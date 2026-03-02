@@ -32,6 +32,10 @@ export class CategoriesRepository {
     return categoriesStore.filter((category) => category.householdId === householdId);
   }
 
+  findById(id: string): CategoryRecord | undefined {
+    return categoriesStore.find((category) => category.id === id);
+  }
+
   clearAll(): void {
     categoriesStore.length = 0;
   }

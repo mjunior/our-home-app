@@ -25,6 +25,10 @@ export class AccountsRepository {
     return accountsStore.filter((account) => account.householdId === householdId);
   }
 
+  findById(id: string): AccountRecord | undefined {
+    return accountsStore.find((account) => account.id === id);
+  }
+
   clearAll(): void {
     accountsStore.length = 0;
   }

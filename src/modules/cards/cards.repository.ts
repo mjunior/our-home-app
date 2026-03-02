@@ -25,6 +25,10 @@ export class CardsRepository {
     return cardsStore.filter((card) => card.householdId === householdId);
   }
 
+  findById(id: string): CreditCardRecord | undefined {
+    return cardsStore.find((card) => card.id === id);
+  }
+
   clearAll(): void {
     cardsStore.length = 0;
   }
