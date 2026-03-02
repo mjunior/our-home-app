@@ -32,6 +32,6 @@ export class Money {
 
 export function sumMoney(values: MoneyInput[]): string {
   return values
-    .reduce((acc, current) => acc.plus(new Decimal(current)), new Decimal(0))
+    .reduce((acc: Decimal, current) => acc.plus(new Decimal(current)), new Decimal(0))
     .toFixed(2);
 }
