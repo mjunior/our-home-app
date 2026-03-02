@@ -1,0 +1,140 @@
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { AccountsController } from "../../src/modules/accounts/accounts.controller";
+import { AccountsRepository } from "../../src/modules/accounts/accounts.repository";
+import { AccountsService } from "../../src/modules/accounts/accounts.service";
+import { CardsController } from "../../src/modules/cards/cards.controller";
+import { CardsRepository } from "../../src/modules/cards/cards.repository";
+import { CardsService } from "../../src/modules/cards/cards.service";
+import { CategoriesController } from "../../src/modules/categories/categories.controller";
+import { CategoriesRepository } from "../../src/modules/categories/categories.repository";
+import { CategoriesService } from "../../src/modules/categories/categories.service";
+import { InvoiceCycleService } from "../../src/modules/invoices/invoice-cycle.service";
+import { InvoicesController } from "../../src/modules/invoices/invoices.controller";
+import { InvoicesService } from "../../src/modules/invoices/invoices.service";
+import { TransactionsController } from "../../src/modules/transactions/transactions.controller";
+import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
+import { TransactionsService } from "../../src/modules/transactions/transactions.service";
+
+const householdId = "household-main";
+
+const accountsRepo = new AccountsRepository();
+const cardsRepo = new CardsRepository();
+const categoriesRepo = new CategoriesRepository();
+const transactionsRepo = new TransactionsRepository();
+
+const accounts = new AccountsController(new AccountsService(accountsRepo));
+const cards = new CardsController(new CardsService(cardsRepo));
+const categories = new CategoriesController(new CategoriesService(categoriesRepo));
+const transactions = new TransactionsController(
+  new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo),
+);
+const invoices = new InvoicesController(
+  new InvoicesService(transactionsRepo, cardsRepo, new InvoiceCycleService()),
+);
+
+describe("invoice services", () => {
+  beforeEach(() => {
+    accountsRepo.clearAll();
+    cardsRepo.clearAll();
+    categoriesRepo.clearAll();
+    transactionsRepo.clearAll();
+  });
+
+  it("assigns purchases to current and next invoice based on close day", () => {
+    const account = accounts.createAccount({
+      householdId,
+      name: "Conta",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const card = cards.createCard({ householdId, name: "Visa", closeDay: 5, dueDay: 12 });
+    const category = categories.createCategory({ householdId, name: "Mercado" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra antes do fechamento",
+      amount: "200.00",
+      occurredAt: "2026-03-04T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra apos fechamento",
+      amount: "350.00",
+      occurredAt: "2026-03-06T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "INCOME",
+      description: "Salario",
+      amount: "5000.00",
+      occurredAt: "2026-03-01T10:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+    });
+
+    const summary = invoices.getCardInvoices({
+      householdId,
+      cardId: card.id,
+      referenceDate: "2026-03-03T10:00:00.000Z",
+    });
+
+    expect(summary.current.total).toBe("200.00");
+    expect(summary.next.total).toBe("350.00");
+  });
+
+  it("returns monthly cashflow summary with card obligations", () => {
+    const account = accounts.createAccount({
+      householdId,
+      name: "Conta 2",
+      type: "CHECKING",
+      openingBalance: "200.00",
+    });
+    const card = cards.createCard({ householdId, name: "Master", closeDay: 8, dueDay: 15 });
+    const category = categories.createCategory({ householdId, name: "Casa" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "INCOME",
+      description: "Renda",
+      amount: "4000.00",
+      occurredAt: "2026-03-01T10:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+    });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Despesa conta",
+      amount: "500.00",
+      occurredAt: "2026-03-02T10:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+    });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Despesa cartao",
+      amount: "300.00",
+      occurredAt: "2026-03-02T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    const monthly = invoices.getMonthlyCashflowSummary({ householdId, month: "2026-03" });
+
+    expect(monthly.totalIncome).toBe("4000.00");
+    expect(monthly.totalExpense).toBe("800.00");
+    expect(monthly.cardObligations).toBe("300.00");
+  });
+});
