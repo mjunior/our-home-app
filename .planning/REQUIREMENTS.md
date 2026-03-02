@@ -73,10 +73,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ACCT-01 | Phase 1 | Pending |
-| ACCT-02 | Phase 1 | Pending |
-| ACCT-03 | Phase 1 | Pending |
-| CARD-01 | Phase 1 | Pending |
+| ACCT-01 | Phase 1 | Complete |
+| ACCT-02 | Phase 1 | Complete |
+| ACCT-03 | Phase 1 | Complete |
+| CARD-01 | Phase 1 | Complete |
 | CARD-02 | Phase 2 | Pending |
 | CARD-03 | Phase 2 | Pending |
 | CASH-01 | Phase 2 | Pending |
@@ -85,7 +85,7 @@
 | RECU-01 | Phase 3 | Pending |
 | RECU-02 | Phase 3 | Pending |
 | RECU-03 | Phase 3 | Pending |
-| CAT-01 | Phase 1 | Pending |
+| CAT-01 | Phase 1 | Complete |
 | CAT-02 | Phase 2 | Pending |
 | CAT-03 | Phase 5 | Pending |
 | FREE-01 | Phase 4 | Pending |

@@ -10,7 +10,7 @@ A jornada começa com a fundação dos dados financeiros da casa (contas, cartõ
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Fundação Financeira** - Estruturar contas, cartões base e categorias.
+- [x] **Phase 1: Fundação Financeira** - Estruturar contas, cartões base e categorias.
 - [ ] **Phase 2: Fluxo de Caixa e Faturas** - Registrar entradas/saídas e consolidar extrato mensal.
 - [ ] **Phase 3: Parcelas e Recorrências** - Automatizar compromissos futuros.
 - [ ] **Phase 4: Motor de Saldo Livre** - Calcular saldo livre atual e projetado com explicabilidade.
@@ -31,9 +31,9 @@ A jornada começa com a fundação dos dados financeiros da casa (contas, cartõ
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Modelagem de dados (contas, cartões, categorias)
-- [ ] 01-02: CRUD de contas e cartões
-- [ ] 01-03: CRUD de categorias e consolidação inicial de saldo
+- [x] 01-01: Modelagem de dados (contas, cartões, categorias)
+- [x] 01-02: CRUD de contas e cartões
+- [x] 01-03: CRUD de categorias e consolidação inicial de saldo
 
 ### Phase 2: Fluxo de Caixa e Faturas
 **Goal**: Permitir lançamentos financeiros completos e visualização da fatura/extrato mensal.
@@ -115,7 +115,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Fundação Financeira | 0/3 | Not started | - |
+| 1. Fundação Financeira | 3/3 | Complete | 2026-03-02 |
 | 2. Fluxo de Caixa e Faturas | 0/3 | Not started | - |
 | 3. Parcelas e Recorrências | 0/2 | Not started | - |
 | 4. Motor de Saldo Livre | 0/3 | Not started | - |
