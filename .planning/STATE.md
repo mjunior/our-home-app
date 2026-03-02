@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 Phase: 2 of 6 (Fluxo de Caixa e Faturas)
 Plan: 0 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-03-02 — Phase 1 executada e verificada
+Status: Ready to execute
+Last activity: 2026-03-02 — Phase 2 planejada com pesquisa e verificação
 
 Progress: [██░░░░░░░░] 17%
 
