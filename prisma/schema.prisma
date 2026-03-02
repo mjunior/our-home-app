@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CASH
+}
+
+model Account {
+  id             String        @id @default(cuid())
+  householdId    String
+  name           String
+  type           AccountType
+  openingBalance Decimal
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  transactions   Transaction[]
+
+  @@unique([householdId, name])
+}
+
+model CreditCard {
+  id           String        @id @default(cuid())
+  householdId  String
+  name         String
+  closeDay     Int
+  dueDay       Int
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+
+  @@unique([householdId, name])
+}
+
+model Category {
+  id          String        @id @default(cuid())
+  householdId String
+  name        String
+  normalized  String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  transactions Transaction[]
+
+  @@unique([householdId, normalized])
+}
+
+model Transaction {
+  id           String      @id @default(cuid())
+  householdId  String
+  description  String
+  amount       Decimal
+  occurredAt   DateTime
+  accountId    String?
+  creditCardId String?
+  categoryId   String?
+
+  account      Account?    @relation(fields: [accountId], references: [id])
+  creditCard   CreditCard? @relation(fields: [creditCardId], references: [id])
+  category     Category?   @relation(fields: [categoryId], references: [id])
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([householdId, occurredAt])
+}
