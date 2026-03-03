@@ -2,16 +2,32 @@ import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 import { formatCurrencyBR, formatDateBR } from "../../lib/utils";
-import type { TransactionRecord } from "../../modules/transactions/transactions.repository";
+
+export interface StatementEntry {
+  id: string;
+  kind: "INCOME" | "EXPENSE";
+  description: string;
+  amount: string;
+  occurredAt: string;
+  categoryId: string;
+  accountId: string | null;
+  creditCardId: string | null;
+  sourceLabel?: "Avulso" | "Recorrente" | "Parcela";
+  sourceType?: "ONE_OFF" | "RECURRING" | "INSTALLMENT";
+  sourceId?: string;
+  monthKey?: string;
+  sequence?: number;
+}
 
 interface StatementTableProps {
-  entries: TransactionRecord[];
+  entries: StatementEntry[];
   categoryLabels: Record<string, string>;
   accountLabels: Record<string, string>;
   cardLabels: Record<string, string>;
+  onEditEntry?: (entry: StatementEntry) => void;
 }
 
-function KindPill({ kind }: { kind: TransactionRecord["kind"] }) {
+function KindPill({ kind }: { kind: StatementEntry["kind"] }) {
   if (kind === "INCOME") {
     return <Badge variant="lime">Entrada</Badge>;
   }
@@ -19,7 +35,7 @@ function KindPill({ kind }: { kind: TransactionRecord["kind"] }) {
   return <Badge variant="destructive">Saida</Badge>;
 }
 
-export function StatementTable({ entries, categoryLabels, accountLabels, cardLabels }: StatementTableProps) {
+export function StatementTable({ entries, categoryLabels, accountLabels, cardLabels, onEditEntry }: StatementTableProps) {
   return (
     <Card className="section-reveal overflow-hidden">
       <CardHeader className="pb-3">
@@ -39,8 +55,10 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                   <th>Descricao</th>
                   <th>Valor</th>
                   <th>Tipo</th>
+                  <th>Origem</th>
                   <th>Categoria</th>
                   <th>Destino</th>
+                  <th>Acoes</th>
                 </tr>
               </thead>
               <tbody>
@@ -59,6 +77,11 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                         <KindPill kind={entry.kind} />
                       </td>
                       <td>
+                        <Badge variant="outline" className="normal-case tracking-normal">
+                          {entry.sourceLabel ?? "Avulso"}
+                        </Badge>
+                      </td>
+                      <td>
                         <Badge variant="secondary" className="normal-case tracking-normal">
                           {categoryLabel}
                         </Badge>
@@ -67,6 +90,17 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                         <Badge variant="outline" className="normal-case tracking-normal">
                           {destinationLabel}
                         </Badge>
+                      </td>
+                      <td>
+                        {onEditEntry ? (
+                          <button
+                            type="button"
+                            className="rounded-md border px-2 py-1 text-xs"
+                            onClick={() => onEditEntry(entry)}
+                          >
+                            Editar
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
                   );

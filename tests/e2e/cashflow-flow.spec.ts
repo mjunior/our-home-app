@@ -66,5 +66,12 @@ describe("cashflow flow", () => {
     expect(screen.getByText("Entrada")).toBeInTheDocument();
     expect(screen.getByText("Saida")).toBeInTheDocument();
     expect(screen.getByText("Cartao: Visa Casa")).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: "Editar" })[0]!);
+    await user.clear(screen.getByLabelText("Editar descricao da transacao"));
+    await user.type(screen.getByLabelText("Editar descricao da transacao"), "Salario ajustado");
+    await user.click(screen.getByRole("button", { name: "Salvar edicao" }));
+
+    expect(screen.getByText("Salario ajustado")).toBeInTheDocument();
   });
 });

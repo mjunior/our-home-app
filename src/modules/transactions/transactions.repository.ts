@@ -70,6 +70,28 @@ export class TransactionsRepository {
     return transactionsStore.filter((transaction) => transaction.householdId === householdId);
   }
 
+  findById(id: string): TransactionRecord | undefined {
+    return transactionsStore.find((transaction) => transaction.id === id);
+  }
+
+  update(id: string, patch: Partial<Omit<TransactionRecord, "id" | "householdId">>): TransactionRecord {
+    const target = this.findById(id);
+    if (!target) {
+      throw new Error("TRANSACTION_NOT_FOUND");
+    }
+
+    Object.assign(target, patch);
+    return target;
+  }
+
+  remove(id: string): void {
+    for (let index = transactionsStore.length - 1; index >= 0; index -= 1) {
+      if (transactionsStore[index]?.id === id) {
+        transactionsStore.splice(index, 1);
+      }
+    }
+  }
+
   clearAll(): void {
     transactionsStore.length = 0;
   }

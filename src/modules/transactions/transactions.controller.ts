@@ -1,4 +1,4 @@
-import type { CreateTransactionInput, ListTransactionsInput } from "./transactions.service";
+import type { CreateTransactionInput, DeleteTransactionInput, ListTransactionsInput, UpdateTransactionInput } from "./transactions.service";
 import { TransactionsService } from "./transactions.service";
 
 export class TransactionsController {
@@ -6,6 +6,14 @@ export class TransactionsController {
 
   createTransaction(payload: CreateTransactionInput) {
     return this.service.create(payload);
+  }
+
+  updateTransaction(payload: UpdateTransactionInput) {
+    return this.service.update(payload);
+  }
+
+  deleteTransaction(payload: DeleteTransactionInput) {
+    return this.service.remove(payload);
   }
 
   listTransactionsByMonth(payload: ListTransactionsInput) {

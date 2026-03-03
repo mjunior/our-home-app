@@ -92,6 +92,16 @@ export class ScheduleRepository {
     return target;
   }
 
+  updateInstallmentPlan(id: string, patch: Partial<InstallmentPlanRecord>): InstallmentPlanRecord {
+    const target = this.findInstallmentPlanById(id);
+    if (!target) {
+      throw new Error("INSTALLMENT_PLAN_NOT_FOUND");
+    }
+
+    Object.assign(target, patch);
+    return target;
+  }
+
   createInstanceIfMissing(data: Omit<ScheduledInstanceRecord, "id">): { created: boolean; record: ScheduledInstanceRecord } {
     const existing = scheduledInstancesStore.find((instance) => instance.instanceKey === data.instanceKey);
     if (existing) {
@@ -107,6 +117,16 @@ export class ScheduleRepository {
     return scheduledInstancesStore.filter((instance) => instance.sourceType === sourceType && instance.sourceId === sourceId);
   }
 
+  updateScheduledInstance(id: string, patch: Partial<ScheduledInstanceRecord>): ScheduledInstanceRecord {
+    const target = scheduledInstancesStore.find((item) => item.id === id);
+    if (!target) {
+      throw new Error("SCHEDULE_INSTANCE_NOT_FOUND");
+    }
+
+    Object.assign(target, patch);
+    return target;
+  }
+
   listInstancesByHousehold(householdId: string): ScheduledInstanceRecord[] {
     return scheduledInstancesStore.filter((instance) => instance.householdId === householdId);
   }
@@ -120,10 +140,39 @@ export class ScheduleRepository {
     }
   }
 
+  removeInstancesBySource(sourceType: ScheduleSourceType, sourceId: string, includeLocked: boolean): void {
+    for (let index = scheduledInstancesStore.length - 1; index >= 0; index -= 1) {
+      const item = scheduledInstancesStore[index];
+      if (item.sourceType !== sourceType || item.sourceId !== sourceId) {
+        continue;
+      }
+      if (!includeLocked && item.locked) {
+        continue;
+      }
+      scheduledInstancesStore.splice(index, 1);
+    }
+  }
+
   lockInstancesBeforeMonth(sourceType: ScheduleSourceType, sourceId: string, effectiveMonth: string): void {
     for (const item of scheduledInstancesStore) {
       if (item.sourceType === sourceType && item.sourceId === sourceId && item.monthKey < effectiveMonth) {
         item.locked = true;
+      }
+    }
+  }
+
+  removeRecurringRule(id: string): void {
+    for (let index = recurringRulesStore.length - 1; index >= 0; index -= 1) {
+      if (recurringRulesStore[index]?.id === id) {
+        recurringRulesStore.splice(index, 1);
+      }
+    }
+  }
+
+  removeInstallmentPlan(id: string): void {
+    for (let index = installmentPlansStore.length - 1; index >= 0; index -= 1) {
+      if (installmentPlansStore[index]?.id === id) {
+        installmentPlansStore.splice(index, 1);
       }
     }
   }

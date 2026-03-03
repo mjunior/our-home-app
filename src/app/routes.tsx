@@ -21,5 +21,5 @@ export const routes: Record<RouteKey, RouteDef> = {
   accounts: { label: "Contas", shortLabel: "Contas", icon: <LayoutList className="h-4 w-4" />, render: () => <AccountsPage /> },
   cards: { label: "Cartoes", shortLabel: "Cartoes", icon: <CreditCard className="h-4 w-4" />, render: () => <CardsPage /> },
   categories: { label: "Categorias", shortLabel: "Tags", icon: <Grid2X2 className="h-4 w-4" />, render: () => <CategoriesPage /> },
-  schedules: { label: "Parcelas e Recorrencias", shortLabel: "Parcelas", icon: <LayoutList className="h-4 w-4" />, render: () => <SchedulesPage /> },
+  schedules: { label: "Compromissos", shortLabel: "Comprom.", icon: <LayoutList className="h-4 w-4" />, render: () => <SchedulesPage /> },
 };

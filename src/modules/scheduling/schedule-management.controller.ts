@@ -1,3 +1,4 @@
+import type { CreateTransactionInput } from "../transactions/transactions.service";
 import type { CreateInstallmentInput } from "./installments.service";
 import type { CreateRecurringInput } from "./recurrence.service";
 import { ScheduleManagementService } from "./schedule-management.service";
@@ -13,8 +14,41 @@ export class ScheduleManagementController {
     return this.service.createRecurringSchedule(payload);
   }
 
-  editRecurringSchedule(payload: { ruleId: string; effectiveMonth: string; amount?: string; description?: string }) {
+  createLaunch(
+    payload:
+      | { launchType: "ONE_OFF"; transaction: CreateTransactionInput }
+      | { launchType: "RECURRING"; recurring: CreateRecurringInput }
+      | { launchType: "INSTALLMENT"; installment: CreateInstallmentInput },
+  ) {
+    return this.service.createUnifiedLaunch(payload);
+  }
+
+  editRecurringSchedule(payload: {
+    ruleId: string;
+    effectiveMonth: string;
+    kind?: "INCOME" | "EXPENSE";
+    amount?: string;
+    description?: string;
+  }) {
     return this.service.editRecurringSchedule(payload);
+  }
+
+  editInstallmentSchedule(payload: {
+    planId: string;
+    effectiveMonth: string;
+    kind?: "INCOME" | "EXPENSE";
+    amount?: string;
+    description?: string;
+  }) {
+    return this.service.editInstallmentSchedule(payload);
+  }
+
+  deleteRecurringSchedule(payload: { ruleId: string; fromMonth: string; scope: "CURRENT_AND_FUTURE" | "ALL" }) {
+    return this.service.deleteRecurringSchedule(payload);
+  }
+
+  deleteInstallmentSchedule(payload: { planId: string; fromMonth: string; scope: "CURRENT_AND_FUTURE" | "ALL" }) {
+    return this.service.deleteInstallmentSchedule(payload);
   }
 
   stopRecurringSchedule(payload: { ruleId: string; stopFromMonth: string }) {
@@ -23,5 +57,9 @@ export class ScheduleManagementController {
 
   listSchedules(householdId: string) {
     return this.service.listSchedules(householdId);
+  }
+
+  listMonthInstances(payload: { householdId: string; month: string }) {
+    return this.service.listMonthInstances(payload.householdId, payload.month);
   }
 }

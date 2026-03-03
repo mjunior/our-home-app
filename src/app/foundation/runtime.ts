@@ -28,12 +28,24 @@ type MethodReturn<T> = T extends (...args: any[]) => infer R ? R : never;
 type AccountsControllerContract = Pick<AccountsController, "createAccount" | "listAccounts" | "getConsolidatedBalance">;
 type CardsControllerContract = Pick<CardsController, "createCard" | "listCards">;
 type CategoriesControllerContract = Pick<CategoriesController, "createCategory" | "listCategories">;
-type TransactionsControllerContract = Pick<TransactionsController, "createTransaction" | "listTransactionsByMonth">;
+type TransactionsControllerContract = Pick<
+  TransactionsController,
+  "createTransaction" | "updateTransaction" | "deleteTransaction" | "listTransactionsByMonth"
+>;
 type InvoicesControllerContract = Pick<InvoicesController, "getCardInvoices" | "getMonthlyCashflowSummary" | "getDueObligationsByMonth">;
 type FreeBalanceControllerContract = Pick<FreeBalanceController, "getFreeBalance">;
 type ScheduleManagementControllerContract = Pick<
   ScheduleManagementController,
-  "createRecurringSchedule" | "createInstallmentSchedule" | "listSchedules" | "editRecurringSchedule" | "stopRecurringSchedule"
+  | "createRecurringSchedule"
+  | "createInstallmentSchedule"
+  | "createLaunch"
+  | "listSchedules"
+  | "listMonthInstances"
+  | "editRecurringSchedule"
+  | "editInstallmentSchedule"
+  | "deleteRecurringSchedule"
+  | "deleteInstallmentSchedule"
+  | "stopRecurringSchedule"
 >;
 type Runtime = {
   accountsController: AccountsControllerContract;
@@ -99,6 +111,7 @@ function createLocalRuntime(): Runtime {
       new InstallmentsService(scheduleRepository, scheduleEngine),
       new RecurrenceService(scheduleRepository, scheduleEngine),
       scheduleEngine,
+      new TransactionsService(transactionsRepository, accountsRepository, cardsRepository, categoriesRepository),
     ),
   );
 
@@ -129,6 +142,10 @@ function createApiRuntime(): Runtime {
 
   type TransactionsCreateInput = MethodArgs<Runtime["transactionsController"]["createTransaction"]>[0];
   type TransactionsCreateOutput = MethodReturn<Runtime["transactionsController"]["createTransaction"]>;
+  type TransactionsUpdateInput = MethodArgs<Runtime["transactionsController"]["updateTransaction"]>[0];
+  type TransactionsUpdateOutput = MethodReturn<Runtime["transactionsController"]["updateTransaction"]>;
+  type TransactionsDeleteInput = MethodArgs<Runtime["transactionsController"]["deleteTransaction"]>[0];
+  type TransactionsDeleteOutput = MethodReturn<Runtime["transactionsController"]["deleteTransaction"]>;
   type TransactionsListInput = MethodArgs<Runtime["transactionsController"]["listTransactionsByMonth"]>[0];
   type TransactionsListOutput = MethodReturn<Runtime["transactionsController"]["listTransactionsByMonth"]>;
 
@@ -142,9 +159,19 @@ function createApiRuntime(): Runtime {
   type RecurringCreateOutput = MethodReturn<Runtime["scheduleManagementController"]["createRecurringSchedule"]>;
   type InstallmentCreateInput = MethodArgs<Runtime["scheduleManagementController"]["createInstallmentSchedule"]>[0];
   type InstallmentCreateOutput = MethodReturn<Runtime["scheduleManagementController"]["createInstallmentSchedule"]>;
+  type UnifiedLaunchInput = MethodArgs<Runtime["scheduleManagementController"]["createLaunch"]>[0];
+  type UnifiedLaunchOutput = MethodReturn<Runtime["scheduleManagementController"]["createLaunch"]>;
   type SchedulesListOutput = MethodReturn<Runtime["scheduleManagementController"]["listSchedules"]>;
+  type SchedulesMonthInstancesInput = MethodArgs<Runtime["scheduleManagementController"]["listMonthInstances"]>[0];
+  type SchedulesMonthInstancesOutput = MethodReturn<Runtime["scheduleManagementController"]["listMonthInstances"]>;
   type RecurringEditInput = MethodArgs<Runtime["scheduleManagementController"]["editRecurringSchedule"]>[0];
   type RecurringEditOutput = MethodReturn<Runtime["scheduleManagementController"]["editRecurringSchedule"]>;
+  type InstallmentEditInput = MethodArgs<Runtime["scheduleManagementController"]["editInstallmentSchedule"]>[0];
+  type InstallmentEditOutput = MethodReturn<Runtime["scheduleManagementController"]["editInstallmentSchedule"]>;
+  type RecurringDeleteInput = MethodArgs<Runtime["scheduleManagementController"]["deleteRecurringSchedule"]>[0];
+  type RecurringDeleteOutput = MethodReturn<Runtime["scheduleManagementController"]["deleteRecurringSchedule"]>;
+  type InstallmentDeleteInput = MethodArgs<Runtime["scheduleManagementController"]["deleteInstallmentSchedule"]>[0];
+  type InstallmentDeleteOutput = MethodReturn<Runtime["scheduleManagementController"]["deleteInstallmentSchedule"]>;
   type RecurringStopInput = MethodArgs<Runtime["scheduleManagementController"]["stopRecurringSchedule"]>[0];
   type RecurringStopOutput = MethodReturn<Runtime["scheduleManagementController"]["stopRecurringSchedule"]>;
 
@@ -171,6 +198,10 @@ function createApiRuntime(): Runtime {
     transactionsController: {
       createTransaction: (input: TransactionsCreateInput): TransactionsCreateOutput =>
         requestSync<TransactionsCreateOutput>("POST", "/api/transactions", input),
+      updateTransaction: (input: TransactionsUpdateInput): TransactionsUpdateOutput =>
+        requestSync<TransactionsUpdateOutput>("POST", "/api/transactions/edit", input),
+      deleteTransaction: (input: TransactionsDeleteInput): TransactionsDeleteOutput =>
+        requestSync<TransactionsDeleteOutput>("POST", "/api/transactions/delete", input),
       listTransactionsByMonth: (input: TransactionsListInput): TransactionsListOutput => {
         const query = new URLSearchParams({
           householdId: input.householdId,
@@ -210,10 +241,23 @@ function createApiRuntime(): Runtime {
         requestSync<RecurringCreateOutput>("POST", "/api/schedules/recurring", input),
       createInstallmentSchedule: (input: InstallmentCreateInput): InstallmentCreateOutput =>
         requestSync<InstallmentCreateOutput>("POST", "/api/schedules/installment", input),
+      createLaunch: (input: UnifiedLaunchInput): UnifiedLaunchOutput =>
+        requestSync<UnifiedLaunchOutput>("POST", "/api/launches", input),
       listSchedules: (householdId: string): SchedulesListOutput =>
         requestSync<SchedulesListOutput>("GET", `/api/schedules?householdId=${encodeURIComponent(householdId)}`),
+      listMonthInstances: (input: SchedulesMonthInstancesInput): SchedulesMonthInstancesOutput =>
+        requestSync<SchedulesMonthInstancesOutput>(
+          "GET",
+          `/api/schedules/instances?householdId=${encodeURIComponent(input.householdId)}&month=${encodeURIComponent(input.month)}`,
+        ),
       editRecurringSchedule: (input: RecurringEditInput): RecurringEditOutput =>
         requestSync<RecurringEditOutput>("POST", "/api/schedules/recurring/edit", input),
+      editInstallmentSchedule: (input: InstallmentEditInput): InstallmentEditOutput =>
+        requestSync<InstallmentEditOutput>("POST", "/api/schedules/installment/edit", input),
+      deleteRecurringSchedule: (input: RecurringDeleteInput): RecurringDeleteOutput =>
+        requestSync<RecurringDeleteOutput>("POST", "/api/schedules/recurring/delete", input),
+      deleteInstallmentSchedule: (input: InstallmentDeleteInput): InstallmentDeleteOutput =>
+        requestSync<InstallmentDeleteOutput>("POST", "/api/schedules/installment/delete", input),
       stopRecurringSchedule: (input: RecurringStopInput): RecurringStopOutput =>
         requestSync<RecurringStopOutput>("POST", "/api/schedules/recurring/stop", input),
     },

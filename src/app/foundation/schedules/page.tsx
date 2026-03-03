@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react";
 
-import { InstallmentForm } from "../../../components/foundation/installment-form";
-import { RecurrenceForm } from "../../../components/foundation/recurrence-form";
 import { ScheduleList } from "../../../components/foundation/schedule-list";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
@@ -23,51 +21,22 @@ export default function SchedulesPage() {
   return (
     <main className="space-y-4">
       <section className="section-reveal flex items-center justify-between gap-3">
-        <h1>Parcelas e Recorrencias</h1>
+        <h1>Gerenciamento de Compromissos</h1>
         <Badge variant="secondary">Foundation</Badge>
       </section>
 
       <Card className="section-reveal">
         <CardHeader>
-          <CardTitle>Nova recorrencia</CardTitle>
+          <CardTitle>Criacao centralizada no Cashflow</CardTitle>
         </CardHeader>
         <CardContent>
-          <RecurrenceForm
-            accounts={accounts.map((item) => ({ id: item.id, label: item.name }))}
-            cards={cards.map((item) => ({ id: item.id, label: item.name }))}
-            categories={categories.map((item) => ({ id: item.id, label: item.name }))}
-            onSubmit={(values) => {
-              try {
-                scheduleManagementController.createRecurringSchedule({ householdId: HOUSEHOLD_ID, ...values });
-                setRefreshKey((prev) => prev + 1);
-                notify({ message: "Recorrencia cadastrada com sucesso.", tone: "success" });
-              } catch {
-                notify({ message: "Nao foi possivel cadastrar a recorrencia.", tone: "error" });
-              }
-            }}
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="section-reveal">
-        <CardHeader>
-          <CardTitle>Novo parcelamento</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <InstallmentForm
-            accounts={accounts.map((item) => ({ id: item.id, label: item.name }))}
-            cards={cards.map((item) => ({ id: item.id, label: item.name }))}
-            categories={categories.map((item) => ({ id: item.id, label: item.name }))}
-            onSubmit={(values) => {
-              try {
-                scheduleManagementController.createInstallmentSchedule({ householdId: HOUSEHOLD_ID, ...values });
-                setRefreshKey((prev) => prev + 1);
-                notify({ message: "Parcela cadastrada com sucesso.", tone: "success" });
-              } catch {
-                notify({ message: "Nao foi possivel cadastrar a parcela.", tone: "error" });
-              }
-            }}
-          />
+          <p className="text-sm text-slate-500 dark:text-slate-300">
+            Novos avulsos, recorrencias e parcelamentos sao criados pelo botao <strong>Novo lancamento</strong> no Cashflow.
+            Esta tela fica dedicada para consulta e manutencao future-only.
+          </p>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Contas: {accounts.length} | Cartoes: {cards.length} | Categorias: {categories.length}
+          </p>
         </CardContent>
       </Card>
 

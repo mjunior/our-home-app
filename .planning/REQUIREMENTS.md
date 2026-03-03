@@ -8,10 +8,10 @@
 
 ### Unified Launch Flow
 
-- [ ] **LAN-01**: User can criar novo lancamento em fluxo unico escolhendo tipo avulso, recorrencia ou parcelamento.
-- [ ] **LAN-02**: Sistema aplica regras consistentes de vencimento, periodicidade e parcelamento a partir de contrato base unico.
-- [ ] **LAN-03**: User can editar apenas ocorrencias futuras sem alterar historico financeiro fechado.
-- [ ] **LAN-04**: User can identificar no extrato e na projecao se o compromisso veio de recorrencia ou parcelamento.
+- [x] **LAN-01**: User can criar novo lancamento em fluxo unico escolhendo tipo avulso, recorrencia ou parcelamento.
+- [x] **LAN-02**: Sistema aplica regras consistentes de vencimento, periodicidade e parcelamento a partir de contrato base unico.
+- [x] **LAN-03**: User can editar apenas ocorrencias futuras sem alterar historico financeiro fechado.
+- [x] **LAN-04**: User can identificar no extrato e na projecao se o compromisso veio de recorrencia ou parcelamento.
 
 ### Investment Transfers
 
@@ -48,10 +48,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LAN-01 | Phase 7 | Planned |
-| LAN-02 | Phase 7 | Planned |
-| LAN-03 | Phase 7 | Planned |
-| LAN-04 | Phase 7 | Planned |
+| LAN-01 | Phase 7 | Completed |
+| LAN-02 | Phase 7 | Completed |
+| LAN-03 | Phase 7 | Completed |
+| LAN-04 | Phase 7 | Completed |
 | INV-01 | Phase 8 | Planned |
 | INV-02 | Phase 8 | Planned |
 | INV-03 | Phase 9 | Planned |

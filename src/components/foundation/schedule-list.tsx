@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
@@ -37,7 +39,21 @@ interface ScheduleListProps {
 
 export function ScheduleList({ installments, recurrences, instances, onEditRecurring, onStopRecurring }: ScheduleListProps) {
   const activeRules = recurrences.filter((item) => item.active);
-  const selectedRule = activeRules[0];
+  const [selectedRuleId, setSelectedRuleId] = useState<string>(activeRules[0]?.id ?? "");
+  const [editDescription, setEditDescription] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [effectiveMonth, setEffectiveMonth] = useState("2026-03");
+  const [stopFromMonth, setStopFromMonth] = useState("2026-03");
+  const selectedRule = activeRules.find((item) => item.id === selectedRuleId) ?? activeRules[0];
+
+  useEffect(() => {
+    if (!selectedRule) return;
+    setSelectedRuleId(selectedRule.id);
+    setEditDescription(selectedRule.description);
+    setEditAmount(selectedRule.amount);
+    setEffectiveMonth(selectedRule.startMonth);
+    setStopFromMonth(selectedRule.startMonth);
+  }, [selectedRule?.id]);
 
   return (
     <Card className="section-reveal">
@@ -71,14 +87,43 @@ export function ScheduleList({ installments, recurrences, instances, onEditRecur
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
             <p className="mb-2 text-sm font-semibold">Gerenciar recorrencia: {selectedRule.description}</p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <label>
+                Regra ativa
+                <select value={selectedRuleId} onChange={(event) => setSelectedRuleId(event.target.value)}>
+                  {activeRules.map((rule) => (
+                    <option key={rule.id} value={rule.id}>
+                      {rule.description}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Mes efetivo edicao
+                <input value={effectiveMonth} onChange={(event) => setEffectiveMonth(event.target.value)} />
+              </label>
+              <label>
+                Nova descricao
+                <input value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
+              </label>
+              <label>
+                Novo valor
+                <input value={editAmount} onChange={(event) => setEditAmount(event.target.value)} />
+              </label>
+              <label>
+                Encerrar a partir de
+                <input value={stopFromMonth} onChange={(event) => setStopFromMonth(event.target.value)} />
+              </label>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() =>
                   onEditRecurring({
                     ruleId: selectedRule.id,
-                    amount: "150.00",
-                    effectiveMonth: "2026-06",
+                    description: editDescription,
+                    amount: editAmount,
+                    effectiveMonth,
                   })
                 }
               >
@@ -90,7 +135,7 @@ export function ScheduleList({ installments, recurrences, instances, onEditRecur
                 onClick={() =>
                   onStopRecurring({
                     ruleId: selectedRule.id,
-                    stopFromMonth: "2026-08",
+                    stopFromMonth,
                   })
                 }
               >
