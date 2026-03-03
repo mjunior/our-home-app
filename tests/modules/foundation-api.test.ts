@@ -25,7 +25,7 @@ const categoriesRepo = new CategoriesRepository();
 const transactionsRepo = new TransactionsRepository();
 const scheduleRepo = new ScheduleRepository();
 
-const accountsController = new AccountsController(new AccountsService(accountsRepo));
+const accountsController = new AccountsController(new AccountsService(accountsRepo, transactionsRepo));
 const cardsController = new CardsController(new CardsService(cardsRepo));
 const categoriesController = new CategoriesController(new CategoriesService(categoriesRepo));
 const transactionsController = new TransactionsController(
@@ -50,14 +50,14 @@ describe("foundation api", () => {
   });
 
   it("creates and lists accounts with consolidated balance", () => {
-    accountsController.createAccount({
+    const checking = accountsController.createAccount({
       householdId,
       name: "Conta Principal",
       type: "CHECKING",
       openingBalance: "1000.50",
     });
 
-    accountsController.createAccount({
+    const investment = accountsController.createAccount({
       householdId,
       name: "Conta Investimento",
       type: "INVESTMENT",
@@ -65,7 +65,27 @@ describe("foundation api", () => {
     });
 
     expect(accountsController.listAccounts(householdId)).toHaveLength(2);
-    expect(accountsController.getConsolidatedBalance(householdId)).toEqual({ amount: "1200.60" });
+    expect(accountsController.getConsolidatedBalance(householdId)).toEqual({
+      amount: "1200.60",
+      byType: {
+        CHECKING: "1000.50",
+        INVESTMENT: "200.10",
+      },
+      accounts: [
+        {
+          id: checking.id,
+          name: "Conta Principal",
+          type: "CHECKING",
+          balance: "1000.50",
+        },
+        {
+          id: investment.id,
+          name: "Conta Investimento",
+          type: "INVESTMENT",
+          balance: "200.10",
+        },
+      ],
+    });
   });
 
   it("validates card cycle days", () => {
@@ -138,5 +158,42 @@ describe("foundation api", () => {
     expect(result.breakdown.current.month).toBe("2026-03");
     expect(result.breakdown.next.components.cardInvoiceDue).toBe("250.00");
     expect(result.topDrivers.length).toBeGreaterThan(0);
+  });
+
+  it("keeps total consolidated unchanged on internal investment transfer while changing account balances", () => {
+    const checking = accountsController.createAccount({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const investment = accountsController.createAccount({
+      householdId,
+      name: "Reserva",
+      type: "INVESTMENT",
+      openingBalance: "0.00",
+    });
+    const category = categoriesController.createCategory({ householdId, name: "Investimentos" });
+
+    transactionsController.createInvestmentTransfer({
+      householdId,
+      description: "Aporte mensal",
+      amount: "250.00",
+      occurredAt: "2026-03-10T12:00:00.000Z",
+      categoryId: category.id,
+      sourceAccountId: checking.id,
+      destinationAccountId: investment.id,
+    });
+
+    const consolidated = accountsController.getConsolidatedBalance(householdId);
+    expect(consolidated.amount).toBe("1000.00");
+    expect(consolidated.byType).toEqual({
+      CHECKING: "750.00",
+      INVESTMENT: "250.00",
+    });
+    expect(consolidated.accounts).toEqual([
+      { id: checking.id, name: "Conta Principal", type: "CHECKING", balance: "750.00" },
+      { id: investment.id, name: "Reserva", type: "INVESTMENT", balance: "250.00" },
+    ]);
   });
 });

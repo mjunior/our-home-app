@@ -354,8 +354,47 @@ export function installViteApi(server: ViteDevServer) {
       if (req.method === "GET" && path === "/api/accounts/consolidated") {
         const householdId = url.searchParams.get("householdId") ?? "household-main";
         const rows = await prisma.account.findMany({ where: { householdId } });
-        const total = rows.reduce((acc, item) => acc + Number(item.openingBalance.toString()), 0);
-        sendJson(res, 200, { amount: total.toFixed(2) });
+        const transactions = await prisma.transaction.findMany({
+          where: {
+            householdId,
+            accountId: { not: null },
+          },
+        });
+
+        const netByAccountId = new Map<string, number>();
+        for (const item of transactions) {
+          if (!item.accountId) continue;
+          const signed = item.kind === "INCOME" ? Number(item.amount.toString()) : Number(item.amount.toString()) * -1;
+          netByAccountId.set(item.accountId, (netByAccountId.get(item.accountId) ?? 0) + signed);
+        }
+
+        const accounts = rows.map((item) => {
+          const opening = Number(item.openingBalance.toString());
+          const movement = netByAccountId.get(item.id) ?? 0;
+          return {
+            id: item.id,
+            name: item.name,
+            type: item.type,
+            balance: (opening + movement).toFixed(2),
+          };
+        });
+
+        const amount = accounts.reduce((acc, item) => acc + Number(item.balance), 0);
+        const checking = accounts
+          .filter((item) => item.type === "CHECKING")
+          .reduce((acc, item) => acc + Number(item.balance), 0);
+        const investment = accounts
+          .filter((item) => item.type === "INVESTMENT")
+          .reduce((acc, item) => acc + Number(item.balance), 0);
+
+        sendJson(res, 200, {
+          amount: amount.toFixed(2),
+          byType: {
+            CHECKING: checking.toFixed(2),
+            INVESTMENT: investment.toFixed(2),
+          },
+          accounts,
+        });
         return;
       }
 

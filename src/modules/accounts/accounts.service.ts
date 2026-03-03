@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Account } from "../../domain/accounts/account.entity";
 import { sumMoney } from "../../domain/shared/money";
 import { AccountsRepository } from "./accounts.repository";
+import { TransactionsRepository } from "../transactions/transactions.repository";
 
 const accountInputSchema = z.object({
   householdId: z.string().min(1),
@@ -19,7 +20,10 @@ export interface CreateAccountInput {
 }
 
 export class AccountsService {
-  constructor(private readonly repository: AccountsRepository) {}
+  constructor(
+    private readonly repository: AccountsRepository,
+    private readonly transactionsRepository?: TransactionsRepository,
+  ) {}
 
   create(input: CreateAccountInput) {
     const parsed = accountInputSchema.parse(input);
@@ -37,9 +41,48 @@ export class AccountsService {
     return this.repository.listByHousehold(householdId);
   }
 
-  consolidatedBalance(householdId: string): { amount: string } {
-    const values = this.list(householdId).map((item) => item.openingBalance);
-    return { amount: sumMoney(values) };
+  consolidatedBalance(householdId: string): {
+    amount: string;
+    byType: { CHECKING: string; INVESTMENT: string };
+    accounts: Array<{ id: string; name: string; type: "CHECKING" | "INVESTMENT"; balance: string }>;
+  } {
+    const accounts = this.list(householdId);
+    const transactions = this.transactionsRepository?.listByHousehold(householdId) ?? [];
+
+    const netByAccountId = new Map<string, number>();
+    for (const item of transactions) {
+      if (!item.accountId) continue;
+      const signed = item.kind === "INCOME" ? Number(item.amount) : Number(item.amount) * -1;
+      netByAccountId.set(item.accountId, (netByAccountId.get(item.accountId) ?? 0) + signed);
+    }
+
+    const accountRows = accounts.map((item) => {
+      const opening = Number(item.openingBalance);
+      const movement = netByAccountId.get(item.id) ?? 0;
+      return {
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        balance: (opening + movement).toFixed(2),
+      };
+    });
+
+    const total = accountRows.reduce((acc, item) => acc + Number(item.balance), 0);
+    const checking = accountRows
+      .filter((item) => item.type === "CHECKING")
+      .reduce((acc, item) => acc + Number(item.balance), 0);
+    const investment = accountRows
+      .filter((item) => item.type === "INVESTMENT")
+      .reduce((acc, item) => acc + Number(item.balance), 0);
+
+    return {
+      amount: total.toFixed(2),
+      byType: {
+        CHECKING: checking.toFixed(2),
+        INVESTMENT: investment.toFixed(2),
+      },
+      accounts: accountRows,
+    };
   }
 
   clearAll() {

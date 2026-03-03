@@ -92,7 +92,7 @@ function createLocalRuntime(): Runtime {
   const scheduleRepository = new ScheduleRepository();
   const scheduleEngine = new ScheduleEngineService();
 
-  const accountsController = new AccountsController(new AccountsService(accountsRepository));
+  const accountsController = new AccountsController(new AccountsService(accountsRepository, transactionsRepository));
   const cardsController = new CardsController(new CardsService(cardsRepository));
   const categoriesController = new CategoriesController(new CategoriesService(categoriesRepository));
   const transactionsController = new TransactionsController(
