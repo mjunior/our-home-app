@@ -20,15 +20,15 @@
   }
 
   body {
-    @apply bg-brand-fog text-slate-900 font-body antialiased;
-    background-image: radial-gradient(circle at 20% 0%, rgba(216, 240, 79, 0.35), transparent 35%),
-      radial-gradient(circle at 100% 100%, rgba(0, 79, 89, 0.15), transparent 30%);
+    @apply bg-brand-fog font-body text-slate-900 antialiased;
+    background-image: radial-gradient(circle at 8% -4%, rgba(216, 240, 79, 0.45), transparent 34%),
+      radial-gradient(circle at 110% 115%, rgba(0, 79, 89, 0.18), transparent 36%);
   }
 
   .dark body {
-    @apply bg-[#090d10] text-slate-100;
-    background-image: radial-gradient(circle at 12% 10%, rgba(216, 240, 79, 0.16), transparent 32%),
-      radial-gradient(circle at 86% 100%, rgba(0, 79, 89, 0.28), transparent 34%);
+    @apply bg-slate-950 text-slate-100;
+    background-image: radial-gradient(circle at 12% 4%, rgba(216, 240, 79, 0.14), transparent 34%),
+      radial-gradient(circle at 88% 110%, rgba(0, 79, 89, 0.32), transparent 38%);
   }
 
   h1,
@@ -38,23 +38,15 @@
   }
 
   h1 {
-    @apply text-2xl md:text-3xl;
+    @apply text-2xl;
   }
 
   h2 {
-    @apply text-lg md:text-xl;
-  }
-
-  h3 {
-    @apply text-base md:text-lg;
+    @apply text-lg;
   }
 
   form {
-    @apply grid gap-3 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-soft backdrop-blur;
-  }
-
-  .dark form {
-    @apply border-slate-700/80 bg-slate-900/80;
+    @apply grid gap-3;
   }
 
   label {
@@ -67,14 +59,12 @@
 
   input,
   select,
-  button,
   textarea {
-    @apply rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 outline-none transition;
+    @apply h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition;
   }
 
   .dark input,
   .dark select,
-  .dark button,
   .dark textarea {
     @apply border-slate-700 bg-slate-950 text-slate-100;
   }
@@ -83,37 +73,6 @@
   select:focus,
   textarea:focus {
     @apply border-brand-teal ring-2 ring-brand-teal/20;
-  }
-
-  button {
-    @apply border-slate-300 bg-brand-teal text-white;
-  }
-
-  button:hover {
-    @apply brightness-110;
-  }
-
-  ul,
-  ol {
-    @apply space-y-1;
-  }
-
-  table {
-    @apply w-full rounded-2xl border border-slate-200 bg-white/90 text-sm shadow-soft;
-  }
-
-  .dark table {
-    @apply border-slate-700 bg-slate-900/80;
-  }
-
-  th,
-  td {
-    @apply border-b border-slate-100 px-3 py-2 text-left;
-  }
-
-  .dark th,
-  .dark td {
-    @apply border-slate-800;
   }
 }
 
@@ -126,11 +85,87 @@
     @apply border-slate-700/80 bg-slate-900/80;
   }
 
-  .chip {
-    @apply inline-flex items-center rounded-full border border-slate-200 px-2 py-1 text-xs font-semibold;
+  .surface-card {
+    @apply rounded-3xl border border-white/50 bg-white/80 shadow-soft backdrop-blur;
   }
 
-  .dark .chip {
-    @apply border-slate-700;
+  .dark .surface-card {
+    @apply border-slate-700/80 bg-slate-900/70;
+  }
+
+  .section-reveal {
+    animation: section-reveal 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  .stagger-up {
+    animation: stagger-up 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  .snackbar-in {
+    animation: snackbar-in 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  .row-animate {
+    @apply transition duration-200 hover:bg-slate-50/80 dark:hover:bg-slate-900/60;
+  }
+
+  .safe-bottom {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  .mobile-bottom-nav {
+    @apply fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/90 px-3 pt-2 backdrop-blur;
+    padding-bottom: calc(0.65rem + env(safe-area-inset-bottom));
+  }
+
+  .dark .mobile-bottom-nav {
+    @apply border-slate-800 bg-slate-950/90;
+  }
+}
+
+@keyframes section-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stagger-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes snackbar-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

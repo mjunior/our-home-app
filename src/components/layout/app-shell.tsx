@@ -5,7 +5,7 @@ import type { RouteKey } from "../../app/routes";
 import { routes } from "../../app/routes";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Separator } from "../ui/separator";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "../ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
@@ -17,6 +17,8 @@ interface AppShellProps {
   onDarkModeChange: (value: boolean) => void;
 }
 
+const quickRoutes: RouteKey[] = ["cashflow", "accounts", "cards", "schedules"];
+
 function NavItems({ route, onRouteChange }: { route: RouteKey; onRouteChange: (next: RouteKey) => void }) {
   return (
     <nav className="space-y-2">
@@ -26,7 +28,7 @@ function NavItems({ route, onRouteChange }: { route: RouteKey; onRouteChange: (n
           <Button
             key={key}
             type="button"
-            variant={active ? "lime" : "secondary"}
+            variant={active ? "lime" : "ghost"}
             className="h-11 w-full justify-start rounded-2xl"
             onClick={() => onRouteChange(key)}
           >
@@ -41,22 +43,35 @@ function NavItems({ route, onRouteChange }: { route: RouteKey; onRouteChange: (n
 
 export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange }: AppShellProps) {
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
-      <aside className="hidden border-r border-slate-200/80 bg-white/90 p-4 backdrop-blur dark:border-slate-800 dark:bg-[#0b1014]/95 lg:block">
-        <Card className="h-full">
+    <div className="min-h-screen lg:grid lg:grid-cols-[300px_1fr]">
+      <aside className="hidden border-r border-slate-200/80 bg-white/80 p-4 backdrop-blur dark:border-slate-800 dark:bg-[#090f13]/80 lg:block">
+        <Card className="h-full section-reveal">
           <CardHeader>
-            <Badge variant="lime" className="w-fit uppercase tracking-[0.18em]">Our Home</Badge>
+            <Badge variant="lime" className="w-fit">
+              Our Home
+            </Badge>
             <CardTitle className="text-2xl">Money Finesse</CardTitle>
-            <p className="text-sm text-slate-500 dark:text-slate-300">Controle diario no mobile, com previsao clara.</p>
+            <CardDescription>Controle diario no mobile com saldo livre e risco explicavel.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <NavItems route={route} onRouteChange={onRouteChange} />
+            <Separator />
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full"
+              aria-label="Alternar tema"
+              onClick={() => onDarkModeChange(!darkMode)}
+            >
+              {darkMode ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
+              {darkMode ? "Modo claro" : "Modo escuro"}
+            </Button>
           </CardContent>
         </Card>
       </aside>
 
-      <main className="p-3 pb-8 pt-4 lg:p-8">
-        <header className="panel mb-4 flex items-center justify-between lg:hidden">
+      <main className="safe-bottom p-3 pb-24 pt-4 lg:p-8 lg:pb-8">
+        <header className="surface-card section-reveal mb-4 flex items-center justify-between px-3 py-2 lg:hidden">
           <Sheet>
             <SheetTrigger asChild>
               <Button type="button" variant="ghost" size="icon" aria-label="Abrir menu">
@@ -89,7 +104,10 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange }: A
             </SheetContent>
           </Sheet>
 
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">{routes[route].shortLabel}</p>
+          <div className="text-center">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Hoje</p>
+            <p className="font-display text-sm">{routes[route].label}</p>
+          </div>
 
           <Button
             type="button"
@@ -102,9 +120,11 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange }: A
           </Button>
         </header>
 
-        <header className="hidden items-center justify-between pb-5 lg:flex">
-          <div>
-            <Badge variant="outline" className="mb-2 uppercase tracking-[0.12em]">mobile-first financial cockpit</Badge>
+        <header className="mb-6 hidden items-center justify-between lg:flex">
+          <div className="stagger-up">
+            <Badge variant="outline" className="mb-3">
+              Mobile-first financial cockpit
+            </Badge>
             <h2 className="text-3xl">{routes[route].label}</h2>
           </div>
           <Button type="button" variant="secondary" size="icon" aria-label="Alternar tema" onClick={() => onDarkModeChange(!darkMode)}>
@@ -112,18 +132,20 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange }: A
           </Button>
         </header>
 
-        <div className="mb-4 lg:hidden">
-          <Tabs value={route} onValueChange={(v) => onRouteChange(v as RouteKey)}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="cashflow">Caixa</TabsTrigger>
-              <TabsTrigger value="accounts">Contas</TabsTrigger>
-              <TabsTrigger value="cards">Cartoes</TabsTrigger>
+        <section className="section-reveal space-y-4">{routes[route].render()}</section>
+
+        <div className="mobile-bottom-nav lg:hidden">
+          <Tabs value={route} onValueChange={(value) => onRouteChange(value as RouteKey)}>
+            <TabsList className="grid h-14 w-full grid-cols-4 rounded-2xl">
+              {quickRoutes.map((key) => (
+                <TabsTrigger key={key} value={key} className="flex h-11 flex-col gap-0.5 px-1 text-[11px]">
+                  {routes[key].icon}
+                  {routes[key].shortLabel}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
         </div>
-
-        <Separator className="mb-4" />
-        <section className="space-y-4">{routes[route].render()}</section>
       </main>
     </div>
   );
