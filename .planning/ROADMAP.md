@@ -12,7 +12,7 @@ A jornada começa com a fundação dos dados financeiros da casa (contas, cartõ
 
 - [x] **Phase 1: Fundação Financeira** - Estruturar contas, cartões base e categorias.
 - [x] **Phase 2: Fluxo de Caixa e Faturas** - Registrar entradas/saídas e consolidar extrato mensal.
-- [ ] **Phase 3: Parcelas e Recorrências** - Automatizar compromissos futuros.
+- [x] **Phase 3: Parcelas e Recorrências** - Automatizar compromissos futuros.
 - [ ] **Phase 4: Motor de Saldo Livre** - Calcular saldo livre atual e projetado com explicabilidade.
 - [ ] **Phase 5: Investimentos e Relatórios** - Gerenciar carteira básica e visão por categoria.
 - [ ] **Phase 6: Wishlist com Impacto** - Priorizar desejos com simulação no saldo livre.
@@ -62,8 +62,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: Motor de geração de parcelas e recorrências
-- [ ] 03-02: Tela de gestão e edição segura de recorrências
+- [x] 03-01: Motor de geração de parcelas e recorrências
+- [x] 03-02: Tela de gestão e edição segura de recorrências
 
 ### Phase 4: Motor de Saldo Livre
 **Goal**: Entregar métrica principal de decisão financeira com projeção mensal.
@@ -117,7 +117,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Fundação Financeira | 3/3 | Complete | 2026-03-02 |
 | 2. Fluxo de Caixa e Faturas | 3/3 | Complete | 2026-03-02 |
-| 3. Parcelas e Recorrências | 0/2 | Not started | - |
+| 3. Parcelas e Recorrências | 2/2 | Complete | 2026-03-02 |
 | 4. Motor de Saldo Livre | 0/3 | Not started | - |
 | 5. Investimentos e Relatórios | 0/2 | Not started | - |
 | 6. Wishlist com Impacto | 0/2 | Not started | - |

@@ -82,9 +82,9 @@
 | CASH-01 | Phase 2 | Complete |
 | CASH-02 | Phase 2 | Complete |
 | CASH-03 | Phase 2 | Complete |
-| RECU-01 | Phase 3 | Pending |
-| RECU-02 | Phase 3 | Pending |
-| RECU-03 | Phase 3 | Pending |
+| RECU-01 | Phase 3 | Complete |
+| RECU-02 | Phase 3 | Complete |
+| RECU-03 | Phase 3 | Complete |
 | CAT-01 | Phase 1 | Complete |
 | CAT-02 | Phase 2 | Complete |
 | CAT-03 | Phase 5 | Pending |
