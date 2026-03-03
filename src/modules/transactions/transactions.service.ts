@@ -1,3 +1,4 @@
+import { createId } from "../../domain/shared/id";
 import { z } from "zod";
 
 import { AccountsRepository } from "../accounts/accounts.repository";
@@ -38,6 +39,25 @@ const deleteInputSchema = z.object({
   householdId: z.string().min(1),
 });
 
+const createInvestmentInputSchema = z.object({
+  householdId: z.string().min(1),
+  description: z.string().min(1),
+  amount: z.string().min(1),
+  occurredAt: z.string().datetime(),
+  categoryId: z.string().min(1),
+  sourceAccountId: z.string().min(1),
+  destinationAccountId: z.string().min(1),
+});
+
+const updateInvestmentInputSchema = createInvestmentInputSchema.extend({
+  transferGroupId: z.string().min(1),
+});
+
+const deleteInvestmentInputSchema = z.object({
+  householdId: z.string().min(1),
+  transferGroupId: z.string().min(1),
+});
+
 export interface CreateTransactionInput {
   householdId: string;
   kind: TransactionKind;
@@ -62,6 +82,42 @@ export interface DeleteTransactionInput {
   householdId: string;
 }
 
+export interface CreateInvestmentTransferInput {
+  householdId: string;
+  description: string;
+  amount: string;
+  occurredAt: string;
+  categoryId: string;
+  sourceAccountId: string;
+  destinationAccountId: string;
+}
+
+export interface UpdateInvestmentTransferInput extends CreateInvestmentTransferInput {
+  transferGroupId: string;
+}
+
+export interface DeleteInvestmentTransferInput {
+  householdId: string;
+  transferGroupId: string;
+}
+
+export interface InvestmentTransferResult {
+  transferGroupId: string;
+  debit: TransactionRecord;
+  credit: TransactionRecord;
+}
+
+function sortTransferPair(items: TransactionRecord[]): { debit: TransactionRecord; credit: TransactionRecord } {
+  const debit = items.find((item) => item.kind === "EXPENSE");
+  const credit = items.find((item) => item.kind === "INCOME");
+
+  if (!debit || !credit) {
+    throw new Error("INVESTMENT_TRANSFER_BROKEN");
+  }
+
+  return { debit, credit };
+}
+
 export class TransactionsService {
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
@@ -70,13 +126,31 @@ export class TransactionsService {
     private readonly categoriesRepository: CategoriesRepository,
   ) {}
 
-  create(input: CreateTransactionInput): TransactionRecord {
-    const parsed = transactionInputSchema.parse(input);
-
-    const category = this.categoriesRepository.findById(parsed.categoryId);
-    if (!category || category.householdId !== parsed.householdId) {
+  private assertCategory(householdId: string, categoryId: string) {
+    const category = this.categoriesRepository.findById(categoryId);
+    if (!category || category.householdId !== householdId) {
       throw new Error("CATEGORY_NOT_FOUND");
     }
+  }
+
+  private assertAccountOwnership(householdId: string, accountId: string) {
+    const account = this.accountsRepository.findById(accountId);
+    if (!account || account.householdId !== householdId) {
+      throw new Error("ACCOUNT_NOT_FOUND");
+    }
+    return account;
+  }
+
+  private assertCardOwnership(householdId: string, cardId: string) {
+    const card = this.cardsRepository.findById(cardId);
+    if (!card || card.householdId !== householdId) {
+      throw new Error("CARD_NOT_FOUND");
+    }
+    return card;
+  }
+
+  private validateCoreBinding(parsed: CreateTransactionInput | UpdateTransactionInput) {
+    this.assertCategory(parsed.householdId, parsed.categoryId);
 
     if (parsed.kind === "INCOME") {
       if (!parsed.accountId || parsed.creditCardId) {
@@ -91,18 +165,17 @@ export class TransactionsService {
     }
 
     if (parsed.accountId) {
-      const account = this.accountsRepository.findById(parsed.accountId);
-      if (!account || account.householdId !== parsed.householdId) {
-        throw new Error("ACCOUNT_NOT_FOUND");
-      }
+      this.assertAccountOwnership(parsed.householdId, parsed.accountId);
     }
 
     if (parsed.creditCardId) {
-      const card = this.cardsRepository.findById(parsed.creditCardId);
-      if (!card || card.householdId !== parsed.householdId) {
-        throw new Error("CARD_NOT_FOUND");
-      }
+      this.assertCardOwnership(parsed.householdId, parsed.creditCardId);
     }
+  }
+
+  create(input: CreateTransactionInput): TransactionRecord {
+    const parsed = transactionInputSchema.parse(input);
+    this.validateCoreBinding(parsed);
 
     return this.transactionsRepository.create({
       householdId: parsed.householdId,
@@ -115,7 +188,61 @@ export class TransactionsService {
       categoryId: parsed.categoryId,
       invoiceMonthKey: null,
       invoiceDueDate: null,
+      transferGroupId: null,
     });
+  }
+
+  createInvestmentTransfer(input: CreateInvestmentTransferInput): InvestmentTransferResult {
+    const parsed = createInvestmentInputSchema.parse(input);
+
+    if (parsed.sourceAccountId === parsed.destinationAccountId) {
+      throw new Error("INVESTMENT_TRANSFER_REQUIRES_DISTINCT_ACCOUNTS");
+    }
+
+    const source = this.assertAccountOwnership(parsed.householdId, parsed.sourceAccountId);
+    const destination = this.assertAccountOwnership(parsed.householdId, parsed.destinationAccountId);
+    this.assertCategory(parsed.householdId, parsed.categoryId);
+
+    if (source.type !== "CHECKING") {
+      throw new Error("INVESTMENT_SOURCE_MUST_BE_CHECKING");
+    }
+
+    if (destination.type !== "INVESTMENT") {
+      throw new Error("INVESTMENT_DESTINATION_MUST_BE_INVESTMENT");
+    }
+
+    const transferGroupId = createId();
+    const description = parsed.description.trim();
+
+    const debit = this.transactionsRepository.create({
+      householdId: parsed.householdId,
+      kind: "EXPENSE",
+      description,
+      amount: parsed.amount,
+      occurredAt: parsed.occurredAt,
+      accountId: parsed.sourceAccountId,
+      creditCardId: null,
+      categoryId: parsed.categoryId,
+      invoiceMonthKey: null,
+      invoiceDueDate: null,
+      transferGroupId,
+    });
+
+    const credit = this.transactionsRepository.create({
+      householdId: parsed.householdId,
+      kind: "INCOME",
+      description,
+      amount: parsed.amount,
+      occurredAt: parsed.occurredAt,
+      accountId: parsed.destinationAccountId,
+      creditCardId: null,
+      categoryId: parsed.categoryId,
+      invoiceMonthKey: null,
+      invoiceDueDate: null,
+      transferGroupId,
+    });
+
+    return { transferGroupId, debit, credit };
   }
 
   update(input: UpdateTransactionInput): TransactionRecord {
@@ -127,37 +254,11 @@ export class TransactionsService {
     if (existing.householdId !== parsed.householdId) {
       throw new Error("TRANSACTION_HOUSEHOLD_MISMATCH");
     }
-
-    const category = this.categoriesRepository.findById(parsed.categoryId);
-    if (!category || category.householdId !== parsed.householdId) {
-      throw new Error("CATEGORY_NOT_FOUND");
+    if (existing.transferGroupId) {
+      throw new Error("INVESTMENT_TRANSFER_REQUIRES_GROUP_UPDATE");
     }
 
-    if (parsed.kind === "INCOME") {
-      if (!parsed.accountId || parsed.creditCardId) {
-        throw new Error("INCOME_REQUIRES_ACCOUNT_ONLY");
-      }
-    }
-
-    if (parsed.kind === "EXPENSE") {
-      if ((parsed.accountId && parsed.creditCardId) || (!parsed.accountId && !parsed.creditCardId)) {
-        throw new Error("EXPENSE_REQUIRES_SINGLE_TARGET");
-      }
-    }
-
-    if (parsed.accountId) {
-      const account = this.accountsRepository.findById(parsed.accountId);
-      if (!account || account.householdId !== parsed.householdId) {
-        throw new Error("ACCOUNT_NOT_FOUND");
-      }
-    }
-
-    if (parsed.creditCardId) {
-      const card = this.cardsRepository.findById(parsed.creditCardId);
-      if (!card || card.householdId !== parsed.householdId) {
-        throw new Error("CARD_NOT_FOUND");
-      }
-    }
+    this.validateCoreBinding(parsed);
 
     return this.transactionsRepository.update(parsed.id, {
       kind: parsed.kind,
@@ -172,6 +273,64 @@ export class TransactionsService {
     });
   }
 
+  updateInvestmentTransfer(input: UpdateInvestmentTransferInput): InvestmentTransferResult {
+    const parsed = updateInvestmentInputSchema.parse(input);
+
+    if (parsed.sourceAccountId === parsed.destinationAccountId) {
+      throw new Error("INVESTMENT_TRANSFER_REQUIRES_DISTINCT_ACCOUNTS");
+    }
+
+    const pair = this.transactionsRepository.listByTransferGroupId(parsed.householdId, parsed.transferGroupId);
+    if (pair.length !== 2) {
+      throw new Error("INVESTMENT_TRANSFER_NOT_FOUND");
+    }
+
+    const source = this.assertAccountOwnership(parsed.householdId, parsed.sourceAccountId);
+    const destination = this.assertAccountOwnership(parsed.householdId, parsed.destinationAccountId);
+    this.assertCategory(parsed.householdId, parsed.categoryId);
+
+    if (source.type !== "CHECKING") {
+      throw new Error("INVESTMENT_SOURCE_MUST_BE_CHECKING");
+    }
+
+    if (destination.type !== "INVESTMENT") {
+      throw new Error("INVESTMENT_DESTINATION_MUST_BE_INVESTMENT");
+    }
+
+    const { debit, credit } = sortTransferPair(pair);
+    const description = parsed.description.trim();
+
+    const updatedDebit = this.transactionsRepository.update(debit.id, {
+      kind: "EXPENSE",
+      description,
+      amount: parsed.amount,
+      occurredAt: parsed.occurredAt,
+      accountId: parsed.sourceAccountId,
+      creditCardId: null,
+      categoryId: parsed.categoryId,
+      invoiceMonthKey: null,
+      invoiceDueDate: null,
+    });
+
+    const updatedCredit = this.transactionsRepository.update(credit.id, {
+      kind: "INCOME",
+      description,
+      amount: parsed.amount,
+      occurredAt: parsed.occurredAt,
+      accountId: parsed.destinationAccountId,
+      creditCardId: null,
+      categoryId: parsed.categoryId,
+      invoiceMonthKey: null,
+      invoiceDueDate: null,
+    });
+
+    return {
+      transferGroupId: parsed.transferGroupId,
+      debit: updatedDebit,
+      credit: updatedCredit,
+    };
+  }
+
   remove(input: DeleteTransactionInput): { deleted: true } {
     const parsed = deleteInputSchema.parse(input);
     const existing = this.transactionsRepository.findById(parsed.id);
@@ -181,8 +340,23 @@ export class TransactionsService {
     if (existing.householdId !== parsed.householdId) {
       throw new Error("TRANSACTION_HOUSEHOLD_MISMATCH");
     }
+    if (existing.transferGroupId) {
+      this.transactionsRepository.removeByTransferGroupId(parsed.householdId, existing.transferGroupId);
+      return { deleted: true };
+    }
 
     this.transactionsRepository.remove(parsed.id);
+    return { deleted: true };
+  }
+
+  removeInvestmentTransfer(input: DeleteInvestmentTransferInput): { deleted: true } {
+    const parsed = deleteInvestmentInputSchema.parse(input);
+    const pair = this.transactionsRepository.listByTransferGroupId(parsed.householdId, parsed.transferGroupId);
+    if (pair.length !== 2) {
+      throw new Error("INVESTMENT_TRANSFER_NOT_FOUND");
+    }
+
+    this.transactionsRepository.removeByTransferGroupId(parsed.householdId, parsed.transferGroupId);
     return { deleted: true };
   }
 

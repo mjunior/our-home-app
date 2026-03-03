@@ -4,7 +4,7 @@ export interface AccountRecord {
   id: string;
   householdId: string;
   name: string;
-  type: "CHECKING" | "SAVINGS" | "CASH";
+  type: "CHECKING" | "INVESTMENT";
   openingBalance: string;
 }
 

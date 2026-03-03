@@ -163,6 +163,63 @@ describe("schedule management", () => {
     expect(instances[0]?.description).toContain("Notebook Ajustado");
   });
 
+  it("creates investment launch via unified contract with linked transfer", () => {
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+    const scheduleRepo = new ScheduleRepository();
+    accountsRepo.clearAll();
+    cardsRepo.clearAll();
+    categoriesRepo.clearAll();
+    transactionsRepo.clearAll();
+    scheduleRepo.clearAll();
+
+    const checking = accountsRepo.create({
+      householdId,
+      name: "Conta Casa",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const investment = accountsRepo.create({
+      householdId,
+      name: "Reserva",
+      type: "INVESTMENT",
+      openingBalance: "0.00",
+    });
+    const category = categoriesRepo.create({
+      householdId,
+      name: "Investimento",
+      normalized: "investimento",
+    });
+
+    const transactionsService = new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo);
+    const engine = new ScheduleEngineService();
+    const management = new ScheduleManagementService(
+      scheduleRepo,
+      new InstallmentsService(scheduleRepo, engine),
+      new RecurrenceService(scheduleRepo, engine),
+      engine,
+      transactionsService,
+    );
+
+    const created = management.createUnifiedLaunch({
+      launchType: "INVESTMENT",
+      investment: {
+        householdId,
+        description: "Aporte",
+        amount: "300.00",
+        occurredAt: "2026-03-01T12:00:00.000Z",
+        categoryId: category.id,
+        sourceAccountId: checking.id,
+        destinationAccountId: investment.id,
+      },
+    });
+
+    expect("transferGroupId" in created ? created.transferGroupId : "").not.toBe("");
+    expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(2);
+  });
+
   it("deletes recurring including historical when scope is ALL", () => {
     const repository = new ScheduleRepository();
     repository.clearAll();
@@ -190,5 +247,39 @@ describe("schedule management", () => {
 
     expect(repository.findRecurringRuleById(rule.id)).toBeUndefined();
     expect(repository.listInstancesBySource("RECURRING", rule.id)).toHaveLength(0);
+  });
+
+  it("deletes current and future recurring even when future instances are locked", () => {
+    const repository = new ScheduleRepository();
+    repository.clearAll();
+
+    const engine = new ScheduleEngineService();
+    const installments = new InstallmentsService(repository, engine);
+    const recurrence = new RecurrenceService(repository, engine);
+    const management = new ScheduleManagementService(repository, installments, recurrence, engine);
+
+    const rule = management.createRecurringSchedule({
+      householdId,
+      kind: "INCOME",
+      description: "Receita",
+      amount: "100.00",
+      startMonth: "2026-03",
+      categoryId: "cat-1",
+      accountId: "acc-1",
+    });
+
+    const instances = repository.listInstancesBySource("RECURRING", rule.id);
+    for (const instance of instances.filter((item) => item.monthKey >= "2026-04")) {
+      repository.updateScheduledInstance(instance.id, { locked: true });
+    }
+
+    management.deleteRecurringSchedule({
+      ruleId: rule.id,
+      fromMonth: "2026-04",
+      scope: "CURRENT_AND_FUTURE",
+    });
+
+    const remaining = repository.listInstancesBySource("RECURRING", rule.id);
+    expect(remaining.every((item) => item.monthKey < "2026-04")).toBe(true);
   });
 });

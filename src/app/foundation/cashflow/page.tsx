@@ -42,10 +42,11 @@ export default function CashflowPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailMonthKey, setDetailMonthKey] = useState<"current" | "next">("current");
   const [month, setMonth] = useState("2026-03");
-  const [originFilter, setOriginFilter] = useState<"ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT">("ALL");
-  const [editMode, setEditMode] = useState<"ONE_OFF" | "RECURRING" | "INSTALLMENT" | null>(null);
+  const [originFilter, setOriginFilter] = useState<"ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT">("ALL");
+  const [editMode, setEditMode] = useState<"ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT" | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
+  const [editingTransferGroupId, setEditingTransferGroupId] = useState<string | null>(null);
   const [editingSourceMonth, setEditingSourceMonth] = useState<string>("2026-03");
   const [editKind, setEditKind] = useState<"INCOME" | "EXPENSE">("INCOME");
   const [editDescription, setEditDescription] = useState("");
@@ -53,6 +54,8 @@ export default function CashflowPage() {
   const [editOccurredAt, setEditOccurredAt] = useState("2026-03-01");
   const [editTarget, setEditTarget] = useState<"account" | "card">("account");
   const [editTargetId, setEditTargetId] = useState("");
+  const [editInvestmentSourceId, setEditInvestmentSourceId] = useState("");
+  const [editInvestmentDestinationId, setEditInvestmentDestinationId] = useState("");
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteScope, setDeleteScope] = useState<"CURRENT_AND_FUTURE" | "ALL">("CURRENT_AND_FUTURE");
@@ -90,11 +93,45 @@ export default function CashflowPage() {
   );
 
   const statementEntries = useMemo(() => {
-    const oneOff = transactions.map((item) => ({
-      ...item,
-      sourceLabel: "Avulso" as const,
-      sourceType: "ONE_OFF" as const,
-    }));
+    const oneOff = transactions
+      .filter((item) => !item.transferGroupId)
+      .map((item) => ({
+        ...item,
+        sourceLabel: "Avulso" as const,
+        sourceType: "ONE_OFF" as const,
+      }));
+
+    const investmentsByGroup = new Map<
+      string,
+      {
+        debit?: (typeof transactions)[number];
+        credit?: (typeof transactions)[number];
+      }
+    >();
+    for (const item of transactions) {
+      if (!item.transferGroupId) continue;
+      const group = investmentsByGroup.get(item.transferGroupId) ?? {};
+      if (item.kind === "EXPENSE") group.debit = item;
+      if (item.kind === "INCOME") group.credit = item;
+      investmentsByGroup.set(item.transferGroupId, group);
+    }
+
+    const investments = Array.from(investmentsByGroup.entries())
+      .filter(([, pair]) => pair.debit && pair.credit)
+      .map(([transferGroupId, pair]) => ({
+        id: `investment:${transferGroupId}`,
+        kind: "EXPENSE" as const,
+        description: pair.debit!.description,
+        amount: pair.debit!.amount,
+        occurredAt: pair.debit!.occurredAt,
+        categoryId: pair.debit!.categoryId,
+        accountId: pair.debit!.accountId,
+        destinationAccountId: pair.credit!.accountId,
+        creditCardId: null,
+        transferGroupId,
+        sourceLabel: "Investimento" as const,
+        sourceType: "INVESTMENT" as const,
+      }));
 
     const scheduled = scheduleInstances.map((item) => ({
       id: `schedule:${item.id}`,
@@ -112,7 +149,7 @@ export default function CashflowPage() {
       sourceType: item.sourceType,
     }));
 
-    const all = [...oneOff, ...scheduled].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+    const all = [...oneOff, ...investments, ...scheduled].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
     if (originFilter === "ALL") {
       return all;
@@ -120,6 +157,10 @@ export default function CashflowPage() {
 
     if (originFilter === "ONE_OFF") {
       return all.filter((item) => item.sourceType === "ONE_OFF");
+    }
+
+    if (originFilter === "INVESTMENT") {
+      return all.filter((item) => item.sourceType === "INVESTMENT");
     }
 
     return all.filter((item) => item.sourceType === originFilter);
@@ -166,10 +207,11 @@ export default function CashflowPage() {
               id="origin-filter"
               aria-label="Filtro de origem"
               value={originFilter}
-              onChange={(event) => setOriginFilter(event.target.value as "ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT")}
+              onChange={(event) => setOriginFilter(event.target.value as "ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT")}
             >
               <option value="ALL">Todos</option>
               <option value="ONE_OFF">Avulso</option>
+              <option value="INVESTMENT">Investimento</option>
               <option value="RECURRING">Recorrencia</option>
               <option value="INSTALLMENT">Parcelamento</option>
             </select>
@@ -198,16 +240,25 @@ export default function CashflowPage() {
         cardLabels={cardLabels}
         categoryLabels={categoryLabels}
         onEditEntry={(entry) => {
+          const isInvestment = entry.sourceType === "INVESTMENT";
           const isOneOff = entry.sourceType === "ONE_OFF";
           setEditMode(entry.sourceType ?? "ONE_OFF");
-          setEditingEntryId(isOneOff ? entry.id : null);
-          setEditingSourceId(!isOneOff ? entry.sourceId ?? null : null);
+          setEditingEntryId(isOneOff || isInvestment ? entry.id : null);
+          setEditingSourceId(!isOneOff && !isInvestment ? entry.sourceId ?? null : null);
+          setEditingTransferGroupId(entry.transferGroupId ?? null);
           setEditingSourceMonth(entry.monthKey ?? month);
           setDeleteScope("CURRENT_AND_FUTURE");
           setEditKind(entry.kind);
           setEditDescription(entry.description);
           setEditAmount(entry.amount);
           setEditOccurredAt(entry.occurredAt.slice(0, 10));
+          if (isInvestment && entry.transferGroupId) {
+            const pair = transactions.filter((item) => item.transferGroupId === entry.transferGroupId);
+            const debit = pair.find((item) => item.kind === "EXPENSE");
+            const credit = pair.find((item) => item.kind === "INCOME");
+            setEditInvestmentSourceId(debit?.accountId ?? "");
+            setEditInvestmentDestinationId(credit?.accountId ?? "");
+          }
           if (entry.accountId) {
             setEditTarget("account");
             setEditTargetId(entry.accountId);
@@ -236,7 +287,7 @@ export default function CashflowPage() {
               <UnifiedLaunchForm
                 formId="cashflow-unified-launch-form"
                 householdId={HOUSEHOLD_ID}
-                accounts={accounts.map((item) => ({ id: item.id, label: item.name }))}
+                accounts={accounts.map((item) => ({ id: item.id, label: item.name, type: item.type }))}
                 cards={cards.map((item) => ({ id: item.id, label: item.name }))}
                 categories={categories.map((item) => ({ id: item.id, label: item.name }))}
                 onSubmit={(payload) => {
@@ -322,6 +373,20 @@ export default function CashflowPage() {
                     accountId: editTarget === "account" ? editTargetId : undefined,
                     creditCardId: editTarget === "card" ? editTargetId : undefined,
                   });
+                } else if (editMode === "INVESTMENT") {
+                  if (!editingTransferGroupId) {
+                    throw new Error("INVESTMENT_NOT_SELECTED");
+                  }
+                  transactionsController.updateInvestmentTransfer({
+                    householdId: HOUSEHOLD_ID,
+                    transferGroupId: editingTransferGroupId,
+                    description: editDescription,
+                    amount: editAmount,
+                    occurredAt: `${editOccurredAt}T12:00:00.000Z`,
+                    categoryId: editCategoryId || categories[0]?.id || "",
+                    sourceAccountId: editInvestmentSourceId,
+                    destinationAccountId: editInvestmentDestinationId,
+                  });
                 } else if (editMode === "RECURRING") {
                   if (!editingSourceId) {
                     throw new Error("RECURRING_NOT_SELECTED");
@@ -353,15 +418,21 @@ export default function CashflowPage() {
               }
             }}
           >
-            {editMode === "ONE_OFF" ? (
+            {editMode === "ONE_OFF" || editMode === "INVESTMENT" ? (
               <div className="grid grid-cols-2 gap-3">
-                <label>
-                  Tipo da transacao
-                  <select aria-label="Editar tipo da transacao" value={editKind} onChange={(event) => setEditKind(event.target.value as "INCOME" | "EXPENSE")}>
-                    <option value="INCOME">Entrada</option>
-                    <option value="EXPENSE">Saida</option>
-                  </select>
-                </label>
+                {editMode === "ONE_OFF" ? (
+                  <label>
+                    Tipo da transacao
+                    <select aria-label="Editar tipo da transacao" value={editKind} onChange={(event) => setEditKind(event.target.value as "INCOME" | "EXPENSE")}>
+                      <option value="INCOME">Entrada</option>
+                      <option value="EXPENSE">Saida</option>
+                    </select>
+                  </label>
+                ) : (
+                  <div className="rounded-lg border border-slate-200 p-2 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-300">
+                    Investimento sempre altera debito e credito juntos.
+                  </div>
+                )}
                 <label>
                   Data da transacao
                   <input aria-label="Editar data da transacao" type="date" value={editOccurredAt} onChange={(event) => setEditOccurredAt(event.target.value)} />
@@ -436,13 +507,61 @@ export default function CashflowPage() {
               </>
             ) : null}
 
+            {editMode === "INVESTMENT" ? (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <label>
+                    Conta de origem
+                    <select aria-label="Editar conta de origem" value={editInvestmentSourceId} onChange={(event) => setEditInvestmentSourceId(event.target.value)}>
+                      {accounts
+                        .filter((item) => item.type === "CHECKING")
+                        .map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label>
+                    Conta de destino
+                    <select
+                      aria-label="Editar conta de destino"
+                      value={editInvestmentDestinationId}
+                      onChange={(event) => setEditInvestmentDestinationId(event.target.value)}
+                    >
+                      {accounts
+                        .filter((item) => item.type === "INVESTMENT")
+                        .map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                </div>
+
+                <label>
+                  Categoria da transacao
+                  <select aria-label="Editar categoria da transacao" value={editCategoryId} onChange={(event) => setEditCategoryId(event.target.value)}>
+                    {categories.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            ) : null}
+
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {editMode === "ONE_OFF"
                 ? "Esta edicao altera apenas o lancamento selecionado."
+                : editMode === "INVESTMENT"
+                  ? "Esta edicao altera o par vinculado de investimento (debito e credito)."
                 : "Esta edicao altera o mes atual selecionado e todas as ocorrencias futuras."}
             </p>
 
-            {editMode !== "ONE_OFF" ? (
+            {editMode === "RECURRING" || editMode === "INSTALLMENT" ? (
               <label>
                 Escopo de exclusao
                 <select aria-label="Escopo de exclusao" value={deleteScope} onChange={(event) => setDeleteScope(event.target.value as "CURRENT_AND_FUTURE" | "ALL")}>
@@ -460,10 +579,25 @@ export default function CashflowPage() {
                 onClick={() => {
                   try {
                     if (editMode === "ONE_OFF") {
-                      if (!editingEntryId) {
-                        throw new Error("TRANSACTION_NOT_SELECTED");
+                      if (editingTransferGroupId) {
+                        transactionsController.deleteInvestmentTransfer({
+                          householdId: HOUSEHOLD_ID,
+                          transferGroupId: editingTransferGroupId,
+                        });
+                      } else {
+                        if (!editingEntryId) {
+                          throw new Error("TRANSACTION_NOT_SELECTED");
+                        }
+                        transactionsController.deleteTransaction({ id: editingEntryId, householdId: HOUSEHOLD_ID });
                       }
-                      transactionsController.deleteTransaction({ id: editingEntryId, householdId: HOUSEHOLD_ID });
+                    } else if (editMode === "INVESTMENT") {
+                      if (!editingTransferGroupId) {
+                        throw new Error("INVESTMENT_NOT_SELECTED");
+                      }
+                      transactionsController.deleteInvestmentTransfer({
+                        householdId: HOUSEHOLD_ID,
+                        transferGroupId: editingTransferGroupId,
+                      });
                     } else if (editMode === "RECURRING") {
                       if (!editingSourceId) {
                         throw new Error("RECURRING_NOT_SELECTED");

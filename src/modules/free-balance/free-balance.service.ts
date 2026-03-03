@@ -70,17 +70,27 @@ export class FreeBalanceService {
     const transactions = this.transactionsRepository.listByHousehold(parsed.householdId);
     const scheduleInstances = this.scheduleRepository.listInstancesByHousehold(parsed.householdId);
 
+    const accounts = this.accountsRepository.listByHousehold(parsed.householdId);
+    const checkingAccountIds = new Set(accounts.filter((item) => item.type === "CHECKING").map((item) => item.id));
     const accountOpeningBalance = sumDecimals(
-      this.accountsRepository
-        .listByHousehold(parsed.householdId)
+      accounts
+        .filter((item) => item.type === "CHECKING")
         .map((item) => new Decimal(item.openingBalance)),
     );
 
     const cardCharges = this.collectCardCharges(parsed.householdId, transactions, scheduleInstances);
-    const missingData = this.collectMissingData(parsed.householdId, currentMonth, nextMonth, transactions, scheduleInstances);
+    const missingData = this.collectMissingData(parsed.householdId, currentMonth, nextMonth, transactions, scheduleInstances, checkingAccountIds);
     const confidence = missingData.length > 0 ? "LOW" : "HIGH";
 
-    const startingCurrent = this.computeStartingBalance(parsed.householdId, currentMonth, accountOpeningBalance, transactions, scheduleInstances, cardCharges);
+    const startingCurrent = this.computeStartingBalance(
+      parsed.householdId,
+      currentMonth,
+      accountOpeningBalance,
+      transactions,
+      scheduleInstances,
+      cardCharges,
+      checkingAccountIds,
+    );
 
     const currentComputation = this.computeMonth(
       parsed.householdId,
@@ -90,6 +100,7 @@ export class FreeBalanceService {
       transactions,
       scheduleInstances,
       cardCharges,
+      checkingAccountIds,
     );
 
     const carryToNext = new Decimal(currentComputation.breakdown.freeBalance).lessThan(0)
@@ -104,6 +115,7 @@ export class FreeBalanceService {
       transactions,
       scheduleInstances,
       cardCharges,
+      checkingAccountIds,
     );
 
     const topDrivers = [...currentComputation.driverSeeds, ...nextComputation.driverSeeds]
@@ -148,17 +160,31 @@ export class FreeBalanceService {
     transactions: ReturnType<TransactionsRepository["listByHousehold"]>,
     scheduleInstances: ReturnType<ScheduleRepository["listInstancesByHousehold"]>,
     cardCharges: CardCharge[],
+    checkingAccountIds: Set<string>,
   ): Decimal {
     const accountIncomesBefore = sumDecimals(
       transactions
-        .filter((item) => item.householdId === householdId && item.accountId !== null && item.kind === "INCOME")
+        .filter(
+          (item) =>
+            item.householdId === householdId &&
+            item.accountId !== null &&
+            checkingAccountIds.has(item.accountId) &&
+            item.transferGroupId === null &&
+            item.kind === "INCOME",
+        )
         .filter((item) => monthFromIso(item.occurredAt) < month)
         .map((item) => new Decimal(item.amount)),
     );
 
     const accountExpensesBefore = sumDecimals(
       transactions
-        .filter((item) => item.householdId === householdId && item.accountId !== null && item.kind === "EXPENSE")
+        .filter(
+          (item) =>
+            item.householdId === householdId &&
+            item.accountId !== null &&
+            checkingAccountIds.has(item.accountId) &&
+            item.kind === "EXPENSE",
+        )
         .filter((item) => monthFromIso(item.occurredAt) < month)
         .map((item) => new Decimal(item.amount)),
     );
@@ -167,7 +193,11 @@ export class FreeBalanceService {
       scheduleInstances
         .filter(
           (item) =>
-            item.householdId === householdId && item.accountId !== null && item.kind === "INCOME" && item.monthKey < month,
+            item.householdId === householdId &&
+            item.accountId !== null &&
+            checkingAccountIds.has(item.accountId) &&
+            item.kind === "INCOME" &&
+            item.monthKey < month,
         )
         .map((item) => new Decimal(item.amount)),
     );
@@ -176,7 +206,11 @@ export class FreeBalanceService {
       scheduleInstances
         .filter(
           (item) =>
-            item.householdId === householdId && item.accountId !== null && item.kind === "EXPENSE" && item.monthKey < month,
+            item.householdId === householdId &&
+            item.accountId !== null &&
+            checkingAccountIds.has(item.accountId) &&
+            item.kind === "EXPENSE" &&
+            item.monthKey < month,
         )
         .map((item) => new Decimal(item.amount)),
     );
@@ -232,12 +266,15 @@ export class FreeBalanceService {
     nextMonth: string,
     transactions: ReturnType<TransactionsRepository["listByHousehold"]>,
     scheduleInstances: ReturnType<ScheduleRepository["listInstancesByHousehold"]>,
+    checkingAccountIds: Set<string>,
   ): string[] {
     const missing: string[] = [];
-    const hasAccounts = this.accountsRepository.listByHousehold(householdId).length > 0;
+    const hasAccounts = checkingAccountIds.size > 0;
     const hasCards = this.cardsRepository.listByHousehold(householdId).length > 0;
 
-    const incomes = transactions.filter((item) => item.householdId === householdId && item.kind === "INCOME");
+    const incomes = transactions.filter(
+      (item) => item.householdId === householdId && item.kind === "INCOME" && item.transferGroupId === null,
+    );
     const scheduleIncomes = scheduleInstances.filter((item) => item.householdId === householdId && item.kind === "INCOME");
 
     const expenses = transactions.filter((item) => item.householdId === householdId && item.kind === "EXPENSE");
@@ -278,6 +315,7 @@ export class FreeBalanceService {
     transactions: ReturnType<TransactionsRepository["listByHousehold"]>,
     scheduleInstances: ReturnType<ScheduleRepository["listInstancesByHousehold"]>,
     cardCharges: CardCharge[],
+    checkingAccountIds: Set<string>,
   ): MonthComputation {
     const incomeTransactions = sumDecimals(
       transactions
@@ -286,6 +324,8 @@ export class FreeBalanceService {
             item.householdId === householdId &&
             item.kind === "INCOME" &&
             item.accountId !== null &&
+            checkingAccountIds.has(item.accountId) &&
+            item.transferGroupId === null &&
             monthFromIso(item.occurredAt) === month,
         )
         .map((item) => new Decimal(item.amount)),
@@ -299,7 +339,8 @@ export class FreeBalanceService {
             item.monthKey === month &&
             item.kind === "INCOME" &&
             item.sourceType === "RECURRING" &&
-            item.accountId !== null,
+            item.accountId !== null &&
+            checkingAccountIds.has(item.accountId),
         )
         .map((item) => new Decimal(item.amount)),
     );
@@ -311,6 +352,7 @@ export class FreeBalanceService {
             item.householdId === householdId &&
             item.kind === "EXPENSE" &&
             item.accountId !== null &&
+            checkingAccountIds.has(item.accountId) &&
             monthFromIso(item.occurredAt) === month,
         )
         .map((item) => new Decimal(item.amount)),
@@ -324,7 +366,8 @@ export class FreeBalanceService {
             item.monthKey === month &&
             item.kind === "EXPENSE" &&
             item.sourceType === "INSTALLMENT" &&
-            item.accountId !== null,
+            item.accountId !== null &&
+            checkingAccountIds.has(item.accountId),
         )
         .map((item) => new Decimal(item.amount)),
     );
@@ -337,7 +380,8 @@ export class FreeBalanceService {
             item.monthKey === month &&
             item.kind === "EXPENSE" &&
             item.sourceType === "RECURRING" &&
-            item.accountId !== null,
+            item.accountId !== null &&
+            checkingAccountIds.has(item.accountId),
         )
         .map((item) => new Decimal(item.amount)),
     );

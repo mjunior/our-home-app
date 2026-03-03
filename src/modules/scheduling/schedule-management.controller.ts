@@ -1,4 +1,4 @@
-import type { CreateTransactionInput } from "../transactions/transactions.service";
+import type { CreateInvestmentTransferInput, CreateTransactionInput } from "../transactions/transactions.service";
 import type { CreateInstallmentInput } from "./installments.service";
 import type { CreateRecurringInput } from "./recurrence.service";
 import { ScheduleManagementService } from "./schedule-management.service";
@@ -18,7 +18,8 @@ export class ScheduleManagementController {
     payload:
       | { launchType: "ONE_OFF"; transaction: CreateTransactionInput }
       | { launchType: "RECURRING"; recurring: CreateRecurringInput }
-      | { launchType: "INSTALLMENT"; installment: CreateInstallmentInput },
+      | { launchType: "INSTALLMENT"; installment: CreateInstallmentInput }
+      | { launchType: "INVESTMENT"; investment: CreateInvestmentTransferInput },
   ) {
     return this.service.createUnifiedLaunch(payload);
   }

@@ -1,6 +1,6 @@
 import { Money, type MoneyInput } from "../shared/money";
 
-export type AccountType = "CHECKING" | "SAVINGS" | "CASH";
+export type AccountType = "CHECKING" | "INVESTMENT";
 
 export interface AccountProps {
   id?: string;

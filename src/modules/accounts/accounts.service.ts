@@ -7,14 +7,14 @@ import { AccountsRepository } from "./accounts.repository";
 const accountInputSchema = z.object({
   householdId: z.string().min(1),
   name: z.string().min(1),
-  type: z.enum(["CHECKING", "SAVINGS", "CASH"]),
+  type: z.enum(["CHECKING", "INVESTMENT"]),
   openingBalance: z.string().min(1),
 });
 
 export interface CreateAccountInput {
   householdId: string;
   name: string;
-  type: "CHECKING" | "SAVINGS" | "CASH";
+  type: "CHECKING" | "INVESTMENT";
   openingBalance: string;
 }
 

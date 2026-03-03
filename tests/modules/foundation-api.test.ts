@@ -59,8 +59,8 @@ describe("foundation api", () => {
 
     accountsController.createAccount({
       householdId,
-      name: "Poupanca",
-      type: "SAVINGS",
+      name: "Conta Investimento",
+      type: "INVESTMENT",
       openingBalance: "200.10",
     });
 

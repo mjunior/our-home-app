@@ -30,7 +30,13 @@ type CardsControllerContract = Pick<CardsController, "createCard" | "listCards">
 type CategoriesControllerContract = Pick<CategoriesController, "createCategory" | "listCategories">;
 type TransactionsControllerContract = Pick<
   TransactionsController,
-  "createTransaction" | "updateTransaction" | "deleteTransaction" | "listTransactionsByMonth"
+  | "createTransaction"
+  | "createInvestmentTransfer"
+  | "updateTransaction"
+  | "updateInvestmentTransfer"
+  | "deleteTransaction"
+  | "deleteInvestmentTransfer"
+  | "listTransactionsByMonth"
 >;
 type InvoicesControllerContract = Pick<InvoicesController, "getCardInvoices" | "getMonthlyCashflowSummary" | "getDueObligationsByMonth">;
 type FreeBalanceControllerContract = Pick<FreeBalanceController, "getFreeBalance">;
@@ -144,8 +150,14 @@ function createApiRuntime(): Runtime {
   type TransactionsCreateOutput = MethodReturn<Runtime["transactionsController"]["createTransaction"]>;
   type TransactionsUpdateInput = MethodArgs<Runtime["transactionsController"]["updateTransaction"]>[0];
   type TransactionsUpdateOutput = MethodReturn<Runtime["transactionsController"]["updateTransaction"]>;
+  type TransactionsInvestmentCreateInput = MethodArgs<Runtime["transactionsController"]["createInvestmentTransfer"]>[0];
+  type TransactionsInvestmentCreateOutput = MethodReturn<Runtime["transactionsController"]["createInvestmentTransfer"]>;
+  type TransactionsInvestmentUpdateInput = MethodArgs<Runtime["transactionsController"]["updateInvestmentTransfer"]>[0];
+  type TransactionsInvestmentUpdateOutput = MethodReturn<Runtime["transactionsController"]["updateInvestmentTransfer"]>;
   type TransactionsDeleteInput = MethodArgs<Runtime["transactionsController"]["deleteTransaction"]>[0];
   type TransactionsDeleteOutput = MethodReturn<Runtime["transactionsController"]["deleteTransaction"]>;
+  type TransactionsInvestmentDeleteInput = MethodArgs<Runtime["transactionsController"]["deleteInvestmentTransfer"]>[0];
+  type TransactionsInvestmentDeleteOutput = MethodReturn<Runtime["transactionsController"]["deleteInvestmentTransfer"]>;
   type TransactionsListInput = MethodArgs<Runtime["transactionsController"]["listTransactionsByMonth"]>[0];
   type TransactionsListOutput = MethodReturn<Runtime["transactionsController"]["listTransactionsByMonth"]>;
 
@@ -198,10 +210,16 @@ function createApiRuntime(): Runtime {
     transactionsController: {
       createTransaction: (input: TransactionsCreateInput): TransactionsCreateOutput =>
         requestSync<TransactionsCreateOutput>("POST", "/api/transactions", input),
+      createInvestmentTransfer: (input: TransactionsInvestmentCreateInput): TransactionsInvestmentCreateOutput =>
+        requestSync<TransactionsInvestmentCreateOutput>("POST", "/api/transactions/investments", input),
       updateTransaction: (input: TransactionsUpdateInput): TransactionsUpdateOutput =>
         requestSync<TransactionsUpdateOutput>("POST", "/api/transactions/edit", input),
+      updateInvestmentTransfer: (input: TransactionsInvestmentUpdateInput): TransactionsInvestmentUpdateOutput =>
+        requestSync<TransactionsInvestmentUpdateOutput>("POST", "/api/transactions/investments/edit", input),
       deleteTransaction: (input: TransactionsDeleteInput): TransactionsDeleteOutput =>
         requestSync<TransactionsDeleteOutput>("POST", "/api/transactions/delete", input),
+      deleteInvestmentTransfer: (input: TransactionsInvestmentDeleteInput): TransactionsInvestmentDeleteOutput =>
+        requestSync<TransactionsInvestmentDeleteOutput>("POST", "/api/transactions/investments/delete", input),
       listTransactionsByMonth: (input: TransactionsListInput): TransactionsListOutput => {
         const query = new URLSearchParams({
           householdId: input.householdId,

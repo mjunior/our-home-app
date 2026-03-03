@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Lancamentos Unificados e Investimento por Transferencia
-status: unknown
-last_updated: "2026-03-03T13:36:47.459Z"
+status: in_progress
+last_updated: "2026-03-03T15:12:00.000Z"
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 3
+  completed_plans: 6
 ---
 
 # Project State
@@ -18,39 +18,39 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
-**Current focus:** Phase 7 concluida; pronto para discussao e planejamento da Phase 8.
+**Current focus:** Phase 8 concluida e verificada; pronto para discussao/planejamento da Phase 9.
 
 ## Current Position
 
-Phase: 8 (not started)
+Phase: 9 (not started)
 Plan: -
 Status: Ready for discussion
-Last activity: 2026-03-03 — Phase 7 executada e verificada com checkpoint humano aprovado.
+Last activity: 2026-03-03 — Phase 8 executada com ajustes de UAT e checkpoint humano aprovado.
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Accumulated Context
 
 ### Decisions
 
-- Recorrencia e parcelamento passam a ser tipos de transacao no mesmo fluxo de novo lancamento.
-- Investimento e modelado como transferencia interna: saida de origem + entrada de destino no mesmo evento.
-- Semantica visual e contabil de investimento deve ficar separada de despesa operacional.
-- Tipos de conta priorizados no ciclo: CONTA_CORRENTE e CONTA_INVESTIMENTO.
+- Contas operacionais do ciclo v1.1: `CONTA_CORRENTE` e `CONTA_INVESTIMENTO`.
+- Investimento e tratado como transferencia interna rastreavel com `transferGroupId` (debito + credito atomicos).
+- No Cashflow, investimento aparece consolidado em linha unica com vinculo origem -> destino.
+- No saldo livre principal do Cashflow, investimento impacta como saida real; entrada da conta investimento nao compensa o consolidado operacional.
 
 ### Pending Todos
 
-- Iniciar implementacao da Phase 8 (contas tipadas e transferencia de investimento origem/destino).
-- Definir regra final de modelagem para caixinha dentro de Conta Investimento.
-- Planejar validacoes de consistencia contabil para eventos atomicos de investimento.
+- Iniciar discussao e planejamento da Phase 9 (consolidados e semantica visual de investimento).
+- Refinar semantica visual para investimento sem cor de gasto operacional vermelho (Phase 9).
+- Consolidar visoes por tipo de conta e relatorios sem dupla contagem (Phase 9).
 
 ### Blockers/Concerns
 
-- Risco de regressao em historico financeiro durante migracao de recorrencias/parcelamentos.
-- Necessidade de garantir dupla movimentacao atomica sem inconsistencias em falhas parciais.
+- Garantir consistencia entre visao de extrato consolidado e relatorios analiticos na separacao investimento vs gasto operacional.
+- Manter rastreabilidade de transferencia em cenarios de manutencao historica futura.
 
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Phase 7 completed and verified
-Resume file: .planning/phases/07-fluxo-unico-de-lancamentos/07-VERIFICATION.md
+Stopped at: Phase 8 completed and verified
+Resume file: .planning/phases/08-modelo-de-contas-e-transferencia-de-investimento/08-VERIFICATION.md

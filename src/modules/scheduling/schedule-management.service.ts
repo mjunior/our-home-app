@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { TransactionsService, type CreateTransactionInput } from "../transactions/transactions.service";
+import {
+  TransactionsService,
+  type CreateInvestmentTransferInput,
+  type CreateTransactionInput,
+} from "../transactions/transactions.service";
 import { InstallmentsService, type CreateInstallmentInput } from "./installments.service";
 import { RecurrenceService, type CreateRecurringInput } from "./recurrence.service";
 import { ScheduleEngineService } from "./schedule-engine.service";
@@ -79,12 +83,25 @@ const unifiedLaunchSchema = z.discriminatedUnion("launchType", [
       creditCardId: z.string().min(1).optional(),
     }),
   }),
+  z.object({
+    launchType: z.literal("INVESTMENT"),
+    investment: z.object({
+      householdId: z.string().min(1),
+      description: z.string().min(1),
+      amount: z.string().min(1),
+      occurredAt: z.string().datetime(),
+      categoryId: z.string().min(1),
+      sourceAccountId: z.string().min(1),
+      destinationAccountId: z.string().min(1),
+    }),
+  }),
 ]);
 
 type UnifiedLaunchInput =
   | { launchType: "ONE_OFF"; transaction: CreateTransactionInput }
   | { launchType: "RECURRING"; recurring: CreateRecurringInput }
-  | { launchType: "INSTALLMENT"; installment: CreateInstallmentInput };
+  | { launchType: "INSTALLMENT"; installment: CreateInstallmentInput }
+  | { launchType: "INVESTMENT"; investment: CreateInvestmentTransferInput };
 
 export class ScheduleManagementService {
   constructor(
@@ -118,6 +135,13 @@ export class ScheduleManagementService {
 
     if (parsed.launchType === "RECURRING") {
       return this.createRecurringSchedule(parsed.recurring);
+    }
+
+    if (parsed.launchType === "INVESTMENT") {
+      if (!this.transactionsService) {
+        throw new Error("TRANSACTION_SERVICE_NOT_CONFIGURED");
+      }
+      return this.transactionsService.createInvestmentTransfer(parsed.investment);
     }
 
     return this.createInstallmentSchedule(parsed.installment);

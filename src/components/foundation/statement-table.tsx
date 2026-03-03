@@ -12,9 +12,11 @@ export interface StatementEntry {
   categoryId: string;
   accountId: string | null;
   creditCardId: string | null;
-  sourceLabel?: "Avulso" | "Recorrente" | "Parcela";
-  sourceType?: "ONE_OFF" | "RECURRING" | "INSTALLMENT";
+  sourceLabel?: "Avulso" | "Recorrente" | "Parcela" | "Investimento";
+  sourceType?: "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT";
   sourceId?: string;
+  transferGroupId?: string | null;
+  destinationAccountId?: string | null;
   monthKey?: string;
   sequence?: number;
 }
@@ -27,7 +29,11 @@ interface StatementTableProps {
   onEditEntry?: (entry: StatementEntry) => void;
 }
 
-function KindPill({ kind }: { kind: StatementEntry["kind"] }) {
+function KindPill({ kind, isInvestment }: { kind: StatementEntry["kind"]; isInvestment?: boolean }) {
+  if (isInvestment) {
+    return <Badge variant="secondary">Investimento</Badge>;
+  }
+
   if (kind === "INCOME") {
     return <Badge variant="lime">Entrada</Badge>;
   }
@@ -64,9 +70,11 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
               <tbody>
                 {entries.map((entry) => {
                   const categoryLabel = categoryLabels[entry.categoryId] ?? "Sem categoria";
-                  const destinationLabel = entry.accountId
-                    ? `Conta: ${accountLabels[entry.accountId] ?? "Nao encontrada"}`
-                    : `Cartao: ${cardLabels[entry.creditCardId ?? ""] ?? "Nao encontrado"}`;
+                  const destinationLabel = entry.sourceType === "INVESTMENT"
+                    ? `Origem: ${accountLabels[entry.accountId ?? ""] ?? "Nao encontrada"} -> Destino: ${accountLabels[entry.destinationAccountId ?? ""] ?? "Nao encontrada"}`
+                    : entry.accountId
+                      ? `Conta: ${accountLabels[entry.accountId] ?? "Nao encontrada"}`
+                      : `Cartao: ${cardLabels[entry.creditCardId ?? ""] ?? "Nao encontrado"}`;
 
                   return (
                     <tr key={entry.id} className="row-animate">
@@ -74,11 +82,11 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                       <td className="font-medium">{entry.description}</td>
                       <td className="font-semibold">{formatCurrencyBR(entry.amount)}</td>
                       <td>
-                        <KindPill kind={entry.kind} />
+                        <KindPill kind={entry.kind} isInvestment={Boolean(entry.transferGroupId)} />
                       </td>
                       <td>
                         <Badge variant="outline" className="normal-case tracking-normal">
-                          {entry.sourceLabel ?? "Avulso"}
+                          {entry.sourceLabel ?? "Avulso"}{entry.transferGroupId ? ` #${entry.transferGroupId.slice(0, 6)}` : ""}
                         </Badge>
                       </td>
                       <td>

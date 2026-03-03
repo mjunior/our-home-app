@@ -14,6 +14,7 @@ export interface TransactionRecord {
   categoryId: string;
   invoiceMonthKey: string | null;
   invoiceDueDate: string | null;
+  transferGroupId: string | null;
 }
 
 export interface TransactionMonthFilter {
@@ -74,6 +75,10 @@ export class TransactionsRepository {
     return transactionsStore.find((transaction) => transaction.id === id);
   }
 
+  listByTransferGroupId(householdId: string, transferGroupId: string): TransactionRecord[] {
+    return transactionsStore.filter((transaction) => transaction.householdId === householdId && transaction.transferGroupId === transferGroupId);
+  }
+
   update(id: string, patch: Partial<Omit<TransactionRecord, "id" | "householdId">>): TransactionRecord {
     const target = this.findById(id);
     if (!target) {
@@ -87,6 +92,16 @@ export class TransactionsRepository {
   remove(id: string): void {
     for (let index = transactionsStore.length - 1; index >= 0; index -= 1) {
       if (transactionsStore[index]?.id === id) {
+        transactionsStore.splice(index, 1);
+      }
+    }
+  }
+
+  removeByTransferGroupId(householdId: string, transferGroupId: string): void {
+    for (let index = transactionsStore.length - 1; index >= 0; index -= 1) {
+      const item = transactionsStore[index];
+      if (!item) continue;
+      if (item.householdId === householdId && item.transferGroupId === transferGroupId) {
         transactionsStore.splice(index, 1);
       }
     }

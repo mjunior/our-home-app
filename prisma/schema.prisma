@@ -9,8 +9,7 @@ datasource db {
 
 enum AccountType {
   CHECKING
-  SAVINGS
-  CASH
+  INVESTMENT
 }
 
 enum TransactionKind {
@@ -82,6 +81,7 @@ model Transaction {
   accountId    String?
   creditCardId String?
   categoryId   String
+  transferGroupId String?
 
   account      Account?    @relation(fields: [accountId], references: [id])
   creditCard   CreditCard? @relation(fields: [creditCardId], references: [id])
@@ -91,6 +91,7 @@ model Transaction {
   updatedAt    DateTime    @updatedAt
 
   @@index([householdId, occurredAt])
+  @@index([householdId, transferGroupId])
 }
 
 model InstallmentPlan {

@@ -123,4 +123,83 @@ describe("transactions api", () => {
       });
     }).toThrow("CATEGORY_NOT_FOUND");
   });
+
+  it("creates and maintains investment transfer atomically", () => {
+    const checking = accountsController.createAccount({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const investment = accountsController.createAccount({
+      householdId,
+      name: "Reserva",
+      type: "INVESTMENT",
+      openingBalance: "0.00",
+    });
+    const category = categoriesController.createCategory({ householdId, name: "Investimento" });
+
+    const transfer = transactionsController.createInvestmentTransfer({
+      householdId,
+      description: "Aporte mensal",
+      amount: "500.00",
+      occurredAt: "2026-03-15T12:00:00.000Z",
+      categoryId: category.id,
+      sourceAccountId: checking.id,
+      destinationAccountId: investment.id,
+    });
+
+    const march = transactionsController.listTransactionsByMonth({ householdId, month: "2026-03" });
+    expect(march).toHaveLength(2);
+    expect(march.every((item) => item.transferGroupId === transfer.transferGroupId)).toBe(true);
+    expect(march.some((item) => item.kind === "EXPENSE" && item.accountId === checking.id)).toBe(true);
+    expect(march.some((item) => item.kind === "INCOME" && item.accountId === investment.id)).toBe(true);
+
+    const debit = march.find((item) => item.kind === "EXPENSE")!;
+
+    expect(() =>
+      transactionsController.updateTransaction({
+        id: debit.id,
+        householdId,
+        kind: "EXPENSE",
+        description: "Nao permitido",
+        amount: "100.00",
+        occurredAt: "2026-03-16T12:00:00.000Z",
+        accountId: checking.id,
+        categoryId: category.id,
+      }),
+    ).toThrow("INVESTMENT_TRANSFER_REQUIRES_GROUP_UPDATE");
+
+    transactionsController.updateInvestmentTransfer({
+      householdId,
+      transferGroupId: transfer.transferGroupId,
+      description: "Aporte ajustado",
+      amount: "450.00",
+      occurredAt: "2026-03-20T12:00:00.000Z",
+      categoryId: category.id,
+      sourceAccountId: checking.id,
+      destinationAccountId: investment.id,
+    });
+
+    const afterEdit = transactionsController.listTransactionsByMonth({ householdId, month: "2026-03" });
+    expect(afterEdit.every((item) => item.amount === "450.00")).toBe(true);
+    expect(afterEdit.every((item) => item.description === "Aporte ajustado")).toBe(true);
+
+    const incomeLeg = afterEdit.find((item) => item.kind === "INCOME")!;
+    transactionsController.deleteTransaction({ id: incomeLeg.id, householdId });
+    expect(transactionsController.listTransactionsByMonth({ householdId, month: "2026-03" })).toHaveLength(0);
+
+    const recreated = transactionsController.createInvestmentTransfer({
+      householdId,
+      description: "Aporte novo",
+      amount: "200.00",
+      occurredAt: "2026-03-21T12:00:00.000Z",
+      categoryId: category.id,
+      sourceAccountId: checking.id,
+      destinationAccountId: investment.id,
+    });
+
+    transactionsController.deleteInvestmentTransfer({ householdId, transferGroupId: recreated.transferGroupId });
+    expect(transactionsController.listTransactionsByMonth({ householdId, month: "2026-03" })).toHaveLength(0);
+  });
 });

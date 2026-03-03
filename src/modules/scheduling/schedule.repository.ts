@@ -134,7 +134,7 @@ export class ScheduleRepository {
   removeFutureInstances(sourceType: ScheduleSourceType, sourceId: string, fromMonth: string): void {
     for (let index = scheduledInstancesStore.length - 1; index >= 0; index -= 1) {
       const item = scheduledInstancesStore[index];
-      if (item.sourceType === sourceType && item.sourceId === sourceId && item.monthKey >= fromMonth && !item.locked) {
+      if (item.sourceType === sourceType && item.sourceId === sourceId && item.monthKey >= fromMonth) {
         scheduledInstancesStore.splice(index, 1);
       }
     }

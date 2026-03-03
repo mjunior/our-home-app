@@ -6,7 +6,7 @@ import { FreeBalanceService } from "../modules/free-balance/free-balance.service
 import { prisma } from "../modules/shared/persistence/prisma";
 
 class AccountsReadRepository {
-  constructor(private readonly rows: Array<{ id: string; householdId: string; name: string; type: "CHECKING" | "SAVINGS" | "CASH"; openingBalance: string }>) {}
+  constructor(private readonly rows: Array<{ id: string; householdId: string; name: string; type: "CHECKING" | "INVESTMENT"; openingBalance: string }>) {}
   listByHousehold(householdId: string) { return this.rows.filter((item) => item.householdId === householdId); }
   findById(id: string) { return this.rows.find((item) => item.id === id); }
 }
@@ -174,7 +174,74 @@ function toTransactionDto(row: any) {
     categoryId: row.categoryId,
     invoiceMonthKey: row.invoiceMonthKey,
     invoiceDueDate: row.invoiceDueDate ? row.invoiceDueDate.toISOString() : null,
+    transferGroupId: row.transferGroupId ?? null,
   };
+}
+
+function assertInvestmentTypes(source: any, destination: any) {
+  if (source.type !== "CHECKING") {
+    throw new Error("INVESTMENT_SOURCE_MUST_BE_CHECKING");
+  }
+  if (destination.type !== "INVESTMENT") {
+    throw new Error("INVESTMENT_DESTINATION_MUST_BE_INVESTMENT");
+  }
+}
+
+async function createInvestmentTransfer(body: any) {
+  const source = await prisma.account.findUnique({ where: { id: body.sourceAccountId } });
+  const destination = await prisma.account.findUnique({ where: { id: body.destinationAccountId } });
+  const category = await prisma.category.findUnique({ where: { id: body.categoryId } });
+
+  if (!source || source.householdId !== body.householdId) {
+    throw new Error("ACCOUNT_NOT_FOUND");
+  }
+  if (!destination || destination.householdId !== body.householdId) {
+    throw new Error("ACCOUNT_NOT_FOUND");
+  }
+  if (!category || category.householdId !== body.householdId) {
+    throw new Error("CATEGORY_NOT_FOUND");
+  }
+  if (source.id === destination.id) {
+    throw new Error("INVESTMENT_TRANSFER_REQUIRES_DISTINCT_ACCOUNTS");
+  }
+
+  assertInvestmentTypes(source, destination);
+  const transferGroupId = `inv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+
+  const [debit, credit] = await prisma.$transaction([
+    prisma.transaction.create({
+      data: {
+        householdId: body.householdId,
+        kind: "EXPENSE",
+        description: body.description,
+        amount: body.amount,
+        occurredAt: new Date(body.occurredAt),
+        accountId: source.id,
+        creditCardId: null,
+        categoryId: body.categoryId,
+        invoiceMonthKey: null,
+        invoiceDueDate: null,
+        transferGroupId,
+      },
+    }),
+    prisma.transaction.create({
+      data: {
+        householdId: body.householdId,
+        kind: "INCOME",
+        description: body.description,
+        amount: body.amount,
+        occurredAt: new Date(body.occurredAt),
+        accountId: destination.id,
+        creditCardId: null,
+        categoryId: body.categoryId,
+        invoiceMonthKey: null,
+        invoiceDueDate: null,
+        transferGroupId,
+      },
+    }),
+  ]);
+
+  return { transferGroupId, debit: toTransactionDto(debit), credit: toTransactionDto(credit) };
 }
 
 async function loadServices() {
@@ -361,6 +428,7 @@ export function installViteApi(server: ViteDevServer) {
             categoryId: body.categoryId,
             invoiceMonthKey: null,
             invoiceDueDate: null,
+            transferGroupId: null,
           },
         });
 
@@ -370,6 +438,15 @@ export function installViteApi(server: ViteDevServer) {
 
       if (req.method === "POST" && path === "/api/transactions/edit") {
         const body = await readJsonBody(req);
+        const existing = await prisma.transaction.findUnique({ where: { id: body.id } });
+        if (!existing) {
+          sendJson(res, 404, { message: "TRANSACTION_NOT_FOUND" });
+          return;
+        }
+        if (existing.transferGroupId) {
+          sendJson(res, 400, { message: "INVESTMENT_TRANSFER_REQUIRES_GROUP_UPDATE" });
+          return;
+        }
         const updated = await prisma.transaction.update({
           where: { id: body.id },
           data: {
@@ -391,7 +468,130 @@ export function installViteApi(server: ViteDevServer) {
 
       if (req.method === "POST" && path === "/api/transactions/delete") {
         const body = await readJsonBody(req);
+        const existing = await prisma.transaction.findUnique({ where: { id: body.id } });
+        if (!existing) {
+          sendJson(res, 404, { message: "TRANSACTION_NOT_FOUND" });
+          return;
+        }
+        if (existing.transferGroupId) {
+          await prisma.transaction.deleteMany({
+            where: {
+              householdId: body.householdId,
+              transferGroupId: existing.transferGroupId,
+            },
+          });
+          sendJson(res, 200, { deleted: true });
+          return;
+        }
         await prisma.transaction.delete({ where: { id: body.id } });
+        sendJson(res, 200, { deleted: true });
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/transactions/investments") {
+        const body = await readJsonBody(req);
+        const created = await createInvestmentTransfer(body);
+        sendJson(res, 200, created);
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/transactions/investments/edit") {
+        const body = await readJsonBody(req);
+        const pair = await prisma.transaction.findMany({
+          where: {
+            householdId: body.householdId,
+            transferGroupId: body.transferGroupId,
+          },
+          orderBy: { createdAt: "asc" },
+        });
+
+        if (pair.length !== 2) {
+          sendJson(res, 404, { message: "INVESTMENT_TRANSFER_NOT_FOUND" });
+          return;
+        }
+
+        const source = await prisma.account.findUnique({ where: { id: body.sourceAccountId } });
+        const destination = await prisma.account.findUnique({ where: { id: body.destinationAccountId } });
+        const category = await prisma.category.findUnique({ where: { id: body.categoryId } });
+
+        if (!source || source.householdId !== body.householdId) {
+          sendJson(res, 404, { message: "ACCOUNT_NOT_FOUND" });
+          return;
+        }
+        if (!destination || destination.householdId !== body.householdId) {
+          sendJson(res, 404, { message: "ACCOUNT_NOT_FOUND" });
+          return;
+        }
+        if (!category || category.householdId !== body.householdId) {
+          sendJson(res, 404, { message: "CATEGORY_NOT_FOUND" });
+          return;
+        }
+        if (source.id === destination.id) {
+          sendJson(res, 400, { message: "INVESTMENT_TRANSFER_REQUIRES_DISTINCT_ACCOUNTS" });
+          return;
+        }
+        assertInvestmentTypes(source, destination);
+
+        const debit = pair.find((item) => item.kind === "EXPENSE");
+        const credit = pair.find((item) => item.kind === "INCOME");
+        if (!debit || !credit) {
+          sendJson(res, 400, { message: "INVESTMENT_TRANSFER_BROKEN" });
+          return;
+        }
+
+        const [updatedDebit, updatedCredit] = await prisma.$transaction([
+          prisma.transaction.update({
+            where: { id: debit.id },
+            data: {
+              kind: "EXPENSE",
+              description: body.description,
+              amount: body.amount,
+              occurredAt: new Date(body.occurredAt),
+              accountId: source.id,
+              creditCardId: null,
+              categoryId: body.categoryId,
+              invoiceMonthKey: null,
+              invoiceDueDate: null,
+            },
+          }),
+          prisma.transaction.update({
+            where: { id: credit.id },
+            data: {
+              kind: "INCOME",
+              description: body.description,
+              amount: body.amount,
+              occurredAt: new Date(body.occurredAt),
+              accountId: destination.id,
+              creditCardId: null,
+              categoryId: body.categoryId,
+              invoiceMonthKey: null,
+              invoiceDueDate: null,
+            },
+          }),
+        ]);
+
+        sendJson(res, 200, { transferGroupId: body.transferGroupId, debit: toTransactionDto(updatedDebit), credit: toTransactionDto(updatedCredit) });
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/transactions/investments/delete") {
+        const body = await readJsonBody(req);
+        const pair = await prisma.transaction.findMany({
+          where: {
+            householdId: body.householdId,
+            transferGroupId: body.transferGroupId,
+          },
+        });
+        if (pair.length !== 2) {
+          sendJson(res, 404, { message: "INVESTMENT_TRANSFER_NOT_FOUND" });
+          return;
+        }
+        await prisma.transaction.deleteMany({
+          where: {
+            householdId: body.householdId,
+            transferGroupId: body.transferGroupId,
+          },
+        });
         sendJson(res, 200, { deleted: true });
         return;
       }
@@ -413,9 +613,17 @@ export function installViteApi(server: ViteDevServer) {
               categoryId: transaction.categoryId,
               invoiceMonthKey: null,
               invoiceDueDate: null,
+              transferGroupId: null,
             },
           });
           sendJson(res, 200, toTransactionDto(created));
+          return;
+        }
+
+        if (body.launchType === "INVESTMENT") {
+          const investment = body.investment ?? {};
+          const created = await createInvestmentTransfer(investment);
+          sendJson(res, 200, created);
           return;
         }
 
@@ -607,7 +815,6 @@ export function installViteApi(server: ViteDevServer) {
             sourceType: "RECURRING",
             sourceId: original.id,
             monthKey: { gte: body.effectiveMonth },
-            locked: false,
           },
         });
 
@@ -682,7 +889,6 @@ export function installViteApi(server: ViteDevServer) {
             sourceType: "RECURRING",
             sourceId: original.id,
             monthKey: { gte: body.fromMonth },
-            locked: false,
           },
         });
 
@@ -775,7 +981,6 @@ export function installViteApi(server: ViteDevServer) {
             sourceType: "INSTALLMENT",
             sourceId: plan.id,
             monthKey: { gte: body.fromMonth },
-            locked: false,
           },
         });
 
@@ -810,7 +1015,6 @@ export function installViteApi(server: ViteDevServer) {
             sourceType: "RECURRING",
             sourceId: original.id,
             monthKey: { gte: body.stopFromMonth },
-            locked: false,
           },
         });
 

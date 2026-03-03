@@ -5,7 +5,7 @@ import { currencyInputToDecimal, formatCurrencyInputBRL } from "../../lib/utils"
 export interface AccountFormValues {
   name: string;
   openingBalance: string;
-  type: "CHECKING" | "SAVINGS" | "CASH";
+  type: "CHECKING" | "INVESTMENT";
 }
 
 interface AccountFormProps {
@@ -15,7 +15,7 @@ interface AccountFormProps {
 export function AccountForm({ onSubmit }: AccountFormProps) {
   const [name, setName] = useState("");
   const [openingBalance, setOpeningBalance] = useState("0,00");
-  const [type, setType] = useState<"CHECKING" | "SAVINGS" | "CASH">("CHECKING");
+  const [type, setType] = useState<"CHECKING" | "INVESTMENT">("CHECKING");
 
   return (
     <form
@@ -42,8 +42,7 @@ export function AccountForm({ onSubmit }: AccountFormProps) {
         Tipo
         <select aria-label="Tipo da conta" value={type} onChange={(event) => setType(event.target.value as any)}>
           <option value="CHECKING">Conta corrente</option>
-          <option value="SAVINGS">Poupanca</option>
-          <option value="CASH">Dinheiro</option>
+          <option value="INVESTMENT">Conta investimento</option>
         </select>
       </label>
       <button type="submit">Adicionar conta</button>
