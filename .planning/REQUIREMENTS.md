@@ -8,10 +8,10 @@
 
 ### Home UX and Visual Clarity
 
-- [ ] **UI-01**: User can ver apenas um titulo principal de Fluxo de Caixa na tela inicial, sem duplicacao de heading.
-- [ ] **UI-02**: User can navegar entre meses com botoes alinhados visualmente e consistentes em desktop e mobile.
-- [ ] **UI-03**: User can ler o extrato mensal em tabela mais legivel, com melhor espacamento e hierarquia visual.
-- [ ] **UI-04**: User can ver datas do extrato no formato `DD/MM`, sem exibir o ano na listagem padrao.
+- [x] **UI-01**: User can ver apenas um titulo principal de Fluxo de Caixa na tela inicial, sem duplicacao de heading.
+- [x] **UI-02**: User can navegar entre meses com botoes alinhados visualmente e consistentes em desktop e mobile.
+- [x] **UI-03**: User can ler o extrato mensal em tabela mais legivel, com melhor espacamento e hierarquia visual.
+- [x] **UI-04**: User can ver datas do extrato no formato `DD/MM`, sem exibir o ano na listagem padrao.
 
 ### Transaction Import by Textarea
 
@@ -42,10 +42,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UI-01 | Phase 10 | Pending |
-| UI-02 | Phase 10 | Pending |
-| UI-03 | Phase 10 | Pending |
-| UI-04 | Phase 10 | Pending |
+| UI-01 | Phase 10 | Completed |
+| UI-02 | Phase 10 | Completed |
+| UI-03 | Phase 10 | Completed |
+| UI-04 | Phase 10 | Completed |
 | IMP-01 | Phase 11 | Pending |
 | IMP-02 | Phase 11 | Pending |
 | IMP-03 | Phase 11 | Pending |
@@ -59,4 +59,4 @@
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after v1.2 initial scope definition*
+*Last updated: 2026-03-03 after phase 10 execution complete*

@@ -35,7 +35,7 @@ Arquivo detalhado: `.planning/milestones/v1.1-ROADMAP.md`
 
 ### 🚧 v1.2 Ui improvements and Import
 
-- [ ] **Phase 10: Home UX Polish for Cashflow** - Corrigir redundancias visuais e elevar legibilidade/consistencia da tela inicial de Fluxo de Caixa.
+- [x] **Phase 10: Home UX Polish for Cashflow** - Corrigir redundancias visuais e elevar legibilidade/consistencia da tela inicial de Fluxo de Caixa. (completed 2026-03-03)
 - [ ] **Phase 11: Importacao de Lancamentos por Texto** - Entregar fluxo de import em lote via textarea com parsing, validacao e criacao dos lancamentos.
 
 ## Phase Details
@@ -52,9 +52,9 @@ Arquivo detalhado: `.planning/milestones/v1.1-ROADMAP.md`
 **Plans**: 3 plans
 
 Plans:
-- [ ] 10-01: Revisar cabecalho e hierarquia visual da home
-- [ ] 10-02: Ajustar barra de navegacao mensal e responsividade
-- [ ] 10-03: Refinar tabela do extrato e formato de data
+- [x] 10-01: Revisar cabecalho e hierarquia visual da home (completed 2026-03-03)
+- [x] 10-02: Ajustar barra de navegacao mensal e responsividade (completed 2026-03-03)
+- [x] 10-03: Refinar tabela do extrato e formato de data (completed 2026-03-03)
 
 ### Phase 11: Importacao de Lancamentos por Texto
 **Goal**: Permitir cadastro rapido de transacoes em lote a partir de texto estruturado linha a linha.
@@ -77,5 +77,5 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 10. Home UX Polish for Cashflow | v1.2 | 0/3 | Not started | - |
+| 10. Home UX Polish for Cashflow | v1.2 | 3/3 | Complete | 2026-03-03 |
 | 11. Importacao de Lancamentos por Texto | v1.2 | 0/3 | Not started | - |
