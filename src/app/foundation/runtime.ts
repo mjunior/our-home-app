@@ -7,11 +7,24 @@ import { CardsService } from "../../modules/cards/cards.service";
 import { CategoriesController } from "../../modules/categories/categories.controller";
 import { CategoriesRepository } from "../../modules/categories/categories.repository";
 import { CategoriesService } from "../../modules/categories/categories.service";
+import { InvoiceCycleService } from "../../modules/invoices/invoice-cycle.service";
+import { InvoicesController } from "../../modules/invoices/invoices.controller";
+import { InvoicesService } from "../../modules/invoices/invoices.service";
+import { TransactionsController } from "../../modules/transactions/transactions.controller";
+import { TransactionsRepository } from "../../modules/transactions/transactions.repository";
+import { TransactionsService } from "../../modules/transactions/transactions.service";
 
 const accountsRepository = new AccountsRepository();
 const cardsRepository = new CardsRepository();
 const categoriesRepository = new CategoriesRepository();
+const transactionsRepository = new TransactionsRepository();
 
 export const accountsController = new AccountsController(new AccountsService(accountsRepository));
 export const cardsController = new CardsController(new CardsService(cardsRepository));
 export const categoriesController = new CategoriesController(new CategoriesService(categoriesRepository));
+export const transactionsController = new TransactionsController(
+  new TransactionsService(transactionsRepository, accountsRepository, cardsRepository, categoriesRepository),
+);
+export const invoicesController = new InvoicesController(
+  new InvoicesService(transactionsRepository, cardsRepository, new InvoiceCycleService()),
+);
