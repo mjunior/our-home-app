@@ -47,6 +47,8 @@ describe("foundation flow", () => {
 
     expect(screen.getByText(/Conta Casa/)).toBeInTheDocument();
     expect(screen.getByTestId("consolidated-balance")).toHaveTextContent("R$ 500.00");
+    expect(screen.getAllByText("Conta corrente").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Conta investimento").length).toBeGreaterThan(0);
   });
 
   it("toggles theme and can register card and category", async () => {

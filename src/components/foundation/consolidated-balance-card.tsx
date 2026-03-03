@@ -3,9 +3,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 interface ConsolidatedBalanceCardProps {
   amount: string;
+  byType: {
+    CHECKING: string;
+    INVESTMENT: string;
+  };
+  accounts: Array<{
+    id: string;
+    name: string;
+    type: "CHECKING" | "INVESTMENT";
+    balance: string;
+  }>;
 }
 
-export function ConsolidatedBalanceCard({ amount }: ConsolidatedBalanceCardProps) {
+export function ConsolidatedBalanceCard({ amount, byType, accounts }: ConsolidatedBalanceCardProps) {
   return (
     <Card aria-label="Saldo consolidado" className="section-reveal">
       <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
@@ -17,7 +27,32 @@ export function ConsolidatedBalanceCard({ amount }: ConsolidatedBalanceCardProps
         </div>
         <Badge variant="secondary">Contas</Badge>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950/70">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">Conta corrente</p>
+            <p className="mt-1 text-lg font-bold">R$ {byType.CHECKING}</p>
+          </div>
+          <div className="rounded-xl border border-brand-teal/30 bg-brand-teal/5 p-3 text-sm dark:border-brand-lime/30 dark:bg-brand-lime/5">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">Conta investimento</p>
+            <p className="mt-1 text-lg font-bold text-brand-teal dark:text-brand-lime">R$ {byType.INVESTMENT}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          {accounts.map((account) => (
+            <div key={account.id} className="rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-950/70">
+              <p className="truncate text-slate-500 dark:text-slate-300">{account.name}</p>
+              <p className={`mt-1 text-base font-bold ${account.type === "INVESTMENT" ? "text-brand-teal dark:text-brand-lime" : ""}`}>
+                R$ {account.balance}
+              </p>
+              <p className="text-xs uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                {account.type === "INVESTMENT" ? "Investimento" : "Corrente"}
+              </p>
+            </div>
+          ))}
+        </div>
+
         {amount === "0.00" ? <p className="text-sm text-slate-500 dark:text-slate-300">Adicione uma conta para visualizar saldo inicial.</p> : null}
       </CardContent>
     </Card>

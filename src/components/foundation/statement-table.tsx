@@ -1,3 +1,5 @@
+import { Landmark, Repeat2, TrendingDown, TrendingUp } from "lucide-react";
+
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
@@ -31,7 +33,12 @@ interface StatementTableProps {
 
 function KindPill({ kind, isInvestment }: { kind: StatementEntry["kind"]; isInvestment?: boolean }) {
   if (isInvestment) {
-    return <Badge variant="secondary">Investimento</Badge>;
+    return (
+      <Badge variant="secondary" className="inline-flex items-center gap-1">
+        <Landmark className="h-3.5 w-3.5" />
+        Investimento
+      </Badge>
+    );
   }
 
   if (kind === "INCOME") {
@@ -39,6 +46,36 @@ function KindPill({ kind, isInvestment }: { kind: StatementEntry["kind"]; isInve
   }
 
   return <Badge variant="destructive">Saida</Badge>;
+}
+
+function TypeOriginCell({ entry }: { entry: StatementEntry }) {
+  const isInvestment = Boolean(entry.transferGroupId);
+  const isRecurring = entry.sourceType === "RECURRING";
+  const isInstallment = entry.sourceType === "INSTALLMENT";
+
+  if (isInvestment) {
+    return <KindPill kind={entry.kind} isInvestment />;
+  }
+
+  if (isRecurring) {
+    return (
+      <Badge variant={entry.kind === "INCOME" ? "lime" : "destructive"} className="inline-flex items-center gap-1">
+        <Repeat2 className="h-3.5 w-3.5" />
+        {entry.kind === "INCOME" ? "Entrada" : "Saida"}
+      </Badge>
+    );
+  }
+
+  if (isInstallment) {
+    return (
+      <Badge variant={entry.kind === "INCOME" ? "lime" : "destructive"} className="inline-flex items-center gap-1">
+        {entry.kind === "INCOME" ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+        {entry.kind === "INCOME" ? "Entrada" : "Saida"}
+      </Badge>
+    );
+  }
+
+  return <KindPill kind={entry.kind} />;
 }
 
 export function StatementTable({ entries, categoryLabels, accountLabels, cardLabels, onEditEntry }: StatementTableProps) {
@@ -60,8 +97,7 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                   <th>Data</th>
                   <th>Descricao</th>
                   <th>Valor</th>
-                  <th>Tipo</th>
-                  <th>Origem</th>
+                  <th>Tipo/Origem</th>
                   <th>Categoria</th>
                   <th>Destino</th>
                   <th>Acoes</th>
@@ -71,7 +107,7 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                 {entries.map((entry) => {
                   const categoryLabel = categoryLabels[entry.categoryId] ?? "Sem categoria";
                   const destinationLabel = entry.sourceType === "INVESTMENT"
-                    ? `Origem: ${accountLabels[entry.accountId ?? ""] ?? "Nao encontrada"} -> Destino: ${accountLabels[entry.destinationAccountId ?? ""] ?? "Nao encontrada"}`
+                    ? `${accountLabels[entry.accountId ?? ""] ?? "Nao encontrada"} -> ${accountLabels[entry.destinationAccountId ?? ""] ?? "Nao encontrada"}`
                     : entry.accountId
                       ? `Conta: ${accountLabels[entry.accountId] ?? "Nao encontrada"}`
                       : `Cartao: ${cardLabels[entry.creditCardId ?? ""] ?? "Nao encontrado"}`;
@@ -82,12 +118,7 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                       <td className="font-medium">{entry.description}</td>
                       <td className="font-semibold">{formatCurrencyBR(entry.amount)}</td>
                       <td>
-                        <KindPill kind={entry.kind} isInvestment={Boolean(entry.transferGroupId)} />
-                      </td>
-                      <td>
-                        <Badge variant="outline" className="normal-case tracking-normal">
-                          {entry.sourceLabel ?? "Avulso"}{entry.transferGroupId ? ` #${entry.transferGroupId.slice(0, 6)}` : ""}
-                        </Badge>
+                        <TypeOriginCell entry={entry} />
                       </td>
                       <td>
                         <Badge variant="secondary" className="normal-case tracking-normal">

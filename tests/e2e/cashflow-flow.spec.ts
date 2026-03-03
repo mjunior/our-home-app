@@ -97,6 +97,8 @@ describe("cashflow flow", () => {
 
     expect(screen.getAllByText("Aporte")).toHaveLength(1);
     expect(screen.getAllByText(/Investimento/).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Saida")).not.toBeInTheDocument();
+    expect(screen.getByText("Conta Casa -> Reserva Invest")).toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Filtro de origem"), "INVESTMENT");
     expect(screen.getAllByText("Aporte")).toHaveLength(1);
