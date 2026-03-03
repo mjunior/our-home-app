@@ -7,6 +7,9 @@ import { CardsService } from "../../modules/cards/cards.service";
 import { CategoriesController } from "../../modules/categories/categories.controller";
 import { CategoriesRepository } from "../../modules/categories/categories.repository";
 import { CategoriesService } from "../../modules/categories/categories.service";
+import { FreeBalanceController } from "../../modules/free-balance/free-balance.controller";
+import { FreeBalancePolicy } from "../../modules/free-balance/free-balance.policy";
+import { FreeBalanceService } from "../../modules/free-balance/free-balance.service";
 import { InvoiceCycleService } from "../../modules/invoices/invoice-cycle.service";
 import { InvoicesController } from "../../modules/invoices/invoices.controller";
 import { InvoicesService } from "../../modules/invoices/invoices.service";
@@ -35,6 +38,16 @@ export const transactionsController = new TransactionsController(
 );
 export const invoicesController = new InvoicesController(
   new InvoicesService(transactionsRepository, cardsRepository, new InvoiceCycleService()),
+);
+export const freeBalanceController = new FreeBalanceController(
+  new FreeBalanceService(
+    accountsRepository,
+    cardsRepository,
+    transactionsRepository,
+    scheduleRepository,
+    new InvoiceCycleService(),
+    new FreeBalancePolicy(),
+  ),
 );
 export const scheduleManagementController = new ScheduleManagementController(
   new ScheduleManagementService(
