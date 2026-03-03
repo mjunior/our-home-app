@@ -178,12 +178,13 @@ export default function CashflowPage() {
 
   return (
     <main className="space-y-4 pb-28 lg:pb-4">
-      <section className="section-reveal flex items-center justify-between gap-3">
-        <div>
-          <h1>Fluxo de Caixa</h1>
+      <section className="section-reveal flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Visao operacional</p>
+          <h1 className="leading-tight">Fluxo de Caixa</h1>
           <p className="text-sm text-slate-500 dark:text-slate-300">Dashboard limpo com sinal de risco e extrato do mes.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pt-1">
           <Badge variant="lime">Dashboard</Badge>
           <Button type="button" aria-label="Novo lancamento desktop" className="hidden lg:inline-flex" onClick={() => setTransactionModalOpen(true)}>
             Novo lancamento
