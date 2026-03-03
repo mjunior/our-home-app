@@ -18,6 +18,7 @@ export interface FreeBalanceMonthComponents {
   accountStartingBalance: string;
   projectedIncome: string;
   oneOffExpenses: string;
+  investments: string;
   cardInvoiceDue: string;
   installments: string;
   recurrences: string;
@@ -29,6 +30,9 @@ export interface FreeBalanceMonthBreakdown {
   startingBalance: string;
   income: string;
   obligations: string;
+  gastosOperacionais: string;
+  investimentos: string;
+  totalSaidas: string;
   freeBalance: string;
   components: FreeBalanceMonthComponents;
 }

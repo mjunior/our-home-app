@@ -353,6 +353,21 @@ export class FreeBalanceService {
             item.kind === "EXPENSE" &&
             item.accountId !== null &&
             checkingAccountIds.has(item.accountId) &&
+            item.transferGroupId === null &&
+            monthFromIso(item.occurredAt) === month,
+        )
+        .map((item) => new Decimal(item.amount)),
+    );
+
+    const investments = sumDecimals(
+      transactions
+        .filter(
+          (item) =>
+            item.householdId === householdId &&
+            item.kind === "EXPENSE" &&
+            item.accountId !== null &&
+            checkingAccountIds.has(item.accountId) &&
+            item.transferGroupId !== null &&
             monthFromIso(item.occurredAt) === month,
         )
         .map((item) => new Decimal(item.amount)),
@@ -389,13 +404,16 @@ export class FreeBalanceService {
     const cardInvoiceDue = sumDecimals(cardCharges.filter((item) => item.monthKey === month).map((item) => item.amount));
 
     const income = incomeTransactions.plus(incomeRecurring);
-    const obligations = oneOffExpenses.plus(cardInvoiceDue).plus(installments).plus(recurrences).plus(lateCarry);
+    const gastosOperacionais = oneOffExpenses.plus(cardInvoiceDue).plus(installments).plus(recurrences).plus(lateCarry);
+    const totalSaidas = gastosOperacionais.plus(investments);
+    const obligations = totalSaidas;
 
     const freeBalance = startingBalance.plus(income).minus(obligations);
 
     const driverSeeds: DriverSeed[] = [
       { label: "Fatura de cartao", amount: cardInvoiceDue, month },
       { label: "Despesas avulsas", amount: oneOffExpenses, month },
+      { label: "Investimentos", amount: investments, month },
       { label: "Parcelas", amount: installments, month },
       { label: "Recorrencias", amount: recurrences, month },
       { label: "Atrasos carregados", amount: lateCarry, month },
@@ -407,11 +425,15 @@ export class FreeBalanceService {
         startingBalance: startingBalance.toFixed(2),
         income: income.toFixed(2),
         obligations: obligations.toFixed(2),
+        gastosOperacionais: gastosOperacionais.toFixed(2),
+        investimentos: investments.toFixed(2),
+        totalSaidas: totalSaidas.toFixed(2),
         freeBalance: freeBalance.toFixed(2),
         components: {
           accountStartingBalance: startingBalance.toFixed(2),
           projectedIncome: income.toFixed(2),
           oneOffExpenses: oneOffExpenses.toFixed(2),
+          investments: investments.toFixed(2),
           cardInvoiceDue: cardInvoiceDue.toFixed(2),
           installments: installments.toFixed(2),
           recurrences: recurrences.toFixed(2),

@@ -105,6 +105,9 @@ describe("free balance service", () => {
     expect(result.freeBalanceCurrent).toBe("3300.00");
     expect(result.freeBalanceNext).toBe("5500.00");
     expect(result.additionalCardSpendCapacity).toBe("5500.00");
+    expect(result.breakdown.current.gastosOperacionais).toBe("700.00");
+    expect(result.breakdown.current.investimentos).toBe("0.00");
+    expect(result.breakdown.current.totalSaidas).toBe("700.00");
     expect(result.breakdown.next.components.cardInvoiceDue).toBe("300.00");
     expect(result.risk).toBe("GREEN");
   });
@@ -174,5 +177,49 @@ describe("free balance service", () => {
 
     expect(result.freeBalanceCurrent).toBe("-200.00");
     expect(result.breakdown.next.components.lateCarry).toBe("200.00");
+  });
+
+  it("separates investment transfers from operational spending while keeping free balance impact", () => {
+    const checking = accounts.createAccount({
+      householdId,
+      name: "Conta principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const investment = accounts.createAccount({
+      householdId,
+      name: "Reserva",
+      type: "INVESTMENT",
+      openingBalance: "0.00",
+    });
+    const category = categories.createCategory({ householdId, name: "Investimentos" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Mercado",
+      amount: "200.00",
+      occurredAt: "2026-03-02T12:00:00.000Z",
+      accountId: checking.id,
+      categoryId: category.id,
+    });
+    transactions.createInvestmentTransfer({
+      householdId,
+      description: "Aporte",
+      amount: "300.00",
+      occurredAt: "2026-03-05T12:00:00.000Z",
+      categoryId: category.id,
+      sourceAccountId: checking.id,
+      destinationAccountId: investment.id,
+    });
+
+    const result = freeBalance.getFreeBalance({ householdId, month: "2026-03" });
+
+    expect(result.freeBalanceCurrent).toBe("500.00");
+    expect(result.breakdown.current.gastosOperacionais).toBe("200.00");
+    expect(result.breakdown.current.investimentos).toBe("300.00");
+    expect(result.breakdown.current.totalSaidas).toBe("500.00");
+    expect(result.breakdown.current.components.oneOffExpenses).toBe("200.00");
+    expect(result.breakdown.current.components.investments).toBe("300.00");
   });
 });
