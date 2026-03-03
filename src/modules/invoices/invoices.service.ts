@@ -3,6 +3,14 @@ import { CardsRepository } from "../cards/cards.repository";
 import { TransactionsRepository } from "../transactions/transactions.repository";
 import { InvoiceCycleService } from "./invoice-cycle.service";
 
+function addMonths(monthKey: string, count: number): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + count, 1));
+  return `${date.getUTCFullYear().toString().padStart(4, "0")}-${(date.getUTCMonth() + 1)
+    .toString()
+    .padStart(2, "0")}`;
+}
+
 export interface CardInvoicesInput {
   householdId: string;
   cardId: string;
@@ -12,6 +20,11 @@ export interface CardInvoicesInput {
 export interface MonthlyCashflowInput {
   householdId: string;
   month: string;
+}
+
+export interface DueObligationsInput {
+  householdId: string;
+  dueMonth: string;
 }
 
 export class InvoicesService {
@@ -81,6 +94,45 @@ export class InvoicesService {
       totalIncome: sumMoney(income),
       totalExpense: sumMoney(expense),
       cardObligations: sumMoney(cardObligations),
+    };
+  }
+
+  getDueObligationsByMonth(input: DueObligationsInput) {
+    const cards = this.cardsRepository.listByHousehold(input.householdId);
+    const cardMap = new Map(cards.map((card) => [card.id, card]));
+    const totalsByCard = new Map<string, string[]>();
+
+    for (const expense of this.transactionsRepository.listByHousehold(input.householdId)) {
+      if (expense.kind !== "EXPENSE" || expense.creditCardId === null) {
+        continue;
+      }
+
+      const card = cardMap.get(expense.creditCardId);
+      if (!card) {
+        continue;
+      }
+
+      const invoiceMonth =
+        expense.invoiceMonthKey ?? this.cycleService.resolveExpenseCycle(expense.occurredAt, card.closeDay, card.dueDay).monthKey;
+      const dueMonth = addMonths(invoiceMonth, 1);
+
+      if (dueMonth !== input.dueMonth) {
+        continue;
+      }
+
+      const current = totalsByCard.get(card.id) ?? [];
+      current.push(expense.amount);
+      totalsByCard.set(card.id, current);
+    }
+
+    const cardsDue = cards
+      .map((card) => ({ cardId: card.id, cardName: card.name, total: sumMoney(totalsByCard.get(card.id) ?? []) }))
+      .filter((item) => item.total !== "0.00");
+
+    return {
+      dueMonth: input.dueMonth,
+      total: sumMoney(cardsDue.map((item) => item.total)),
+      cards: cardsDue,
     };
   }
 }

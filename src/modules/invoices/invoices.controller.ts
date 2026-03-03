@@ -1,4 +1,4 @@
-import type { CardInvoicesInput, MonthlyCashflowInput } from "./invoices.service";
+import type { CardInvoicesInput, DueObligationsInput, MonthlyCashflowInput } from "./invoices.service";
 import { InvoicesService } from "./invoices.service";
 
 export class InvoicesController {
@@ -10,5 +10,9 @@ export class InvoicesController {
 
   getMonthlyCashflowSummary(payload: MonthlyCashflowInput) {
     return this.service.getMonthlyCashflowSummary(payload);
+  }
+
+  getDueObligationsByMonth(payload: DueObligationsInput) {
+    return this.service.getDueObligationsByMonth(payload);
   }
 }

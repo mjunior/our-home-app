@@ -90,4 +90,11 @@ export class ScheduleManagementService {
       instances: this.repository.listInstancesByHousehold(householdId).sort((a, b) => a.monthKey.localeCompare(b.monthKey)),
     };
   }
+
+  listMonthInstances(householdId: string, month: string) {
+    return this.repository
+      .listInstancesByHousehold(householdId)
+      .filter((item) => item.monthKey === month)
+      .sort((a, b) => a.sequence - b.sequence);
+  }
 }

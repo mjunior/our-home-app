@@ -137,4 +137,49 @@ describe("invoice services", () => {
     expect(monthly.totalExpense).toBe("800.00");
     expect(monthly.cardObligations).toBe("300.00");
   });
+
+  it("aggregates due obligations by month without double counting account expenses", () => {
+    const account = accounts.createAccount({
+      householdId,
+      name: "Conta 3",
+      type: "CHECKING",
+      openingBalance: "1500.00",
+    });
+    const card = cards.createCard({ householdId, name: "Nubank", closeDay: 10, dueDay: 18 });
+    const category = categories.createCategory({ householdId, name: "Casa" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra cartao 1",
+      amount: "250.00",
+      occurredAt: "2026-03-04T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra cartao 2",
+      amount: "150.00",
+      occurredAt: "2026-03-09T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Conta de agua",
+      amount: "90.00",
+      occurredAt: "2026-04-01T10:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+    });
+
+    const due = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-04" });
+
+    expect(due.total).toBe("400.00");
+    expect(due.cards).toHaveLength(1);
+    expect(due.cards[0]?.total).toBe("400.00");
+  });
 });
