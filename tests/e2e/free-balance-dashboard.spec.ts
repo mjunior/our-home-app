@@ -62,6 +62,11 @@ describe("free balance dashboard", () => {
     expect(screen.queryByText("Top 3 causas de pressao")).not.toBeInTheDocument();
     expect(screen.queryByText("Filtros do extrato")).not.toBeInTheDocument();
     expect(screen.getByText("Extrato do Mes")).toBeInTheDocument();
+    expect(screen.getByText("Gastos mes")).toBeInTheDocument();
+    expect(screen.getByText("Gastos operacionais")).toBeInTheDocument();
+    expect(screen.getByText("Investimentos")).toBeInTheDocument();
+    expect(screen.getByText("Total de saidas")).toBeInTheDocument();
+    expect(screen.queryByText("Pode aumentar no cartao")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Detalhar saldo livre do mes atual" }));
     expect(screen.getByText("Detalhamento do saldo livre - Mes atual")).toBeInTheDocument();

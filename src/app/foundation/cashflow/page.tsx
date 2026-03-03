@@ -27,6 +27,7 @@ const breakdownLabels: Record<string, string> = {
   installments: "Parcelas",
   recurrences: "Recorrencias",
   oneOffExpenses: "Gastos extras",
+  investments: "Investimentos",
   lateCarry: "Atrasos carregados",
 };
 
@@ -222,7 +223,9 @@ export default function CashflowPage() {
       <FreeBalanceSemaphore
         freeBalanceCurrent={freeBalance.freeBalanceCurrent}
         freeBalanceNext={freeBalance.freeBalanceNext}
-        additionalCardSpendCapacity={freeBalance.additionalCardSpendCapacity}
+        gastosOperacionais={freeBalance.breakdown.current.gastosOperacionais}
+        investimentos={freeBalance.breakdown.current.investimentos}
+        totalSaidas={freeBalance.breakdown.current.totalSaidas}
         risk={freeBalance.risk}
         onOpenCurrentDetails={() => {
           setDetailMonthKey("current");

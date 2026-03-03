@@ -10,7 +10,9 @@ import type { FreeBalanceRiskLevel } from "../../modules/free-balance/free-balan
 interface FreeBalanceSemaphoreProps {
   freeBalanceCurrent: string;
   freeBalanceNext: string;
-  additionalCardSpendCapacity: string;
+  gastosOperacionais: string;
+  investimentos: string;
+  totalSaidas: string;
   risk: FreeBalanceRiskLevel;
   onOpenCurrentDetails?: () => void;
   onOpenNextDetails?: () => void;
@@ -28,7 +30,9 @@ const stylesByRisk: Record<
 export function FreeBalanceSemaphore({
   freeBalanceCurrent,
   freeBalanceNext,
-  additionalCardSpendCapacity,
+  gastosOperacionais,
+  investimentos,
+  totalSaidas,
   risk,
   onOpenCurrentDetails,
   onOpenNextDetails,
@@ -92,10 +96,23 @@ export function FreeBalanceSemaphore({
         </article>
 
         <article className="rounded-2xl border border-brand-teal/30 bg-brand-teal/5 p-3 dark:border-brand-lime/30 dark:bg-brand-lime/5">
-          <p className="text-xs uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Pode aumentar no cartao</p>
-          <p data-testid="free-balance-card-capacity" className="mt-1 text-lg font-bold text-brand-teal dark:text-brand-lime">
-            {formatCurrencyBR(additionalCardSpendCapacity)}
-          </p>
+          <p className="text-xs uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Gastos mes</p>
+          <dl className="mt-2 space-y-1 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-slate-500 dark:text-slate-300">Gastos operacionais</dt>
+              <dd className="font-semibold">{formatCurrencyBR(gastosOperacionais)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-slate-500 dark:text-slate-300">Investimentos</dt>
+              <dd className="font-semibold text-brand-teal dark:text-brand-lime">{formatCurrencyBR(investimentos)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-2 border-t border-brand-teal/20 pt-1 dark:border-brand-lime/20">
+              <dt className="text-slate-700 dark:text-slate-200">Total de saidas</dt>
+              <dd data-testid="free-balance-total-outflows" className="font-bold">
+                {formatCurrencyBR(totalSaidas)}
+              </dd>
+            </div>
+          </dl>
         </article>
       </CardContent>
     </Card>
