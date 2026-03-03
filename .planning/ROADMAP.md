@@ -97,6 +97,22 @@ Plans:
 - [x] 04.1-02: Revamp profundo da jornada Fluxo de Caixa
 - [x] 04.1-03: Motion premium, sticky CTA e validação UX
 
+### Phase 04.2: database persist (INSERTED)
+
+**Goal:** Migrar persistência do app para banco real sem fallback in-memory no runtime principal.
+**Requirements**: ACCT-01, CARD-01, CAT-01, CASH-01, CASH-02, CASH-03, RECU-01, RECU-02, RECU-03, FREE-01, FREE-02, FREE-03
+**Depends on:** Phase 4.1
+**Success Criteria** (what must be TRUE):
+  1. User can manter dados entre refresh/reabertura do app sem perder registros.
+  2. User can concluir onboarding inicial com baseline mínimo (categorias + conta + cartão).
+  3. Falhas operacionais de persistência são comunicadas por snackbar em pontos críticos.
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04.2-01: Infra server + Prisma repositories (big-bang sem memória)
+- [ ] 04.2-02: Integração runtime/API, onboarding mínimo e erro padronizado
+- [ ] 04.2-03: Migração de testes para SQLite real + hardening e checkpoint humano
+
 ### Phase 5: Investimentos e Relatórios
 **Goal**: Incluir investimentos no panorama financeiro e relatório mensal por categoria.
 **Depends on**: Phase 4
@@ -128,7 +144,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 4.1 → 5 → 6
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 4.1 → 4.2 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -137,5 +153,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 4.1 → 5 → 6
 | 3. Parcelas e Recorrências | 2/2 | Complete | 2026-03-02 |
 | 4. Motor de Saldo Livre | 3/3 | Complete | 2026-03-03 |
 | 4.1 UI revamp mobile-first com shadcn | 3/3 | Complete | 2026-03-03 |
+| 4.2 database persist | 0/3 | Not started | - |
 | 5. Investimentos e Relatórios | 0/2 | Not started | - |
 | 6. Wishlist com Impacto | 0/2 | Not started | - |
