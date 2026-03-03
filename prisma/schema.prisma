@@ -18,6 +18,11 @@ enum TransactionKind {
   EXPENSE
 }
 
+enum ScheduleSourceType {
+  INSTALLMENT
+  RECURRING
+}
+
 model Account {
   id             String        @id @default(cuid())
   householdId    String
@@ -27,6 +32,9 @@ model Account {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   transactions   Transaction[]
+  installmentPlans InstallmentPlan[]
+  recurringRules RecurringRule[]
+  scheduledInstances ScheduledInstance[]
 
   @@unique([householdId, name])
 }
@@ -40,6 +48,9 @@ model CreditCard {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
+  installmentPlans InstallmentPlan[]
+  recurringRules RecurringRule[]
+  scheduledInstances ScheduledInstance[]
 
   @@unique([householdId, name])
 }
@@ -52,6 +63,9 @@ model Category {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   transactions Transaction[]
+  installmentPlans InstallmentPlan[]
+  recurringRules RecurringRule[]
+  scheduledInstances ScheduledInstance[]
 
   @@unique([householdId, normalized])
 }
@@ -77,4 +91,65 @@ model Transaction {
   updatedAt    DateTime    @updatedAt
 
   @@index([householdId, occurredAt])
+}
+
+model InstallmentPlan {
+  id                String   @id @default(cuid())
+  householdId       String
+  description       String
+  totalAmount       Decimal
+  installmentsCount Int
+  startMonth        String
+  categoryId        String
+  accountId         String?
+  creditCardId      String?
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  category   Category   @relation(fields: [categoryId], references: [id])
+  account    Account?   @relation(fields: [accountId], references: [id])
+  creditCard CreditCard? @relation(fields: [creditCardId], references: [id])
+}
+
+model RecurringRule {
+  id               String   @id @default(cuid())
+  householdId      String
+  kind             TransactionKind
+  description      String
+  amount           Decimal
+  startMonth       String
+  categoryId       String
+  accountId        String?
+  creditCardId     String?
+  active           Boolean  @default(true)
+  revisionOfRuleId String?
+  createdAt        DateTime @default(now())
+
+  category   Category    @relation(fields: [categoryId], references: [id])
+  account    Account?    @relation(fields: [accountId], references: [id])
+  creditCard CreditCard? @relation(fields: [creditCardId], references: [id])
+}
+
+model ScheduledInstance {
+  id           String   @id @default(cuid())
+  householdId  String
+  sourceType   ScheduleSourceType
+  sourceId     String
+  sequence     Int
+  monthKey     String
+  occurredAt   DateTime
+  kind         TransactionKind
+  description  String
+  amount       Decimal
+  categoryId   String
+  accountId    String?
+  creditCardId String?
+  instanceKey  String   @unique
+  locked       Boolean  @default(false)
+
+  category   Category    @relation(fields: [categoryId], references: [id])
+  account    Account?    @relation(fields: [accountId], references: [id])
+  creditCard CreditCard? @relation(fields: [creditCardId], references: [id])
+
+  @@index([householdId, monthKey])
 }
