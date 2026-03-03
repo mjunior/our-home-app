@@ -5,7 +5,7 @@ milestone_name: milestone
 status: in_progress
 last_updated: "2026-03-03T22:20:00.000Z"
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 4
   total_plans: 15
   completed_plans: 11
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Mostrar com clareza o saldo livre do mês atual e do próximo mês para evitar ficar no negativo.
-**Current focus:** Phase 5: Investimentos e Relatórios
+**Current focus:** Phase 4.1: UI revamp mobile-first com shadcn
 
 ## Current Position
 
-Phase: 5 of 6 (Investimentos e Relatórios)
-Plan: 0 of 2 in current phase
+Phase: 4.1 of 7 (UI revamp mobile-first com shadcn)
+Plan: 0 of 0 in current phase
 Status: Ready to plan
-Last activity: 2026-03-03 — Phase 4 executada, verificada e aprovada no checkpoint humano
+Last activity: 2026-03-03 — Phase 4.1 inserida como urgente para UX/UI
 
 Progress: [███████░░░] 67%
 
@@ -64,6 +64,10 @@ Recent decisions affecting current work:
 - [Phase 4]: UX mobile-first com dark mode tornou-se requisito de qualidade para avançar
 - [Phase 4]: Base frontend migrou para Tailwind + shadcn/ui para padronização e manutenção
 
+### Roadmap Evolution
+
+- Phase 4.1 inserted after Phase 4: UI revamp mobile-first com shadcn (URGENT)
+
 ### Pending Todos
 
 None yet.
@@ -75,5 +79,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-03 22:20
-Stopped at: Phase 4 execution + verification complete
+Stopped at: Phase 4.1 insertion complete; ready for discuss/plan
 Resume file: None

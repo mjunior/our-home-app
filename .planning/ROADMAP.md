@@ -14,6 +14,7 @@ A jornada começa com a fundação dos dados financeiros da casa (contas, cartõ
 - [x] **Phase 2: Fluxo de Caixa e Faturas** - Registrar entradas/saídas e consolidar extrato mensal.
 - [x] **Phase 3: Parcelas e Recorrências** - Automatizar compromissos futuros.
 - [x] **Phase 4: Motor de Saldo Livre** - Calcular saldo livre atual e projetado com explicabilidade. (completed 2026-03-03)
+- [ ] **Phase 04.1: UI revamp mobile-first com shadcn (INSERTED)** - Refinar UX/UI mobile-first com design system.
 - [ ] **Phase 5: Investimentos e Relatórios** - Gerenciar carteira básica e visão por categoria.
 - [ ] **Phase 6: Wishlist com Impacto** - Priorizar desejos com simulação no saldo livre.
 
@@ -80,6 +81,16 @@ Plans:
 - [x] 04-02: Cálculo do saldo livre atual e próximo mês
 - [x] 04-03: Dashboard explicável de composição do saldo livre
 
+### Phase 04.1: UI revamp mobile-first com shadcn (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 4
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 04.1 to break down)
+
 ### Phase 5: Investimentos e Relatórios
 **Goal**: Incluir investimentos no panorama financeiro e relatório mensal por categoria.
 **Depends on**: Phase 4
@@ -111,7 +122,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 4.1 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -119,5 +130,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Fluxo de Caixa e Faturas | 3/3 | Complete | 2026-03-02 |
 | 3. Parcelas e Recorrências | 2/2 | Complete | 2026-03-02 |
 | 4. Motor de Saldo Livre | 3/3 | Complete | 2026-03-03 |
+| 4.1 UI revamp mobile-first com shadcn | 0/0 | Not started | - |
 | 5. Investimentos e Relatórios | 0/2 | Not started | - |
 | 6. Wishlist com Impacto | 0/2 | Not started | - |
