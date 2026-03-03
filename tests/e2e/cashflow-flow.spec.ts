@@ -41,16 +41,18 @@ describe("cashflow flow", () => {
     categories.createCategory({ householdId, name: "Mercado" });
   });
 
-  it("records entries and updates statement and invoices", async () => {
+  it("records entries and renders premium tags with category/destination labels", async () => {
     const user = userEvent.setup();
 
     render(React.createElement(CashflowPage));
 
+    await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
     await user.type(screen.getByLabelText("Descricao da transacao"), "Salario");
     await user.clear(screen.getByLabelText("Valor da transacao"));
     await user.type(screen.getByLabelText("Valor da transacao"), "5000.00");
     await user.click(screen.getByRole("button", { name: "Adicionar lancamento" }));
 
+    await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
     await user.selectOptions(screen.getByLabelText("Tipo da transacao"), "EXPENSE");
     await user.type(screen.getByLabelText("Descricao da transacao"), "Supermercado cartao");
     await user.clear(screen.getByLabelText("Valor da transacao"));
@@ -60,8 +62,9 @@ describe("cashflow flow", () => {
 
     expect(screen.getByText("Salario")).toBeInTheDocument();
     expect(screen.getByText("Supermercado cartao")).toBeInTheDocument();
-
-    expect(screen.getByTestId("invoice-current")).toHaveTextContent("R$ 200.00");
-    expect(screen.getByTestId("invoice-next")).toHaveTextContent("R$ 0.00");
+    expect(screen.getAllByText("Mercado").length).toBeGreaterThan(0);
+    expect(screen.getByText("Entrada")).toBeInTheDocument();
+    expect(screen.getByText("Saida")).toBeInTheDocument();
+    expect(screen.getByText("Cartao: Visa Casa")).toBeInTheDocument();
   });
 });

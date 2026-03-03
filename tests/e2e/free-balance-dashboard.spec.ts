@@ -47,25 +47,31 @@ describe("free balance dashboard", () => {
     categories.createCategory({ householdId, name: "Mercado" });
   });
 
-  it("shows semaphore and detailed breakdown in dashboard", async () => {
+  it("shows clean dashboard with semaphore and statement only", async () => {
     const user = userEvent.setup();
     render(React.createElement(CashflowPage));
 
+    await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
     await user.type(screen.getByLabelText("Descricao da transacao"), "Salario");
     await user.clear(screen.getByLabelText("Valor da transacao"));
     await user.type(screen.getByLabelText("Valor da transacao"), "3000.00");
     await user.click(screen.getAllByRole("button", { name: "Adicionar lancamento" })[0]!);
 
     expect(screen.getByLabelText("Semaforo saldo livre")).toBeInTheDocument();
-    expect(screen.getByLabelText("Composicao saldo livre")).toBeInTheDocument();
-    expect(screen.getByLabelText("Top causas saldo livre")).toBeInTheDocument();
     expect(screen.getByTestId("free-balance-current")).toHaveTextContent("R$");
+    expect(screen.queryByText("Top 3 causas de pressao")).not.toBeInTheDocument();
+    expect(screen.queryByText("Filtros do extrato")).not.toBeInTheDocument();
+    expect(screen.getByText("Extrato do Mes")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Detalhar saldo livre do mes atual" }));
+    expect(screen.getByText("Detalhamento do saldo livre - Mes atual")).toBeInTheDocument();
   });
 
-  it("renders red alert when next month projection becomes negative", async () => {
+  it("renders red risk when next month projection becomes negative", async () => {
     const user = userEvent.setup();
     render(React.createElement(CashflowPage));
 
+    await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
     const tipo = screen.getAllByLabelText("Tipo da transacao")[0]!;
     const destino = screen.getAllByLabelText("Destino da transacao")[0]!;
     const descricao = screen.getAllByLabelText("Descricao da transacao")[0]!;
@@ -82,6 +88,5 @@ describe("free balance dashboard", () => {
     await user.click(screen.getAllByRole("button", { name: "Adicionar lancamento" })[0]!);
 
     expect(screen.getAllByTestId("free-balance-risk")[0]).toHaveTextContent("Risco");
-    expect(screen.getByTestId("free-balance-alert-danger")).toBeInTheDocument();
   });
 });
