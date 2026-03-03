@@ -1,7 +1,7 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: Reestruturacao de Lancamentos e Investimentos por Transferencia
+milestone_name: Lancamentos Unificados e Investimento por Transferencia
 status: in_progress
 last_updated: "2026-03-03T13:10:00Z"
 progress:
