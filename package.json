@@ -4,13 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "npm run db:push",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "vitest run",
     "lint": "tsc --noEmit",
-    "prisma:validate": "prisma validate --schema prisma/schema.prisma"
+    "prisma:validate": "prisma validate --schema prisma/schema.prisma",
+    "db:push": "prisma db push --schema prisma/schema.prisma --skip-generate"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
