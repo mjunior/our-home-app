@@ -61,7 +61,6 @@ describe("free balance dashboard", () => {
     expect(screen.getByTestId("free-balance-current")).toHaveTextContent("R$");
     expect(screen.queryByText("Top 3 causas de pressao")).not.toBeInTheDocument();
     expect(screen.queryByText("Filtros do extrato")).not.toBeInTheDocument();
-    expect(screen.getByText("Extrato do Mes")).toBeInTheDocument();
     expect(screen.getByText("Gastos mes")).toBeInTheDocument();
     expect(screen.getByText("Gastos operacionais")).toBeInTheDocument();
     expect(screen.getByText("Investimentos")).toBeInTheDocument();

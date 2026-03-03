@@ -3,7 +3,6 @@ import { Landmark, Pencil, Repeat2, TrendingDown, TrendingUp } from "lucide-reac
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 import { formatCurrencyBR, formatDateBR, formatDateShortBR } from "../../lib/utils";
 
@@ -102,17 +101,13 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
   }, []);
 
   return (
-    <Card className="section-reveal overflow-hidden">
-      <CardHeader className="pb-3">
-        <CardTitle>Extrato do Mes</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {entries.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-300">
-            Nenhum lancamento no periodo atual.
-          </p>
-        ) : (
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-700">
+    <section className="section-reveal">
+      {entries.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-300">
+          Nenhum lancamento no periodo atual.
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
             {isDesktop ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[940px] text-sm">
@@ -228,9 +223,8 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                 })}
               </div>
             )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </section>
   );
 }

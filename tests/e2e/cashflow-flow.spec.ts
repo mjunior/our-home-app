@@ -50,10 +50,9 @@ describe("cashflow flow", () => {
     const user = userEvent.setup();
 
     render(React.createElement(CashflowPage));
-    expect(screen.getAllByRole("heading", { level: 1, name: "Fluxo de Caixa" })).toHaveLength(1);
     expect(screen.getByText("Mar/26")).toBeInTheDocument();
 
-    await user.click(screen.getAllByRole("button", { name: "Novo lancamento" })[0]!);
+    await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
     await user.type(screen.getByLabelText("Descricao da transacao"), "Salario");
     await user.clear(screen.getByLabelText("Valor da transacao"));
     await user.type(screen.getByLabelText("Valor da transacao"), "5000.00");

@@ -1,8 +1,6 @@
 import { CircleHelp, TrendingDown, TrendingUp } from "lucide-react";
 
-import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 import { formatCurrencyBR } from "../../lib/utils";
 import type { FreeBalanceRiskLevel } from "../../modules/free-balance/free-balance.types";
@@ -20,11 +18,11 @@ interface FreeBalanceSemaphoreProps {
 
 const stylesByRisk: Record<
   FreeBalanceRiskLevel,
-  { badge: "lime" | "destructive" | "secondary"; title: string; ring: string; accent: string }
+  { title: string; ring: string; accent: string }
 > = {
-  GREEN: { badge: "lime", title: "Saudavel", ring: "ring-emerald-300/50", accent: "text-emerald-600 dark:text-emerald-400" },
-  YELLOW: { badge: "secondary", title: "Atencao", ring: "ring-amber-300/60", accent: "text-amber-600 dark:text-amber-400" },
-  RED: { badge: "destructive", title: "Risco", ring: "ring-red-300/60", accent: "text-red-600 dark:text-red-400" },
+  GREEN: { title: "Saudavel", ring: "ring-emerald-300/50", accent: "text-emerald-600 dark:text-emerald-400" },
+  YELLOW: { title: "Atencao", ring: "ring-amber-300/60", accent: "text-amber-600 dark:text-amber-400" },
+  RED: { title: "Risco", ring: "ring-red-300/60", accent: "text-red-600 dark:text-red-400" },
 };
 
 export function FreeBalanceSemaphore({
@@ -40,22 +38,13 @@ export function FreeBalanceSemaphore({
   const style = stylesByRisk[risk];
 
   return (
-    <Card aria-label="Semaforo saldo livre" className={`stagger-up ring-2 ${style.ring}`}>
-      <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">saldo livre mensal</p>
-          <CardTitle className="mt-1 text-2xl">{formatCurrencyBR(freeBalanceCurrent)}</CardTitle>
-          <p data-testid="free-balance-current" className="sr-only">
-            {formatCurrencyBR(freeBalanceCurrent)}
-          </p>
-        </div>
-        <Badge data-testid="free-balance-risk" variant={style.badge}>
-          {style.title}
-        </Badge>
-      </CardHeader>
+    <section aria-label="Semaforo saldo livre" className="stagger-up space-y-3">
+      <p data-testid="free-balance-risk" className="sr-only">
+        {style.title}
+      </p>
 
-      <CardContent className="grid gap-3 sm:grid-cols-3">
-        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <article className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 dark:border-slate-700/80 dark:bg-slate-950/60">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Mes atual</p>
             <Button
@@ -70,9 +59,12 @@ export function FreeBalanceSemaphore({
             </Button>
           </div>
           <p className="mt-1 text-lg font-bold">{formatCurrencyBR(freeBalanceCurrent)}</p>
+          <p data-testid="free-balance-current" className="sr-only">
+            {formatCurrencyBR(freeBalanceCurrent)}
+          </p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+        <article className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 dark:border-slate-700/80 dark:bg-slate-950/60">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Proximo mes</p>
             <Button
@@ -114,7 +106,7 @@ export function FreeBalanceSemaphore({
             </div>
           </dl>
         </article>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { Menu, MoonStar, SunMedium } from "lucide-react";
+import { Menu, MoonStar, Plus, SunMedium } from "lucide-react";
 
 import type { RouteKey } from "../../app/routes";
 import { routes } from "../../app/routes";
@@ -109,27 +109,44 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange }: A
             <p className="font-display text-sm">{routes[route].label}</p>
           </div>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Alternar tema"
-            onClick={() => onDarkModeChange(!darkMode)}
-          >
-            {darkMode ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-1">
+            {route === "cashflow" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Novo lancamento"
+                onClick={() => window.dispatchEvent(new CustomEvent("cashflow:new-launch"))}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Alternar tema"
+              onClick={() => onDarkModeChange(!darkMode)}
+            >
+              {darkMode ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
+            </Button>
+          </div>
         </header>
 
         <header className="mb-6 hidden items-center justify-between lg:flex">
           <div className="stagger-up">
-            <Badge variant="outline" className="mb-3">
-              Mobile-first financial cockpit
-            </Badge>
             <h2 className="text-3xl">{routes[route].label}</h2>
           </div>
-          <Button type="button" variant="secondary" size="icon" aria-label="Alternar tema" onClick={() => onDarkModeChange(!darkMode)}>
-            {darkMode ? <SunMedium className="h-5 w-5" /> : <MoonStar className="h-5 w-5" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            {route === "cashflow" ? (
+              <Button type="button" aria-label="Novo lancamento" onClick={() => window.dispatchEvent(new CustomEvent("cashflow:new-launch"))}>
+                Novo lancamento
+              </Button>
+            ) : null}
+            <Button type="button" variant="secondary" size="icon" aria-label="Alternar tema" onClick={() => onDarkModeChange(!darkMode)}>
+              {darkMode ? <SunMedium className="h-5 w-5" /> : <MoonStar className="h-5 w-5" />}
+            </Button>
+          </div>
         </header>
 
         <section className="section-reveal space-y-4">{routes[route].render()}</section>

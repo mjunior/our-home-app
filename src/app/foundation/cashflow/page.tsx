@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { FreeBalanceSemaphore } from "../../../components/foundation/free-balance-semaphore";
 import { StatementTable } from "../../../components/foundation/statement-table";
@@ -176,26 +176,28 @@ export default function CashflowPage() {
     [month, refreshKey],
   );
 
+  useEffect(() => {
+    const openLaunch = () => setTransactionModalOpen(true);
+    window.addEventListener("cashflow:new-launch", openLaunch);
+    return () => window.removeEventListener("cashflow:new-launch", openLaunch);
+  }, []);
+
   return (
-    <main className="space-y-4 pb-28 lg:pb-4">
-      <section className="section-reveal flex items-start justify-between gap-3">
+    <main className="space-y-4 pb-36 lg:pb-4">
+      <section className="section-reveal flex flex-col items-start gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Visao operacional</p>
-          <h1 className="leading-tight">Fluxo de Caixa</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-300">Dashboard limpo com sinal de risco e extrato do mes.</p>
-        </div>
-        <div className="flex items-center gap-2 pt-1">
-          <Badge variant="lime">Dashboard</Badge>
-          <Button type="button" aria-label="Novo lancamento desktop" className="hidden lg:inline-flex" onClick={() => setTransactionModalOpen(true)}>
+          <button type="button" aria-label="Novo lancamento" className="sr-only" onClick={() => setTransactionModalOpen(true)}>
             Novo lancamento
-          </Button>
+          </button>
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Visao operacional</p>
+          <p className="text-sm text-slate-500 dark:text-slate-300">Dashboard limpo com sinal de risco e extrato do mes.</p>
         </div>
       </section>
 
       <Card className="section-reveal">
         <CardContent className="pt-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="outline" onClick={() => setMonth((prev) => addMonths(prev, -1))}>
                 Mes anterior
               </Button>
@@ -280,40 +282,33 @@ export default function CashflowPage() {
         }}
       />
 
-      <div className="fixed inset-x-0 bottom-[4.7rem] z-30 px-3 pb-2 lg:hidden">
-        <Sheet open={transactionModalOpen} onOpenChange={setTransactionModalOpen}>
-          <SheetTrigger asChild>
-            <Button type="button" variant="lime" className="h-12 w-full text-sm">
-              Novo lancamento
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[85vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
-            <SheetHeader>
-              <SheetTitle>Adicionar lancamento</SheetTitle>
-              <SheetDescription>Registre entrada ou saida sem sair do dashboard.</SheetDescription>
-            </SheetHeader>
-            <div className="mt-4">
-              <UnifiedLaunchForm
-                formId="cashflow-unified-launch-form"
-                householdId={HOUSEHOLD_ID}
-                accounts={accounts.map((item) => ({ id: item.id, label: item.name, type: item.type }))}
-                cards={cards.map((item) => ({ id: item.id, label: item.name }))}
-                categories={categories.map((item) => ({ id: item.id, label: item.name }))}
-                onSubmit={(payload) => {
-                  try {
-                    scheduleManagementController.createLaunch(payload);
-                    setRefreshKey((prev) => prev + 1);
-                    setTransactionModalOpen(false);
-                    notify({ message: "Lancamento cadastrado com sucesso.", tone: "success" });
-                  } catch {
-                    notify({ message: "Nao foi possivel cadastrar o lancamento.", tone: "error" });
-                  }
-                }}
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
+      <Sheet open={transactionModalOpen} onOpenChange={setTransactionModalOpen}>
+        <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[85vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
+          <SheetHeader>
+            <SheetTitle>Adicionar lancamento</SheetTitle>
+            <SheetDescription>Registre entrada ou saida sem sair do dashboard.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4">
+            <UnifiedLaunchForm
+              formId="cashflow-unified-launch-form"
+              householdId={HOUSEHOLD_ID}
+              accounts={accounts.map((item) => ({ id: item.id, label: item.name, type: item.type }))}
+              cards={cards.map((item) => ({ id: item.id, label: item.name }))}
+              categories={categories.map((item) => ({ id: item.id, label: item.name }))}
+              onSubmit={(payload) => {
+                try {
+                  scheduleManagementController.createLaunch(payload);
+                  setRefreshKey((prev) => prev + 1);
+                  setTransactionModalOpen(false);
+                  notify({ message: "Lancamento cadastrado com sucesso.", tone: "success" });
+                } catch {
+                  notify({ message: "Nao foi possivel cadastrar o lancamento.", tone: "error" });
+                }
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Sheet open={detailModalOpen} onOpenChange={setDetailModalOpen}>
         <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[85vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
