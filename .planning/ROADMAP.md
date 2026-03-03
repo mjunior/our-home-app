@@ -15,6 +15,7 @@ A jornada começa com a fundação dos dados financeiros da casa (contas, cartõ
 - [x] **Phase 3: Parcelas e Recorrências** - Automatizar compromissos futuros.
 - [x] **Phase 4: Motor de Saldo Livre** - Calcular saldo livre atual e projetado com explicabilidade. (completed 2026-03-03)
 - [x] **Phase 04.1: UI revamp mobile-first com shadcn (INSERTED)** - Refinar UX/UI mobile-first com design system. (completed 2026-03-03)
+- [x] **Phase 04.2: database persist (INSERTED)** - Migrar persistência para banco real com SQLite/Prisma. (completed 2026-03-03)
 - [ ] **Phase 5: Investimentos e Relatórios** - Gerenciar carteira básica e visão por categoria.
 - [ ] **Phase 6: Wishlist com Impacto** - Priorizar desejos com simulação no saldo livre.
 
@@ -106,12 +107,12 @@ Plans:
   1. User can manter dados entre refresh/reabertura do app sem perder registros.
   2. User can concluir onboarding inicial com baseline mínimo (categorias + conta + cartão).
   3. Falhas operacionais de persistência são comunicadas por snackbar em pontos críticos.
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 04.2-01: Infra server + Prisma repositories (big-bang sem memória)
-- [ ] 04.2-02: Integração runtime/API, onboarding mínimo e erro padronizado
-- [ ] 04.2-03: Migração de testes para SQLite real + hardening e checkpoint humano
+- [x] 04.2-01: Infra server + Prisma repositories (big-bang sem memória)
+- [x] 04.2-02: Integração runtime/API, onboarding mínimo e erro padronizado
+- [x] 04.2-03: Migração de testes para SQLite real + hardening e checkpoint humano
 
 ### Phase 5: Investimentos e Relatórios
 **Goal**: Incluir investimentos no panorama financeiro e relatório mensal por categoria.
@@ -153,6 +154,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 4.1 → 4.2 → 5 → 6
 | 3. Parcelas e Recorrências | 2/2 | Complete | 2026-03-02 |
 | 4. Motor de Saldo Livre | 3/3 | Complete | 2026-03-03 |
 | 4.1 UI revamp mobile-first com shadcn | 3/3 | Complete | 2026-03-03 |
-| 4.2 database persist | 0/3 | Not started | - |
+| 4.2 database persist | 3/3 | Complete | 2026-03-03 |
 | 5. Investimentos e Relatórios | 0/2 | Not started | - |
 | 6. Wishlist com Impacto | 0/2 | Not started | - |
