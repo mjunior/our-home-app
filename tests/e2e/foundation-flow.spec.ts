@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository";
 import { CardsRepository } from "../../src/modules/cards/cards.repository";
 import { CategoriesRepository } from "../../src/modules/categories/categories.repository";
+import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
 import AccountsPage from "../../src/app/foundation/accounts/page";
 import CardsPage from "../../src/app/foundation/cards/page";
 import CategoriesPage from "../../src/app/foundation/categories/page";
@@ -18,6 +19,7 @@ describe("foundation flow", () => {
     new AccountsRepository().clearAll();
     new CardsRepository().clearAll();
     new CategoriesRepository().clearAll();
+    new TransactionsRepository().clearAll();
   });
 
   it("creates account and updates consolidated balance", async () => {
