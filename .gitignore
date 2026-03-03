@@ -3,3 +3,5 @@ node_modules/
 .prisma/
 coverage/
 dist/
+prisma/*.db
+prisma/*.db-journal
