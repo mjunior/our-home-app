@@ -11,18 +11,21 @@ Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar fica
 ## Current State
 
 - **Ultima versao entregue:** `v1.1` (2026-03-03)
-- **Status do produto:** milestone v1.1 concluido e auditado
+- **Status do produto:** milestone `v1.2` iniciado
 - **Capacidades principais:**
   - Lancamento unificado (avulso, recorrencia, parcelamento e investimento)
   - Investimento como transferencia interna rastreavel (origem -> destino)
   - Cashflow operacional com separacao de gastos operacionais e investimentos
   - Contas com leitura consolidada por tipo e por conta sem dupla contagem
 
-## Next Milestone Goals
+## Current Milestone: v1.2 Ui improvements and Import
 
-- Definir novo milestone com base em prioridades operacionais atuais.
-- Criar novo `REQUIREMENTS.md` (escopo fresco) via `$gsd-new-milestone`.
-- Decidir se o proximo foco sera hardening da API, wishlist/planejamento de metas ou automacoes financeiras.
+**Goal:** Melhorar qualidade visual e usabilidade da tela inicial de Fluxo de Caixa e habilitar importacao rapida de transacoes por entrada textual estilo CSV.
+
+**Target features:**
+- Ajustes de UX/UI no cabecalho e navegacao mensal da tela inicial
+- Melhor renderizacao do extrato (com data sem ano e layout mais legivel)
+- Importador por textarea com parser de linhas no formato padronizado
 
 ## Milestone History
 
@@ -37,4 +40,4 @@ Conteudo operacional detalhado foi arquivado nos arquivos de milestone em `.plan
 </details>
 
 ---
-*Last updated: 2026-03-03 after v1.1 milestone completion*
+*Last updated: 2026-03-03 after v1.2 milestone initialization*
