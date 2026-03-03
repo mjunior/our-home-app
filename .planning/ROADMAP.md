@@ -29,7 +29,7 @@ Arquivo detalhado: `.planning/milestones/v1.0-ROADMAP.md`
 
 - [x] **Phase 7: Fluxo Unico de Lancamentos** - Unificar criacao e regras de avulso, recorrencia e parcelamento em um mesmo contrato transacional. (completed 2026-03-03)
 - [x] **Phase 8: Modelo de Contas e Transferencia de Investimento** - Introduzir tipos de conta e registrar investimento como saida de origem com entrada de destino. (completed 2026-03-03)
-- [ ] **Phase 9: Consolidados e Semantica Visual de Investimento** - Separar investimento de despesa operacional em saldos, relatorios e linguagem visual.
+- [x] **Phase 9: Consolidados e Semantica Visual de Investimento** - Separar investimento de despesa operacional em saldos, relatorios e linguagem visual. (completed 2026-03-03)
 
 ## Phase Details
 
@@ -71,4 +71,4 @@ Arquivo detalhado: `.planning/milestones/v1.0-ROADMAP.md`
 |-------|-----------|----------------|--------|-----------|
 | 7. Fluxo Unico de Lancamentos | v1.1 | 3/3 | Complete | 2026-03-03 |
 | 8. Modelo de Contas e Transferencia de Investimento | v1.1 | 3/3 | Complete | 2026-03-03 |
-| 9. Consolidados e Semantica Visual de Investimento | v1.1 | 0/2 | Not started | - |
+| 9. Consolidados e Semantica Visual de Investimento | v1.1 | 2/2 | Complete | 2026-03-03 |

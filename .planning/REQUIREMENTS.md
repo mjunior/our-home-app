@@ -17,14 +17,14 @@
 
 - [x] **INV-01**: User can registrar investimento informando origem (saida) e destino (entrada) no mesmo fluxo transacional.
 - [x] **INV-02**: Sistema persiste investimento como evento atomico com dupla movimentacao: debito na origem e credito no destino.
-- [ ] **INV-03**: Sistema soma investimentos separadamente no resumo financeiro, sem misturar com despesa operacional comum.
-- [ ] **INV-04**: Valores de investimento nao aparecem com destaque vermelho de gasto no UI.
+- [x] **INV-03**: Sistema soma investimentos separadamente no resumo financeiro, sem misturar com despesa operacional comum.
+- [x] **INV-04**: Valores de investimento nao aparecem com destaque vermelho de gasto no UI.
 
 ### Account Types and Balances
 
 - [x] **ACC-01**: User can cadastrar e manter contas com tipo Conta Corrente ou Conta Investimento.
 - [x] **ACC-02**: Sistema valida regra de investimento: origem precisa ser conta de saida valida e destino precisa ser conta/caixinha de investimento.
-- [ ] **ACC-03**: User can visualizar saldos por tipo de conta e consolidado geral sem dupla contagem de transferencia interna.
+- [x] **ACC-03**: User can visualizar saldos por tipo de conta e consolidado geral sem dupla contagem de transferencia interna.
 
 ## Future Requirements
 
@@ -54,11 +54,11 @@
 | LAN-04 | Phase 7 | Completed |
 | INV-01 | Phase 8 | Completed |
 | INV-02 | Phase 8 | Completed |
-| INV-03 | Phase 9 | Planned |
-| INV-04 | Phase 9 | Planned |
+| INV-03 | Phase 9 | Completed |
+| INV-04 | Phase 9 | Completed |
 | ACC-01 | Phase 8 | Completed |
 | ACC-02 | Phase 8 | Completed |
-| ACC-03 | Phase 9 | Planned |
+| ACC-03 | Phase 9 | Completed |
 
 **Coverage:**
 - v1.1 requirements: 11 total
