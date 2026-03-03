@@ -88,9 +88,9 @@
 | CAT-01 | Phase 1 | Complete |
 | CAT-02 | Phase 2 | Complete |
 | CAT-03 | Phase 5 | Pending |
-| FREE-01 | Phase 4 | Pending |
-| FREE-02 | Phase 4 | Pending |
-| FREE-03 | Phase 4 | Pending |
+| FREE-01 | Phase 4 | Complete |
+| FREE-02 | Phase 4 | Complete |
+| FREE-03 | Phase 4 | Complete |
 | INV-01 | Phase 5 | Pending |
 | INV-02 | Phase 5 | Pending |
 | INV-03 | Phase 5 | Pending |
