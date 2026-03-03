@@ -1,9 +1,20 @@
 import { useMemo, useState } from "react";
 
+import { FreeBalanceAlert } from "../../../components/foundation/free-balance-alert";
+import { FreeBalanceBreakdown } from "../../../components/foundation/free-balance-breakdown";
+import { FreeBalanceCauses } from "../../../components/foundation/free-balance-causes";
+import { FreeBalanceSemaphore } from "../../../components/foundation/free-balance-semaphore";
 import { InvoicePanels } from "../../../components/foundation/invoice-panels";
 import { StatementTable } from "../../../components/foundation/statement-table";
 import { TransactionForm } from "../../../components/foundation/transaction-form";
-import { accountsController, cardsController, categoriesController, invoicesController, transactionsController } from "../runtime";
+import {
+  accountsController,
+  cardsController,
+  categoriesController,
+  freeBalanceController,
+  invoicesController,
+  transactionsController,
+} from "../runtime";
 
 const HOUSEHOLD_ID = "household-main";
 
@@ -44,9 +55,28 @@ export default function CashflowPage() {
     });
   }, [cards, selectedCardId, refreshKey, month]);
 
+  const freeBalance = useMemo(
+    () =>
+      freeBalanceController.getFreeBalance({
+        householdId: HOUSEHOLD_ID,
+        month,
+      }),
+    [month, refreshKey],
+  );
+
   return (
     <main>
       <h1>Fluxo de Caixa</h1>
+
+      <FreeBalanceSemaphore
+        freeBalanceCurrent={freeBalance.freeBalanceCurrent}
+        freeBalanceNext={freeBalance.freeBalanceNext}
+        additionalCardSpendCapacity={freeBalance.additionalCardSpendCapacity}
+        risk={freeBalance.risk}
+      />
+      <FreeBalanceAlert alerts={freeBalance.alerts} confidence={freeBalance.confidence} missingData={freeBalance.missingData} />
+      <FreeBalanceBreakdown current={freeBalance.breakdown.current} next={freeBalance.breakdown.next} />
+      <FreeBalanceCauses topDrivers={freeBalance.topDrivers} />
 
       <TransactionForm
         accounts={accounts.map((item) => ({ id: item.id, label: item.name }))}
