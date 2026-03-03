@@ -1,5 +1,21 @@
 # Milestones
 
+## v1.1 Lancamentos Unificados e Investimento por Transferencia (Shipped: 2026-03-03)
+
+**Phases completed:** 3 phases, 8 plans
+
+**Key accomplishments:**
+- Fluxo unificado de novos lancamentos para avulso, recorrencia, parcelamento e investimento.
+- Investimento modelado como transferencia interna atomica com edicao/exclusao do par vinculado.
+- Cashflow com semantica operacional clara: `Mes atual`, `Proximo mes`, `Gastos mes`.
+- Separacao contabil de gastos operacionais x investimentos sem destaque vermelho para investimento.
+- Tela de contas com consolidado por tipo e por conta, sem dupla contagem de transferencia interna.
+
+### Known Debt Accepted At Milestone Close
+- Rastreabilidade de `requirements-completed` incompleta em alguns `SUMMARY.md` (debt documental, sem gap funcional).
+
+---
+
 ## v1.0 MVP Finance Core (Shipped: 2026-03-03)
 
 **Phases completed:** 6 phases, 17 plans
