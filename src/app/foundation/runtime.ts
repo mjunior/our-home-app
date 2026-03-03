@@ -10,6 +10,12 @@ import { CategoriesService } from "../../modules/categories/categories.service";
 import { InvoiceCycleService } from "../../modules/invoices/invoice-cycle.service";
 import { InvoicesController } from "../../modules/invoices/invoices.controller";
 import { InvoicesService } from "../../modules/invoices/invoices.service";
+import { InstallmentsService } from "../../modules/scheduling/installments.service";
+import { RecurrenceService } from "../../modules/scheduling/recurrence.service";
+import { ScheduleEngineService } from "../../modules/scheduling/schedule-engine.service";
+import { ScheduleManagementController } from "../../modules/scheduling/schedule-management.controller";
+import { ScheduleManagementService } from "../../modules/scheduling/schedule-management.service";
+import { ScheduleRepository } from "../../modules/scheduling/schedule.repository";
 import { TransactionsController } from "../../modules/transactions/transactions.controller";
 import { TransactionsRepository } from "../../modules/transactions/transactions.repository";
 import { TransactionsService } from "../../modules/transactions/transactions.service";
@@ -18,6 +24,8 @@ const accountsRepository = new AccountsRepository();
 const cardsRepository = new CardsRepository();
 const categoriesRepository = new CategoriesRepository();
 const transactionsRepository = new TransactionsRepository();
+const scheduleRepository = new ScheduleRepository();
+const scheduleEngine = new ScheduleEngineService();
 
 export const accountsController = new AccountsController(new AccountsService(accountsRepository));
 export const cardsController = new CardsController(new CardsService(cardsRepository));
@@ -27,4 +35,12 @@ export const transactionsController = new TransactionsController(
 );
 export const invoicesController = new InvoicesController(
   new InvoicesService(transactionsRepository, cardsRepository, new InvoiceCycleService()),
+);
+export const scheduleManagementController = new ScheduleManagementController(
+  new ScheduleManagementService(
+    scheduleRepository,
+    new InstallmentsService(scheduleRepository, scheduleEngine),
+    new RecurrenceService(scheduleRepository, scheduleEngine),
+    scheduleEngine,
+  ),
 );
