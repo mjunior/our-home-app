@@ -8,7 +8,7 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "../../../components/ui/sheet";
-import { formatCurrencyBR } from "../../../lib/utils";
+import { formatCurrencyBR, formatMonthLabelBR } from "../../../lib/utils";
 import {
   accountsController,
   cardsController,
@@ -193,30 +193,35 @@ export default function CashflowPage() {
       </section>
 
       <Card className="section-reveal">
-        <CardContent className="flex flex-wrap items-center gap-2 pt-5">
-          <Button type="button" variant="outline" onClick={() => setMonth((prev) => addMonths(prev, -1))}>
-            Mes anterior
-          </Button>
-          <Badge variant="secondary">{month}</Badge>
-          <Button type="button" variant="outline" onClick={() => setMonth((prev) => addMonths(prev, 1))}>
-            Proximo mes
-          </Button>
-          <div className="ml-auto flex items-center gap-2">
-            <label htmlFor="origin-filter" className="text-sm text-slate-500 dark:text-slate-300">
-              Origem
-            </label>
-            <select
-              id="origin-filter"
-              aria-label="Filtro de origem"
-              value={originFilter}
-              onChange={(event) => setOriginFilter(event.target.value as "ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT")}
-            >
-              <option value="ALL">Todos</option>
-              <option value="ONE_OFF">Avulso</option>
-              <option value="INVESTMENT">Investimento</option>
-              <option value="RECURRING">Recorrencia</option>
-              <option value="INSTALLMENT">Parcelamento</option>
-            </select>
+        <CardContent className="pt-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => setMonth((prev) => addMonths(prev, -1))}>
+                Mes anterior
+              </Button>
+              <Badge variant="secondary">{formatMonthLabelBR(month)}</Badge>
+              <Button type="button" variant="outline" onClick={() => setMonth((prev) => addMonths(prev, 1))}>
+                Proximo mes
+              </Button>
+            </div>
+            <div className="grid grid-cols-[auto,1fr] items-center gap-2 lg:flex lg:items-center">
+              <label htmlFor="origin-filter" className="text-sm text-slate-500 dark:text-slate-300">
+                Origem
+              </label>
+              <select
+                id="origin-filter"
+                aria-label="Filtro de origem"
+                className="w-full lg:w-auto"
+                value={originFilter}
+                onChange={(event) => setOriginFilter(event.target.value as "ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT")}
+              >
+                <option value="ALL">Todos</option>
+                <option value="ONE_OFF">Avulso</option>
+                <option value="INVESTMENT">Investimento</option>
+                <option value="RECURRING">Recorrencia</option>
+                <option value="INSTALLMENT">Parcelamento</option>
+              </select>
+            </div>
           </div>
         </CardContent>
       </Card>

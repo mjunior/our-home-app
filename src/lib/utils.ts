@@ -24,6 +24,18 @@ export function formatDateBR(isoDateLike: string): string {
   return `${day}/${month}/${year}`;
 }
 
+export function formatMonthLabelBR(monthKey: string): string {
+  const [yearRaw, monthRaw] = monthKey.split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  if (!year || !month || month < 1 || month > 12) {
+    return monthKey;
+  }
+
+  const shortMonths = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  return `${shortMonths[month - 1]}/${String(year).slice(-2)}`;
+}
+
 export function formatCurrencyInputBRL(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   const cents = Number(digits || "0");
