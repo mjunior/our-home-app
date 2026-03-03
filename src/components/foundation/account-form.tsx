@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { currencyInputToDecimal, formatCurrencyInputBRL } from "../../lib/utils";
+
 export interface AccountFormValues {
   name: string;
   openingBalance: string;
@@ -12,14 +14,14 @@ interface AccountFormProps {
 
 export function AccountForm({ onSubmit }: AccountFormProps) {
   const [name, setName] = useState("");
-  const [openingBalance, setOpeningBalance] = useState("0.00");
+  const [openingBalance, setOpeningBalance] = useState("0,00");
   const [type, setType] = useState<"CHECKING" | "SAVINGS" | "CASH">("CHECKING");
 
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        onSubmit({ name, openingBalance, type });
+        onSubmit({ name, openingBalance: currencyInputToDecimal(openingBalance), type });
         setName("");
       }}
     >
@@ -31,8 +33,9 @@ export function AccountForm({ onSubmit }: AccountFormProps) {
         Saldo inicial
         <input
           aria-label="Saldo inicial"
+          inputMode="numeric"
           value={openingBalance}
-          onChange={(event) => setOpeningBalance(event.target.value)}
+          onChange={(event) => setOpeningBalance(formatCurrencyInputBRL(event.target.value))}
         />
       </label>
       <label>

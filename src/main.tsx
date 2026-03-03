@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import type { RouteKey } from "./app/routes";
 import { AppShell } from "./components/layout/app-shell";
+import { SnackbarProvider } from "./components/ui/snackbar";
 import "./styles.css";
 
 function App() {
@@ -24,6 +25,8 @@ if (!root) {
 
 createRoot(root).render(
   <React.StrictMode>
-    <App />
+    <SnackbarProvider>
+      <App />
+    </SnackbarProvider>
   </React.StrictMode>,
 );

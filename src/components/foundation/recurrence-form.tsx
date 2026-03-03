@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { currencyInputToDecimal, formatCurrencyInputBRL } from "../../lib/utils";
+
 interface Option {
   id: string;
   label: string;
@@ -23,7 +25,7 @@ interface RecurrenceFormProps {
 export function RecurrenceForm({ accounts, cards, categories, onSubmit }: RecurrenceFormProps) {
   const [kind, setKind] = useState<"INCOME" | "EXPENSE">("EXPENSE");
   const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("0.00");
+  const [amount, setAmount] = useState("0,00");
   const [startMonth, setStartMonth] = useState("2026-03");
   const [target, setTarget] = useState<"account" | "card">("account");
   const [targetId, setTargetId] = useState(accounts[0]?.id ?? cards[0]?.id ?? "");
@@ -38,7 +40,7 @@ export function RecurrenceForm({ accounts, cards, categories, onSubmit }: Recurr
         onSubmit({
           kind,
           description,
-          amount,
+          amount: currencyInputToDecimal(amount),
           startMonth,
           categoryId,
           accountId: target === "account" ? targetId : undefined,
@@ -65,7 +67,12 @@ export function RecurrenceForm({ accounts, cards, categories, onSubmit }: Recurr
       </label>
       <label>
         Valor recorrencia
-        <input aria-label="Valor recorrencia" value={amount} onChange={(event) => setAmount(event.target.value)} />
+        <input
+          aria-label="Valor recorrencia"
+          inputMode="numeric"
+          value={amount}
+          onChange={(event) => setAmount(formatCurrencyInputBRL(event.target.value))}
+        />
       </label>
       <label>
         Mes inicial recorrencia

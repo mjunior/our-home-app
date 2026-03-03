@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { currencyInputToDecimal, formatCurrencyInputBRL } from "../../lib/utils";
+
 interface Option {
   id: string;
   label: string;
@@ -22,7 +24,7 @@ interface InstallmentFormProps {
 
 export function InstallmentForm({ accounts, cards, categories, onSubmit }: InstallmentFormProps) {
   const [description, setDescription] = useState("");
-  const [totalAmount, setTotalAmount] = useState("0.00");
+  const [totalAmount, setTotalAmount] = useState("0,00");
   const [installmentsCount, setInstallmentsCount] = useState(2);
   const [startMonth, setStartMonth] = useState("2026-04");
   const [target, setTarget] = useState<"account" | "card">("card");
@@ -37,7 +39,7 @@ export function InstallmentForm({ accounts, cards, categories, onSubmit }: Insta
         event.preventDefault();
         onSubmit({
           description,
-          totalAmount,
+          totalAmount: currencyInputToDecimal(totalAmount),
           installmentsCount,
           startMonth,
           categoryId,
@@ -56,8 +58,9 @@ export function InstallmentForm({ accounts, cards, categories, onSubmit }: Insta
         Valor total parcelado
         <input
           aria-label="Valor total parcelado"
+          inputMode="numeric"
           value={totalAmount}
-          onChange={(event) => setTotalAmount(event.target.value)}
+          onChange={(event) => setTotalAmount(formatCurrencyInputBRL(event.target.value))}
         />
       </label>
       <label>
