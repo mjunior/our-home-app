@@ -74,14 +74,14 @@ describe("cashflow flow", () => {
     expect(screen.getByText("Saida")).toBeInTheDocument();
     expect(screen.getByText("Cartao: Visa Casa")).toBeInTheDocument();
 
-    await user.click(screen.getAllByRole("button", { name: "Editar" })[0]!);
+    await user.click(screen.getAllByRole("button", { name: "Editar lancamento" })[0]!);
     await user.clear(screen.getByLabelText("Editar descricao da transacao"));
     await user.type(screen.getByLabelText("Editar descricao da transacao"), "Salario ajustado");
     await user.click(screen.getByRole("button", { name: "Salvar edicao" }));
 
     expect(screen.getByText("Salario ajustado")).toBeInTheDocument();
 
-    await user.click(screen.getAllByRole("button", { name: "Editar" })[0]!);
+    await user.click(screen.getAllByRole("button", { name: "Editar lancamento" })[0]!);
     await user.click(screen.getByRole("button", { name: "Excluir" }));
     expect(screen.queryByText("Salario ajustado")).not.toBeInTheDocument();
   });
@@ -105,7 +105,7 @@ describe("cashflow flow", () => {
     await user.selectOptions(screen.getByLabelText("Filtro de origem"), "INVESTMENT");
     expect(screen.getAllByText("Aporte")).toHaveLength(1);
 
-    await user.click(screen.getAllByRole("button", { name: "Editar" })[0]!);
+    await user.click(screen.getAllByRole("button", { name: "Editar lancamento" })[0]!);
     await user.clear(screen.getByLabelText("Editar descricao da transacao"));
     await user.type(screen.getByLabelText("Editar descricao da transacao"), "Aporte ajustado");
     await user.clear(screen.getByLabelText("Editar valor da transacao"));
@@ -114,7 +114,7 @@ describe("cashflow flow", () => {
 
     expect(screen.getAllByText("Aporte ajustado")).toHaveLength(1);
 
-    await user.click(screen.getAllByRole("button", { name: "Editar" })[0]!);
+    await user.click(screen.getAllByRole("button", { name: "Editar lancamento" })[0]!);
     await user.click(screen.getByRole("button", { name: "Excluir" }));
     expect(screen.queryByText("Aporte ajustado")).not.toBeInTheDocument();
   });

@@ -24,6 +24,15 @@ export function formatDateBR(isoDateLike: string): string {
   return `${day}/${month}/${year}`;
 }
 
+export function formatDateShortBR(isoDateLike: string): string {
+  const [year, month, day] = isoDateLike.slice(0, 10).split("-");
+  if (!year || !month || !day) {
+    return isoDateLike;
+  }
+
+  return `${day}/${month}`;
+}
+
 export function formatMonthLabelBR(monthKey: string): string {
   const [yearRaw, monthRaw] = monthKey.split("-");
   const year = Number(yearRaw);
