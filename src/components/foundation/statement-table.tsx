@@ -115,16 +115,16 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700">
             {isDesktop ? (
               <div className="overflow-x-auto">
-                <table>
+                <table className="w-full min-w-[940px] text-sm">
                   <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Descricao</th>
-                      <th>Valor</th>
-                      <th>Tipo/Origem</th>
-                      <th>Categoria</th>
-                      <th>Destino</th>
-                      <th>Acoes</th>
+                    <tr className="border-b border-slate-200/70 dark:border-slate-700/70">
+                      <th className="px-3 py-3 text-left">Data</th>
+                      <th className="px-3 py-3 text-left">Descricao</th>
+                      <th className="px-3 py-3 text-left">Valor</th>
+                      <th className="px-3 py-3 text-left">Tipo/Origem</th>
+                      <th className="px-3 py-3 text-left">Categoria</th>
+                      <th className="px-3 py-3 text-left">Destino</th>
+                      <th className="px-3 py-3 text-left">Acoes</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -138,23 +138,25 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
 
                       return (
                         <tr key={entry.id} className={`row-animate ${index % 2 === 0 ? "bg-transparent" : "bg-slate-50/60 dark:bg-slate-900/40"}`}>
-                          <td title={formatDateBR(entry.occurredAt)}>{formatDateShortBR(entry.occurredAt)}</td>
-                          <td className="font-medium">{entry.description}</td>
-                          <td className="font-semibold">{formatCurrencyBR(entry.amount)}</td>
-                          <td>
+                          <td className="px-3 py-3 align-middle text-base" title={formatDateBR(entry.occurredAt)}>
+                            {formatDateShortBR(entry.occurredAt)}
+                          </td>
+                          <td className="max-w-[280px] px-3 py-3 align-middle font-medium">{entry.description}</td>
+                          <td className="whitespace-nowrap px-3 py-3 align-middle text-[1.05rem] font-semibold">{formatCurrencyBR(entry.amount)}</td>
+                          <td className="px-3 py-3 align-middle">
                             <TypeOriginCell entry={entry} />
                           </td>
-                          <td>
+                          <td className="px-3 py-3 align-middle">
                             <Badge variant="secondary" className="normal-case tracking-normal">
                               {categoryLabel}
                             </Badge>
                           </td>
-                          <td>
+                          <td className="px-3 py-3 align-middle">
                             <Badge variant="outline" className="normal-case tracking-normal">
                               {destinationLabel}
                             </Badge>
                           </td>
-                          <td>
+                          <td className="px-3 py-3 align-middle">
                             {onEditEntry ? (
                               <Button
                                 type="button"
@@ -184,31 +186,36 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                       : `Cartao: ${cardLabels[entry.creditCardId ?? ""] ?? "Nao encontrado"}`;
 
                   return (
-                    <article key={entry.id} className={`row-animate rounded-xl border border-slate-200 p-3 dark:border-slate-700 ${index % 2 === 0 ? "" : "bg-slate-50/60 dark:bg-slate-900/40"}`}>
-                      <div className="mb-2 flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-semibold leading-tight">{entry.description}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-300" title={formatDateBR(entry.occurredAt)}>
-                            {formatDateShortBR(entry.occurredAt)}
-                          </p>
+                    <article
+                      key={entry.id}
+                      className={`row-animate rounded-xl px-3 py-2.5 ${index % 2 === 0 ? "bg-slate-900/20" : "bg-slate-900/35"}`}
+                    >
+                      <div className="mb-1.5 flex items-start justify-between gap-2">
+                        <div className="min-w-0 space-y-1">
+                          <p className="truncate text-[1.02rem] font-semibold leading-tight">{entry.description}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-slate-400" title={formatDateBR(entry.occurredAt)}>
+                              {formatDateShortBR(entry.occurredAt)}
+                            </p>
+                            <TypeOriginCell entry={entry} />
+                          </div>
                         </div>
-                        {onEditEntry ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            aria-label="Editar lancamento"
-                            onClick={() => onEditEntry(entry)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        ) : null}
+                        <div className="flex items-center gap-2">
+                          <strong className="whitespace-nowrap text-[1.12rem]">{formatCurrencyBR(entry.amount)}</strong>
+                          {onEditEntry ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              aria-label="Editar lancamento"
+                              onClick={() => onEditEntry(entry)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <TypeOriginCell entry={entry} />
-                        <strong className="text-sm">{formatCurrencyBR(entry.amount)}</strong>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <Badge variant="secondary" className="normal-case tracking-normal">
                           {categoryLabel}
                         </Badge>
