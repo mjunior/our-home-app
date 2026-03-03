@@ -1,5 +1,19 @@
 # Milestones
 
+## v1.2 Ui improvements and Import (Shipped: 2026-03-03)
+
+**Phases completed:** 2 phases, 6 plans, 12 tasks
+
+**Key accomplishments:**
+- Home do cashflow simplificada (remocao de redundancias visuais e hierarquia mais clara).
+- Navegacao mensal estabilizada em desktop/mobile com rotulo de mes curto (`Mar/26`).
+- Extrato refinado com data curta `DD/MM`, acao de edicao iconica e melhor legibilidade.
+- Fluxo de importacao por textarea integrado ao cashflow com preview de linhas validas/invalidas.
+- Parser deterministico para formato `data tipo descricao valor categoria conta recorrente`.
+- Persistencia em lote com sucesso parcial (`/api/launches/batch`) e feedback de importadas/rejeitadas.
+
+---
+
 ## v1.1 Lancamentos Unificados e Investimento por Transferencia (Shipped: 2026-03-03)
 
 **Phases completed:** 3 phases, 8 plans
