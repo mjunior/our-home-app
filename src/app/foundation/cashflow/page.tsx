@@ -65,7 +65,7 @@ export default function CashflowPage() {
   );
 
   return (
-    <main>
+    <main className="space-y-4">
       <h1>Fluxo de Caixa</h1>
 
       <FreeBalanceSemaphore
@@ -88,8 +88,9 @@ export default function CashflowPage() {
         }}
       />
 
-      <section>
+      <section className="panel">
         <h2>Filtros do extrato</h2>
+        <div className="mt-3 grid gap-2">
         <label>
           Mes
           <input aria-label="Filtro mes" value={month} onChange={(event) => setMonth(event.target.value)} />
@@ -131,11 +132,14 @@ export default function CashflowPage() {
             ))}
           </select>
         </label>
+        </div>
       </section>
 
-      <StatementTable entries={transactions} />
+      <section className="panel">
+        <StatementTable entries={transactions} />
+      </section>
 
-      <section>
+      <section className="panel">
         <label>
           Cartao para fatura
           <select

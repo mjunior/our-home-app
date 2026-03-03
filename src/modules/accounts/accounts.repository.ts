@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createId } from "../../domain/shared/id";
 
 export interface AccountRecord {
   id: string;
@@ -13,7 +13,7 @@ const accountsStore: AccountRecord[] = [];
 export class AccountsRepository {
   create(data: Omit<AccountRecord, "id">): AccountRecord {
     const record: AccountRecord = {
-      id: randomUUID(),
+      id: createId(),
       ...data,
     };
 

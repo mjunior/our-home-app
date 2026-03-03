@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createId } from "../../domain/shared/id";
 
 export interface CategoryRecord {
   id: string;
@@ -20,7 +20,7 @@ export class CategoriesRepository {
     }
 
     const record: CategoryRecord = {
-      id: randomUUID(),
+      id: createId(),
       ...data,
     };
 

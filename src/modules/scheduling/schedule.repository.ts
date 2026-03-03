@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createId } from "../../domain/shared/id";
 
 export type ScheduleSourceType = "INSTALLMENT" | "RECURRING";
 
@@ -55,13 +55,13 @@ const scheduledInstancesStore: ScheduledInstanceRecord[] = [];
 
 export class ScheduleRepository {
   createInstallmentPlan(data: Omit<InstallmentPlanRecord, "id">): InstallmentPlanRecord {
-    const record: InstallmentPlanRecord = { id: randomUUID(), ...data };
+    const record: InstallmentPlanRecord = { id: createId(), ...data };
     installmentPlansStore.push(record);
     return record;
   }
 
   createRecurringRule(data: Omit<RecurringRuleRecord, "id">): RecurringRuleRecord {
-    const record: RecurringRuleRecord = { id: randomUUID(), ...data };
+    const record: RecurringRuleRecord = { id: createId(), ...data };
     recurringRulesStore.push(record);
     return record;
   }
@@ -98,7 +98,7 @@ export class ScheduleRepository {
       return { created: false, record: existing };
     }
 
-    const created: ScheduledInstanceRecord = { id: randomUUID(), ...data };
+    const created: ScheduledInstanceRecord = { id: createId(), ...data };
     scheduledInstancesStore.push(created);
     return { created: true, record: created };
   }

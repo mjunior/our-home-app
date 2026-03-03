@@ -10,7 +10,7 @@ export default function CategoriesPage() {
   const categories = useMemo(() => categoriesController.listCategories(HOUSEHOLD_ID), [refreshKey]);
 
   return (
-    <main>
+    <main className="space-y-4">
       <h1>Categorias</h1>
       <CategoryForm
         onSubmit={(name) => {
@@ -18,9 +18,11 @@ export default function CategoriesPage() {
           setRefreshKey((prev) => prev + 1);
         }}
       />
-      <ul>
+      <ul className="panel">
         {categories.map((category) => (
-          <li key={category.id}>{category.name}</li>
+          <li key={category.id} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950/70">
+            {category.name}
+          </li>
         ))}
       </ul>
     </main>

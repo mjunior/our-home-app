@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createId } from "../../domain/shared/id";
 
 export interface CreditCardRecord {
   id: string;
@@ -13,7 +13,7 @@ const cardsStore: CreditCardRecord[] = [];
 export class CardsRepository {
   create(data: Omit<CreditCardRecord, "id">): CreditCardRecord {
     const record: CreditCardRecord = {
-      id: randomUUID(),
+      id: createId(),
       ...data,
     };
 

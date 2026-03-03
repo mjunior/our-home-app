@@ -10,7 +10,7 @@ export default function CardsPage() {
   const cards = useMemo(() => cardsController.listCards(HOUSEHOLD_ID), [refreshKey]);
 
   return (
-    <main>
+    <main className="space-y-4">
       <h1>Cartoes</h1>
       <CardForm
         onSubmit={(values) => {
@@ -18,9 +18,9 @@ export default function CardsPage() {
           setRefreshKey((prev) => prev + 1);
         }}
       />
-      <ul>
+      <ul className="panel">
         {cards.map((card) => (
-          <li key={card.id}>
+          <li key={card.id} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950/70">
             {card.name} - fecha {card.closeDay} vence {card.dueDay}
           </li>
         ))}

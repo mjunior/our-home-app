@@ -37,29 +37,29 @@ export function ScheduleList({ installments, recurrences, instances, onEditRecur
   const selectedRule = activeRules[0];
 
   return (
-    <section>
+    <section className="panel space-y-3">
       <h2>Schedules</h2>
 
       <h3>Recorrencias</h3>
-      <ul>
+      <ul className="space-y-2">
         {recurrences.map((rule) => (
-          <li key={rule.id}>
+          <li key={rule.id} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950/70">
             {rule.description} - R$ {rule.amount} - inicio {rule.startMonth} - {rule.active ? "ativa" : "inativa"}
           </li>
         ))}
       </ul>
 
       <h3>Parcelas</h3>
-      <ul>
+      <ul className="space-y-2">
         {installments.map((plan) => (
-          <li key={plan.id}>
+          <li key={plan.id} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950/70">
             {plan.description} - R$ {plan.totalAmount} - {plan.installmentsCount}x - {plan.active ? "ativa" : "inativa"}
           </li>
         ))}
       </ul>
 
       {selectedRule ? (
-        <div>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
           <p>Gerenciar recorrencia: {selectedRule.description}</p>
           <button
             type="button"
@@ -88,9 +88,9 @@ export function ScheduleList({ installments, recurrences, instances, onEditRecur
       ) : null}
 
       <h3>Instancias geradas</h3>
-      <ul>
+      <ul className="space-y-2">
         {instances.map((instance) => (
-          <li key={instance.id} data-testid="schedule-instance">
+          <li key={instance.id} data-testid="schedule-instance" className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950/70">
             {instance.monthKey} - {instance.sourceType} - {instance.description} - R$ {instance.amount} - {instance.locked ? "locked" : "open"}
           </li>
         ))}

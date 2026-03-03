@@ -17,7 +17,7 @@ export default function SchedulesPage() {
   const schedules = useMemo(() => scheduleManagementController.listSchedules(HOUSEHOLD_ID), [refreshKey]);
 
   return (
-    <main>
+    <main className="space-y-4">
       <h1>Parcelas e Recorrencias</h1>
 
       <RecurrenceForm

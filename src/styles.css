@@ -1,0 +1,136 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  .dark {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    @apply min-h-screen;
+  }
+
+  body {
+    @apply bg-brand-fog text-slate-900 font-body antialiased;
+    background-image: radial-gradient(circle at 20% 0%, rgba(216, 240, 79, 0.35), transparent 35%),
+      radial-gradient(circle at 100% 100%, rgba(0, 79, 89, 0.15), transparent 30%);
+  }
+
+  .dark body {
+    @apply bg-[#090d10] text-slate-100;
+    background-image: radial-gradient(circle at 12% 10%, rgba(216, 240, 79, 0.16), transparent 32%),
+      radial-gradient(circle at 86% 100%, rgba(0, 79, 89, 0.28), transparent 34%);
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+
+  h1 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  h2 {
+    @apply text-lg md:text-xl;
+  }
+
+  h3 {
+    @apply text-base md:text-lg;
+  }
+
+  form {
+    @apply grid gap-3 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-soft backdrop-blur;
+  }
+
+  .dark form {
+    @apply border-slate-700/80 bg-slate-900/80;
+  }
+
+  label {
+    @apply grid gap-1 text-sm font-semibold text-slate-700;
+  }
+
+  .dark label {
+    @apply text-slate-200;
+  }
+
+  input,
+  select,
+  button,
+  textarea {
+    @apply rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 outline-none transition;
+  }
+
+  .dark input,
+  .dark select,
+  .dark button,
+  .dark textarea {
+    @apply border-slate-700 bg-slate-950 text-slate-100;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    @apply border-brand-teal ring-2 ring-brand-teal/20;
+  }
+
+  button {
+    @apply border-slate-300 bg-brand-teal text-white;
+  }
+
+  button:hover {
+    @apply brightness-110;
+  }
+
+  ul,
+  ol {
+    @apply space-y-1;
+  }
+
+  table {
+    @apply w-full rounded-2xl border border-slate-200 bg-white/90 text-sm shadow-soft;
+  }
+
+  .dark table {
+    @apply border-slate-700 bg-slate-900/80;
+  }
+
+  th,
+  td {
+    @apply border-b border-slate-100 px-3 py-2 text-left;
+  }
+
+  .dark th,
+  .dark td {
+    @apply border-slate-800;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-soft backdrop-blur;
+  }
+
+  .dark .panel {
+    @apply border-slate-700/80 bg-slate-900/80;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full border border-slate-200 px-2 py-1 text-xs font-semibold;
+  }
+
+  .dark .chip {
+    @apply border-slate-700;
+  }
+}

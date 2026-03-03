@@ -12,7 +12,7 @@ export default function AccountsPage() {
   const consolidated = useMemo(() => accountsController.getConsolidatedBalance(HOUSEHOLD_ID), [refreshKey]);
 
   return (
-    <main>
+    <main className="space-y-4">
       <h1>Contas</h1>
       <ConsolidatedBalanceCard amount={consolidated.amount} />
       <AccountForm
@@ -21,9 +21,9 @@ export default function AccountsPage() {
           setRefreshKey((prev) => prev + 1);
         }}
       />
-      <ul>
+      <ul className="panel">
         {accounts.map((account) => (
-          <li key={account.id}>
+          <li key={account.id} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950/70">
             {account.name} - {account.type} - R$ {account.openingBalance}
           </li>
         ))}

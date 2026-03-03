@@ -16,11 +16,11 @@ interface InvoicePanelsProps {
 
 export function InvoicePanels({ data }: InvoicePanelsProps) {
   if (!data) {
-    return <p>Sem cartao selecionado para fatura.</p>;
+    return <p className="panel">Sem cartao selecionado para fatura.</p>;
   }
 
   return (
-    <section aria-label="Painel de fatura">
+    <section aria-label="Painel de fatura" className="panel">
       <h2>Faturas - {data.cardName}</h2>
       <p data-testid="invoice-current">
         Atual ({data.current.monthKey}): R$ {data.current.total}

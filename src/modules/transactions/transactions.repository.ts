@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createId } from "../../domain/shared/id";
 
 export type TransactionKind = "INCOME" | "EXPENSE";
 
@@ -32,7 +32,7 @@ function toMonthKey(occurredAt: string): string {
 export class TransactionsRepository {
   create(data: Omit<TransactionRecord, "id">): TransactionRecord {
     const record: TransactionRecord = {
-      id: randomUUID(),
+      id: createId(),
       ...data,
     };
 
