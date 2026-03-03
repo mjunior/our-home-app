@@ -45,6 +45,7 @@ type ScheduleManagementControllerContract = Pick<
   | "createRecurringSchedule"
   | "createInstallmentSchedule"
   | "createLaunch"
+  | "createLaunchBatch"
   | "listSchedules"
   | "listMonthInstances"
   | "editRecurringSchedule"
@@ -173,6 +174,8 @@ function createApiRuntime(): Runtime {
   type InstallmentCreateOutput = MethodReturn<Runtime["scheduleManagementController"]["createInstallmentSchedule"]>;
   type UnifiedLaunchInput = MethodArgs<Runtime["scheduleManagementController"]["createLaunch"]>[0];
   type UnifiedLaunchOutput = MethodReturn<Runtime["scheduleManagementController"]["createLaunch"]>;
+  type UnifiedLaunchBatchInput = MethodArgs<Runtime["scheduleManagementController"]["createLaunchBatch"]>[0];
+  type UnifiedLaunchBatchOutput = MethodReturn<Runtime["scheduleManagementController"]["createLaunchBatch"]>;
   type SchedulesListOutput = MethodReturn<Runtime["scheduleManagementController"]["listSchedules"]>;
   type SchedulesMonthInstancesInput = MethodArgs<Runtime["scheduleManagementController"]["listMonthInstances"]>[0];
   type SchedulesMonthInstancesOutput = MethodReturn<Runtime["scheduleManagementController"]["listMonthInstances"]>;
@@ -261,6 +264,8 @@ function createApiRuntime(): Runtime {
         requestSync<InstallmentCreateOutput>("POST", "/api/schedules/installment", input),
       createLaunch: (input: UnifiedLaunchInput): UnifiedLaunchOutput =>
         requestSync<UnifiedLaunchOutput>("POST", "/api/launches", input),
+      createLaunchBatch: (input: UnifiedLaunchBatchInput): UnifiedLaunchBatchOutput =>
+        requestSync<UnifiedLaunchBatchOutput>("POST", "/api/launches/batch", input),
       listSchedules: (householdId: string): SchedulesListOutput =>
         requestSync<SchedulesListOutput>("GET", `/api/schedules?householdId=${encodeURIComponent(householdId)}`),
       listMonthInstances: (input: SchedulesMonthInstancesInput): SchedulesMonthInstancesOutput =>

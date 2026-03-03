@@ -103,6 +103,17 @@ type UnifiedLaunchInput =
   | { launchType: "INSTALLMENT"; installment: CreateInstallmentInput }
   | { launchType: "INVESTMENT"; investment: CreateInvestmentTransferInput };
 
+const launchBatchSchema = z.object({
+  entries: z.array(unifiedLaunchSchema).min(1),
+});
+
+export interface LaunchBatchResult {
+  total: number;
+  created: number;
+  failed: number;
+  errors: Array<{ index: number; error: string }>;
+}
+
 export class ScheduleManagementService {
   constructor(
     private readonly repository: ScheduleRepository,
@@ -145,6 +156,30 @@ export class ScheduleManagementService {
     }
 
     return this.createInstallmentSchedule(parsed.installment);
+  }
+
+  createLaunchBatch(input: { entries: UnifiedLaunchInput[] }): LaunchBatchResult {
+    const parsed = launchBatchSchema.parse(input);
+
+    const errors: Array<{ index: number; error: string }> = [];
+    let created = 0;
+
+    parsed.entries.forEach((entry, index) => {
+      try {
+        this.createUnifiedLaunch(entry);
+        created += 1;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "UNKNOWN_ERROR";
+        errors.push({ index, error: message });
+      }
+    });
+
+    return {
+      total: parsed.entries.length,
+      created,
+      failed: parsed.entries.length - created,
+      errors,
+    };
   }
 
   editRecurringSchedule(input: { ruleId: string; effectiveMonth: string; kind?: "INCOME" | "EXPENSE"; amount?: string; description?: string }) {

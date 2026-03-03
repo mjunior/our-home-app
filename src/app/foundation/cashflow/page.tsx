@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import { FreeBalanceSemaphore } from "../../../components/foundation/free-balance-semaphore";
 import { StatementTable } from "../../../components/foundation/statement-table";
+import { TransactionImportForm } from "../../../components/foundation/transaction-import-form";
 import { UnifiedLaunchForm } from "../../../components/foundation/unified-launch-form";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { useSnackbar } from "../../../components/ui/snackbar";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "../../../components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
 import { formatCurrencyBR, formatMonthLabelBR } from "../../../lib/utils";
 import {
   accountsController,
@@ -40,6 +41,7 @@ function addMonths(monthKey: string, count: number): string {
 export default function CashflowPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailMonthKey, setDetailMonthKey] = useState<"current" | "next">("current");
   const [month, setMonth] = useState("2026-03");
@@ -178,8 +180,13 @@ export default function CashflowPage() {
 
   useEffect(() => {
     const openLaunch = () => setTransactionModalOpen(true);
+    const openImport = () => setImportModalOpen(true);
     window.addEventListener("cashflow:new-launch", openLaunch);
-    return () => window.removeEventListener("cashflow:new-launch", openLaunch);
+    window.addEventListener("cashflow:import-launch", openImport);
+    return () => {
+      window.removeEventListener("cashflow:new-launch", openLaunch);
+      window.removeEventListener("cashflow:import-launch", openImport);
+    };
   }, []);
 
   return (
@@ -204,6 +211,9 @@ export default function CashflowPage() {
               <Badge variant="secondary">{formatMonthLabelBR(month)}</Badge>
               <Button type="button" variant="outline" onClick={() => setMonth((prev) => addMonths(prev, 1))}>
                 Proximo mes
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setImportModalOpen(true)}>
+                Importar texto
               </Button>
             </div>
             <div className="grid grid-cols-[auto,1fr] items-center gap-2 lg:flex lg:items-center">
@@ -304,6 +314,35 @@ export default function CashflowPage() {
                 } catch {
                   notify({ message: "Nao foi possivel cadastrar o lancamento.", tone: "error" });
                 }
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={importModalOpen} onOpenChange={setImportModalOpen}>
+        <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[85vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
+          <SheetHeader>
+            <SheetTitle>Importar lancamentos por texto</SheetTitle>
+            <SheetDescription>Cole varias linhas e importe apenas as validas.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4">
+            <TransactionImportForm
+              householdId={HOUSEHOLD_ID}
+              month={month}
+              accounts={accounts.map((item) => ({ id: item.id, label: item.name }))}
+              cards={cards.map((item) => ({ id: item.id, label: item.name }))}
+              categories={categories.map((item) => ({ id: item.id, label: item.name, normalized: item.normalized }))}
+              onSubmitBatch={(payloads) => {
+                const result = scheduleManagementController.createLaunchBatch({ entries: payloads });
+                if (result.created > 0) {
+                  setRefreshKey((prev) => prev + 1);
+                }
+                notify({
+                  message: `Importacao concluida: ${result.created} importados, ${result.failed} rejeitados.`,
+                  tone: result.failed > 0 ? "info" : "success",
+                });
+                return result;
               }}
             />
           </div>

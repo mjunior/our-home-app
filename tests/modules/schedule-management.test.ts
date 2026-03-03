@@ -282,4 +282,75 @@ describe("schedule management", () => {
     const remaining = repository.listInstancesBySource("RECURRING", rule.id);
     expect(remaining.every((item) => item.monthKey < "2026-04")).toBe(true);
   });
+
+  it("imports batch launches with partial success", () => {
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+    const scheduleRepo = new ScheduleRepository();
+    accountsRepo.clearAll();
+    cardsRepo.clearAll();
+    categoriesRepo.clearAll();
+    transactionsRepo.clearAll();
+    scheduleRepo.clearAll();
+
+    const account = accountsRepo.create({
+      householdId,
+      name: "Conta Casa",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const category = categoriesRepo.create({
+      householdId,
+      name: "Mercado",
+      normalized: "mercado",
+    });
+
+    const transactionsService = new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo);
+    const engine = new ScheduleEngineService();
+    const management = new ScheduleManagementService(
+      scheduleRepo,
+      new InstallmentsService(scheduleRepo, engine),
+      new RecurrenceService(scheduleRepo, engine),
+      engine,
+      transactionsService,
+    );
+
+    const result = management.createLaunchBatch({
+      entries: [
+        {
+          launchType: "ONE_OFF",
+          transaction: {
+            householdId,
+            kind: "EXPENSE",
+            description: "Mercado",
+            amount: "80.00",
+            occurredAt: "2026-03-01T12:00:00.000Z",
+            accountId: account.id,
+            categoryId: category.id,
+          },
+        },
+        {
+          launchType: "ONE_OFF",
+          transaction: {
+            householdId,
+            kind: "INCOME",
+            description: "Entrada invalida",
+            amount: "200.00",
+            occurredAt: "2026-03-02T12:00:00.000Z",
+            creditCardId: "card-missing",
+            categoryId: category.id,
+          },
+        },
+      ],
+    });
+
+    expect(result.total).toBe(2);
+    expect(result.created).toBe(1);
+    expect(result.failed).toBe(1);
+    expect(result.errors[0]?.index).toBe(1);
+    expect(result.errors[0]?.error).toBe("INCOME_REQUIRES_ACCOUNT_ONLY");
+    expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(1);
+  });
 });

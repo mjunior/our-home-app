@@ -635,9 +635,7 @@ export function installViteApi(server: ViteDevServer) {
         return;
       }
 
-      if (req.method === "POST" && path === "/api/launches") {
-        const body = await readJsonBody(req);
-
+      const createLaunchByType = async (body: any) => {
         if (body.launchType === "ONE_OFF") {
           const transaction = body.transaction ?? {};
           const created = await prisma.transaction.create({
@@ -655,15 +653,12 @@ export function installViteApi(server: ViteDevServer) {
               transferGroupId: null,
             },
           });
-          sendJson(res, 200, toTransactionDto(created));
-          return;
+          return toTransactionDto(created);
         }
 
         if (body.launchType === "INVESTMENT") {
           const investment = body.investment ?? {};
-          const created = await createInvestmentTransfer(investment);
-          sendJson(res, 200, created);
-          return;
+          return createInvestmentTransfer(investment);
         }
 
         if (body.launchType === "RECURRING") {
@@ -694,8 +689,7 @@ export function installViteApi(server: ViteDevServer) {
             accountId: recurring.accountId ?? null,
             creditCardId: recurring.creditCardId ?? null,
           });
-          sendJson(res, 200, { ...created, amount: created.amount.toString() });
-          return;
+          return { ...created, amount: created.amount.toString() };
         }
 
         if (body.launchType === "INSTALLMENT") {
@@ -724,9 +718,42 @@ export function installViteApi(server: ViteDevServer) {
             accountId: installment.accountId ?? null,
             creditCardId: installment.creditCardId ?? null,
           });
-          sendJson(res, 200, { ...created, totalAmount: created.totalAmount.toString() });
-          return;
+          return { ...created, totalAmount: created.totalAmount.toString() };
         }
+
+        throw new Error("LAUNCH_TYPE_NOT_SUPPORTED");
+      };
+
+      if (req.method === "POST" && path === "/api/launches") {
+        const body = await readJsonBody(req);
+        const created = await createLaunchByType(body);
+        sendJson(res, 200, created);
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/launches/batch") {
+        const body = await readJsonBody(req);
+        const entries = Array.isArray(body?.entries) ? body.entries : [];
+
+        let created = 0;
+        const errors: Array<{ index: number; error: string }> = [];
+
+        for (let index = 0; index < entries.length; index += 1) {
+          try {
+            await createLaunchByType(entries[index]);
+            created += 1;
+          } catch (error: any) {
+            errors.push({ index, error: error?.message ?? "UNKNOWN_ERROR" });
+          }
+        }
+
+        sendJson(res, 200, {
+          total: entries.length,
+          created,
+          failed: entries.length - created,
+          errors,
+        });
+        return;
       }
 
       if (req.method === "GET" && path === "/api/invoices/card") {

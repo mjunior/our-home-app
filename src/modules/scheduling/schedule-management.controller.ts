@@ -24,6 +24,19 @@ export class ScheduleManagementController {
     return this.service.createUnifiedLaunch(payload);
   }
 
+  createLaunchBatch(
+    payload: {
+      entries: Array<
+        | { launchType: "ONE_OFF"; transaction: CreateTransactionInput }
+        | { launchType: "RECURRING"; recurring: CreateRecurringInput }
+        | { launchType: "INSTALLMENT"; installment: CreateInstallmentInput }
+        | { launchType: "INVESTMENT"; investment: CreateInvestmentTransferInput }
+      >;
+    },
+  ) {
+    return this.service.createLaunchBatch(payload);
+  }
+
   editRecurringSchedule(payload: {
     ruleId: string;
     effectiveMonth: string;
