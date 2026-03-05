@@ -1,16 +1,17 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { installViteApi } from "./src/server/vite-api";
 
 export default defineConfig({
   plugins: [
     react(),
     {
       name: "foundation-api-middleware",
-      configureServer(server) {
+      async configureServer(server) {
+        const { installViteApi } = await import("./src/server/vite-api");
         installViteApi(server);
       },
-      configurePreviewServer(server) {
+      async configurePreviewServer(server) {
+        const { installViteApi } = await import("./src/server/vite-api");
         installViteApi(server);
       },
     },

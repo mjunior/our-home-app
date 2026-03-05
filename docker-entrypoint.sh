@@ -2,6 +2,10 @@
 set -eu
 
 echo "Running Prisma schema sync..."
+echo "Generating Prisma client..."
+npx prisma generate --schema prisma/schema.prisma
+
+echo "Applying Prisma schema to database..."
 npx prisma db push --schema prisma/schema.prisma
 
 echo "Starting application..."
