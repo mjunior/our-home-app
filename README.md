@@ -11,23 +11,44 @@ App web financeiro doméstico com foco em saldo livre mensal e projeção de ris
 npm install
 ```
 
-## Banco (PostgreSQL + Prisma)
-`DATABASE_URL` deve apontar para PostgreSQL:
+## Banco (Prisma)
+
+### Desenvolvimento local (SQLite)
+Use `DATABASE_URL` com `file:` (ex.: `.env`):
 
 ```env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=disable"
+DATABASE_URL="file:./dev.db"
 ```
 
-Validar schema:
+Validar schema local:
 
 ```bash
 npm run prisma:validate
 ```
 
-Aplicar schema no banco local:
+Aplicar schema local:
 
 ```bash
 npm run db:push
+```
+
+### Produção (PostgreSQL)
+Em produção, `DATABASE_URL` deve apontar para PostgreSQL:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=disable"
+```
+
+Validar schema de produção:
+
+```bash
+npm run prisma:validate:prod
+```
+
+Aplicar schema de produção:
+
+```bash
+npm run db:push:prod
 ```
 
 ## Rodando o app
@@ -67,3 +88,7 @@ docker run --rm -p 4173:4173 \
   -e DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=disable" \
   our-home-app:latest
 ```
+
+O `docker-entrypoint.sh` detecta o tipo da URL e usa:
+- `prisma/schema.prod.prisma` para `postgresql://...`
+- `prisma/schema.prisma` para `file:...`
