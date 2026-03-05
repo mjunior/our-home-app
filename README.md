@@ -11,11 +11,11 @@ App web financeiro doméstico com foco em saldo livre mensal e projeção de ris
 npm install
 ```
 
-## Banco (SQLite + Prisma)
-`DATABASE_URL` deve apontar para SQLite local (exemplo em `.env`):
+## Banco (PostgreSQL + Prisma)
+`DATABASE_URL` deve apontar para PostgreSQL:
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=disable"
 ```
 
 Validar schema:
@@ -51,4 +51,19 @@ npm run test:e2e -- tests/e2e/foundation-flow.spec.ts tests/e2e/cashflow-flow.sp
 ## Build
 ```bash
 npm run build
+```
+
+## Docker (produção)
+Build:
+
+```bash
+docker build -t our-home-app:latest .
+```
+
+Run:
+
+```bash
+docker run --rm -p 4173:4173 \
+  -e DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=disable" \
+  our-home-app:latest
 ```

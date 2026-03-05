@@ -10,6 +10,9 @@ export default defineConfig({
       configureServer(server) {
         installViteApi(server);
       },
+      configurePreviewServer(server) {
+        installViteApi(server);
+      },
     },
   ],
 });

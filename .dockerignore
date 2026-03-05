@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.planning
+.codex
+.agents
+.env
+dist
+dev.db
+local.db
+*.log
+.DS_Store

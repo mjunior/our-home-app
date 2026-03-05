@@ -1,4 +1,3 @@
-import type { ViteDevServer } from "vite";
 import { InvoiceCycleService } from "../modules/invoices/invoice-cycle.service";
 import { InvoicesService } from "../modules/invoices/invoices.service";
 import { FreeBalancePolicy } from "../modules/free-balance/free-balance.policy";
@@ -318,7 +317,13 @@ async function ensureBootstrap(householdId: string) {
   }
 }
 
-export function installViteApi(server: ViteDevServer) {
+type MiddlewareServer = {
+  middlewares: {
+    use: (handler: (req: any, res: any, next: () => void) => void | Promise<void>) => void;
+  };
+};
+
+export function installViteApi(server: MiddlewareServer) {
   server.middlewares.use(async (req, res, next) => {
     if (!req.url?.startsWith("/api/")) {
       next();
