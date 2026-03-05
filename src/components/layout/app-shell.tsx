@@ -15,6 +15,7 @@ interface AppShellProps {
   onRouteChange: (next: RouteKey) => void;
   darkMode: boolean;
   onDarkModeChange: (value: boolean) => void;
+  onLogout: () => void;
 }
 
 const quickRoutes: RouteKey[] = ["cashflow", "accounts", "cards", "schedules"];
@@ -41,7 +42,7 @@ function NavItems({ route, onRouteChange }: { route: RouteKey; onRouteChange: (n
   );
 }
 
-export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange }: AppShellProps) {
+export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange, onLogout }: AppShellProps) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[300px_1fr]">
       <aside className="hidden border-r border-slate-200/80 bg-white/80 p-4 backdrop-blur dark:border-slate-800 dark:bg-[#090f13]/80 lg:block">
@@ -65,6 +66,9 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange }: A
             >
               {darkMode ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
               {darkMode ? "Modo claro" : "Modo escuro"}
+            </Button>
+            <Button type="button" variant="ghost" className="w-full" onClick={onLogout}>
+              Sair
             </Button>
           </CardContent>
         </Card>
@@ -130,6 +134,9 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange }: A
             >
               {darkMode ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
             </Button>
+            <Button type="button" variant="ghost" size="icon" aria-label="Sair" onClick={onLogout}>
+              <Menu className="h-4 w-4" />
+            </Button>
           </div>
         </header>
 
@@ -145,6 +152,9 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange }: A
             ) : null}
             <Button type="button" variant="secondary" size="icon" aria-label="Alternar tema" onClick={() => onDarkModeChange(!darkMode)}>
               {darkMode ? <SunMedium className="h-5 w-5" /> : <MoonStar className="h-5 w-5" />}
+            </Button>
+            <Button type="button" variant="ghost" aria-label="Sair" onClick={onLogout}>
+              Sair
             </Button>
           </div>
         </header>

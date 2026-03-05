@@ -4,14 +4,13 @@ import { CategoryForm } from "../../../components/foundation/category-form";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { useSnackbar } from "../../../components/ui/snackbar";
-import { categoriesController } from "../runtime";
-
-const HOUSEHOLD_ID = "household-main";
+import { categoriesController, getRuntimeHouseholdId } from "../runtime";
 
 export default function CategoriesPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { notify } = useSnackbar();
-  const categories = useMemo(() => categoriesController.listCategories(HOUSEHOLD_ID), [refreshKey]);
+  const householdId = getRuntimeHouseholdId();
+  const categories = useMemo(() => categoriesController.listCategories(householdId), [refreshKey, householdId]);
 
   return (
     <main className="space-y-4">
@@ -23,7 +22,7 @@ export default function CategoriesPage() {
       <CategoryForm
         onSubmit={(name) => {
           try {
-            categoriesController.createCategory({ householdId: HOUSEHOLD_ID, name });
+            categoriesController.createCategory({ householdId, name });
             setRefreshKey((prev) => prev + 1);
             notify({ message: "Categoria cadastrada com sucesso.", tone: "success" });
           } catch {

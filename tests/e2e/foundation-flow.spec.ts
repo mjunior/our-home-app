@@ -32,7 +32,13 @@ describe("foundation flow", () => {
         document.documentElement.classList.toggle("dark", darkMode);
       }, [darkMode]);
 
-      return React.createElement(AppShell, { route, onRouteChange: setRoute, darkMode, onDarkModeChange: setDarkMode });
+      return React.createElement(AppShell, {
+        route,
+        onRouteChange: setRoute,
+        darkMode,
+        onDarkModeChange: setDarkMode,
+        onLogout: () => undefined,
+      });
     }
 
     render(React.createElement(ShellHarness));
@@ -62,7 +68,13 @@ describe("foundation flow", () => {
         document.documentElement.classList.toggle("dark", darkMode);
       }, [darkMode]);
 
-      return React.createElement(AppShell, { route, onRouteChange: setRoute, darkMode, onDarkModeChange: setDarkMode });
+      return React.createElement(AppShell, {
+        route,
+        onRouteChange: setRoute,
+        darkMode,
+        onDarkModeChange: setDarkMode,
+        onLogout: () => undefined,
+      });
     }
 
     render(React.createElement(ShellHarness));

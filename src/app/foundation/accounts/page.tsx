@@ -4,14 +4,13 @@ import { AccountForm } from "../../../components/foundation/account-form";
 import { ConsolidatedBalanceCard } from "../../../components/foundation/consolidated-balance-card";
 import { Badge } from "../../../components/ui/badge";
 import { useSnackbar } from "../../../components/ui/snackbar";
-import { accountsController } from "../runtime";
-
-const HOUSEHOLD_ID = "household-main";
+import { accountsController, getRuntimeHouseholdId } from "../runtime";
 
 export default function AccountsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { notify } = useSnackbar();
-  const consolidated = useMemo(() => accountsController.getConsolidatedBalance(HOUSEHOLD_ID), [refreshKey]);
+  const householdId = getRuntimeHouseholdId();
+  const consolidated = useMemo(() => accountsController.getConsolidatedBalance(householdId), [refreshKey, householdId]);
 
   return (
     <main className="space-y-4">
@@ -24,7 +23,7 @@ export default function AccountsPage() {
       <AccountForm
         onSubmit={(values) => {
           try {
-            accountsController.createAccount({ householdId: HOUSEHOLD_ID, ...values });
+            accountsController.createAccount({ householdId, ...values });
             setRefreshKey((prev) => prev + 1);
             notify({ message: "Conta cadastrada com sucesso.", tone: "success" });
           } catch {

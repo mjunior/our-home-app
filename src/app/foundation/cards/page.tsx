@@ -4,14 +4,13 @@ import { CardForm } from "../../../components/foundation/card-form";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { useSnackbar } from "../../../components/ui/snackbar";
-import { cardsController } from "../runtime";
-
-const HOUSEHOLD_ID = "household-main";
+import { cardsController, getRuntimeHouseholdId } from "../runtime";
 
 export default function CardsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { notify } = useSnackbar();
-  const cards = useMemo(() => cardsController.listCards(HOUSEHOLD_ID), [refreshKey]);
+  const householdId = getRuntimeHouseholdId();
+  const cards = useMemo(() => cardsController.listCards(householdId), [refreshKey, householdId]);
 
   return (
     <main className="space-y-4">
@@ -23,7 +22,7 @@ export default function CardsPage() {
       <CardForm
         onSubmit={(values) => {
           try {
-            cardsController.createCard({ householdId: HOUSEHOLD_ID, ...values });
+            cardsController.createCard({ householdId, ...values });
             setRefreshKey((prev) => prev + 1);
             notify({ message: "Cartao cadastrado com sucesso.", tone: "success" });
           } catch {

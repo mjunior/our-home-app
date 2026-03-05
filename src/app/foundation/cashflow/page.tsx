@@ -17,9 +17,8 @@ import {
   freeBalanceController,
   scheduleManagementController,
   transactionsController,
+  getRuntimeHouseholdId,
 } from "../runtime";
-
-const HOUSEHOLD_ID = "household-main";
 
 const breakdownLabels: Record<string, string> = {
   accountStartingBalance: "Saldo de contas",
@@ -63,10 +62,11 @@ export default function CashflowPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteScope, setDeleteScope] = useState<"CURRENT_AND_FUTURE" | "ALL">("CURRENT_AND_FUTURE");
   const { notify } = useSnackbar();
+  const householdId = getRuntimeHouseholdId();
 
-  const accounts = useMemo(() => accountsController.listAccounts(HOUSEHOLD_ID), [refreshKey]);
-  const cards = useMemo(() => cardsController.listCards(HOUSEHOLD_ID), [refreshKey]);
-  const categories = useMemo(() => categoriesController.listCategories(HOUSEHOLD_ID), [refreshKey]);
+  const accounts = useMemo(() => accountsController.listAccounts(householdId), [refreshKey, householdId]);
+  const cards = useMemo(() => cardsController.listCards(householdId), [refreshKey, householdId]);
+  const categories = useMemo(() => categoriesController.listCategories(householdId), [refreshKey, householdId]);
 
   const accountLabels = useMemo(
     () => Object.fromEntries(accounts.map((item) => [item.id, item.name])),
@@ -84,15 +84,15 @@ export default function CashflowPage() {
   const transactions = useMemo(
     () =>
       transactionsController.listTransactionsByMonth({
-        householdId: HOUSEHOLD_ID,
+        householdId: householdId,
         month,
       }),
-    [refreshKey, month],
+    [refreshKey, month, householdId],
   );
 
   const scheduleInstances = useMemo(
-    () => scheduleManagementController.listMonthInstances({ householdId: HOUSEHOLD_ID, month }),
-    [refreshKey, month],
+    () => scheduleManagementController.listMonthInstances({ householdId: householdId, month }),
+    [refreshKey, month, householdId],
   );
 
   const statementEntries = useMemo(() => {
@@ -172,10 +172,10 @@ export default function CashflowPage() {
   const freeBalance = useMemo(
     () =>
       freeBalanceController.getFreeBalance({
-        householdId: HOUSEHOLD_ID,
+        householdId: householdId,
         month,
       }),
-    [month, refreshKey],
+    [month, refreshKey, householdId],
   );
 
   useEffect(() => {
@@ -301,7 +301,7 @@ export default function CashflowPage() {
           <div className="mt-4">
             <UnifiedLaunchForm
               formId="cashflow-unified-launch-form"
-              householdId={HOUSEHOLD_ID}
+              householdId={householdId}
               accounts={accounts.map((item) => ({ id: item.id, label: item.name, type: item.type }))}
               cards={cards.map((item) => ({ id: item.id, label: item.name }))}
               categories={categories.map((item) => ({ id: item.id, label: item.name }))}
@@ -328,7 +328,7 @@ export default function CashflowPage() {
           </SheetHeader>
           <div className="mt-4">
             <TransactionImportForm
-              householdId={HOUSEHOLD_ID}
+              householdId={householdId}
               month={month}
               accounts={accounts.map((item) => ({ id: item.id, label: item.name }))}
               cards={cards.map((item) => ({ id: item.id, label: item.name }))}
@@ -407,7 +407,7 @@ export default function CashflowPage() {
                   }
                   transactionsController.updateTransaction({
                     id: editingEntryId,
-                    householdId: HOUSEHOLD_ID,
+                    householdId: householdId,
                     kind: editKind,
                     description: editDescription,
                     amount: editAmount,
@@ -421,7 +421,7 @@ export default function CashflowPage() {
                     throw new Error("INVESTMENT_NOT_SELECTED");
                   }
                   transactionsController.updateInvestmentTransfer({
-                    householdId: HOUSEHOLD_ID,
+                    householdId: householdId,
                     transferGroupId: editingTransferGroupId,
                     description: editDescription,
                     amount: editAmount,
@@ -624,21 +624,21 @@ export default function CashflowPage() {
                     if (editMode === "ONE_OFF") {
                       if (editingTransferGroupId) {
                         transactionsController.deleteInvestmentTransfer({
-                          householdId: HOUSEHOLD_ID,
+                          householdId: householdId,
                           transferGroupId: editingTransferGroupId,
                         });
                       } else {
                         if (!editingEntryId) {
                           throw new Error("TRANSACTION_NOT_SELECTED");
                         }
-                        transactionsController.deleteTransaction({ id: editingEntryId, householdId: HOUSEHOLD_ID });
+                        transactionsController.deleteTransaction({ id: editingEntryId, householdId: householdId });
                       }
                     } else if (editMode === "INVESTMENT") {
                       if (!editingTransferGroupId) {
                         throw new Error("INVESTMENT_NOT_SELECTED");
                       }
                       transactionsController.deleteInvestmentTransfer({
-                        householdId: HOUSEHOLD_ID,
+                        householdId: householdId,
                         transferGroupId: editingTransferGroupId,
                       });
                     } else if (editMode === "RECURRING") {

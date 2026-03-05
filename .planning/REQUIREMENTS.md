@@ -7,24 +7,24 @@
 
 ### Authentication
 
-- [ ] **AUTH-01**: Usuario pode criar conta com email e senha na rota `/n-account`.
-- [ ] **AUTH-02**: Usuario pode autenticar com email e senha validos.
-- [ ] **AUTH-03**: Sessao autenticada persiste entre refresh e reinicio da aba.
-- [ ] **AUTH-04**: Credenciais invalidas retornam erro claro sem expor detalhes sensiveis.
+- [x] **AUTH-01**: Usuario pode criar conta com email e senha na rota `/n-account`.
+- [x] **AUTH-02**: Usuario pode autenticar com email e senha validos.
+- [x] **AUTH-03**: Sessao autenticada persiste entre refresh e reinicio da aba.
+- [x] **AUTH-04**: Credenciais invalidas retornam erro claro sem expor detalhes sensiveis.
 
 ### Access Control and Data Isolation
 
-- [ ] **SECU-01**: Toda rota da aplicacao, exceto `/login` e `/n-account`, exige autenticacao.
-- [ ] **SECU-02**: Usuario autenticado so consegue consultar transacoes, contas, cartoes e categorias do proprio `userId`.
-- [ ] **SECU-03**: Usuario autenticado so consegue criar/editar/excluir dados financeiros vinculados ao proprio `userId`.
-- [ ] **SECU-04**: Tentativas de acesso cruzado entre contas retornam erro de autorizacao sem vazar existencia de dados.
+- [x] **SECU-01**: Toda rota da aplicacao, exceto `/login` e `/n-account`, exige autenticacao.
+- [x] **SECU-02**: Usuario autenticado so consegue consultar transacoes, contas, cartoes e categorias do proprio `userId`.
+- [x] **SECU-03**: Usuario autenticado so consegue criar/editar/excluir dados financeiros vinculados ao proprio `userId`.
+- [x] **SECU-04**: Tentativas de acesso cruzado entre contas retornam erro de autorizacao sem vazar existencia de dados.
 
 ### Login Experience
 
-- [ ] **UX-01**: Rota raiz `/` exibe pagina de login como entrada principal do produto.
-- [ ] **UX-02**: Pagina `/login` e a unica rota nao autenticada com link de navegacao visivel para usuarios finais.
-- [ ] **UX-03**: Paginas `/` e `/login` usam `noindex` para nao indexacao em buscadores.
-- [ ] **UX-04**: Nao existe link publico entre `/login` e `/n-account` no frontend.
+- [x] **UX-01**: Rota raiz `/` exibe pagina de login como entrada principal do produto.
+- [x] **UX-02**: Pagina `/login` e a unica rota nao autenticada com link de navegacao visivel para usuarios finais.
+- [x] **UX-03**: Paginas `/` e `/login` usam `noindex` para nao indexacao em buscadores.
+- [x] **UX-04**: Nao existe link publico entre `/login` e `/n-account` no frontend.
 
 ## v2 Requirements
 
@@ -50,18 +50,18 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 12 | Pending |
-| AUTH-02 | Phase 12 | Pending |
-| AUTH-03 | Phase 12 | Pending |
-| AUTH-04 | Phase 12 | Pending |
-| SECU-01 | Phase 13 | Pending |
-| SECU-02 | Phase 13 | Pending |
-| SECU-03 | Phase 13 | Pending |
-| SECU-04 | Phase 13 | Pending |
-| UX-01 | Phase 14 | Pending |
-| UX-02 | Phase 14 | Pending |
-| UX-03 | Phase 14 | Pending |
-| UX-04 | Phase 14 | Pending |
+| AUTH-01 | Phase 12 | Complete (2026-03-05) |
+| AUTH-02 | Phase 12 | Complete (2026-03-05) |
+| AUTH-03 | Phase 12 | Complete (2026-03-05) |
+| AUTH-04 | Phase 12 | Complete (2026-03-05) |
+| SECU-01 | Phase 13 | Complete (2026-03-05) |
+| SECU-02 | Phase 13 | Complete (2026-03-05) |
+| SECU-03 | Phase 13 | Complete (2026-03-05) |
+| SECU-04 | Phase 13 | Complete (2026-03-05) |
+| UX-01 | Phase 14 | Complete (2026-03-05) |
+| UX-02 | Phase 14 | Complete (2026-03-05) |
+| UX-03 | Phase 14 | Complete (2026-03-05) |
+| UX-04 | Phase 14 | Complete (2026-03-05) |
 
 **Coverage:**
 - v1 requirements: 12 total

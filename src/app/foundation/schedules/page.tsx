@@ -4,19 +4,18 @@ import { ScheduleList } from "../../../components/foundation/schedule-list";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { useSnackbar } from "../../../components/ui/snackbar";
-import { accountsController, cardsController, categoriesController, scheduleManagementController } from "../runtime";
-
-const HOUSEHOLD_ID = "household-main";
+import { accountsController, cardsController, categoriesController, getRuntimeHouseholdId, scheduleManagementController } from "../runtime";
 
 export default function SchedulesPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { notify } = useSnackbar();
+  const householdId = getRuntimeHouseholdId();
 
-  const accounts = useMemo(() => accountsController.listAccounts(HOUSEHOLD_ID), [refreshKey]);
-  const cards = useMemo(() => cardsController.listCards(HOUSEHOLD_ID), [refreshKey]);
-  const categories = useMemo(() => categoriesController.listCategories(HOUSEHOLD_ID), [refreshKey]);
+  const accounts = useMemo(() => accountsController.listAccounts(householdId), [refreshKey, householdId]);
+  const cards = useMemo(() => cardsController.listCards(householdId), [refreshKey, householdId]);
+  const categories = useMemo(() => categoriesController.listCategories(householdId), [refreshKey, householdId]);
 
-  const schedules = useMemo(() => scheduleManagementController.listSchedules(HOUSEHOLD_ID), [refreshKey]);
+  const schedules = useMemo(() => scheduleManagementController.listSchedules(householdId), [refreshKey, householdId]);
 
   return (
     <main className="space-y-4">

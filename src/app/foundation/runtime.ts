@@ -64,6 +64,28 @@ type Runtime = {
   scheduleManagementController: ScheduleManagementControllerContract;
 };
 
+export interface SessionUser {
+  userId: string;
+  email: string;
+  householdId: string;
+}
+
+let activeSessionUser: SessionUser | null = null;
+
+function resolveHouseholdId(fallback?: string) {
+  return activeSessionUser?.householdId ?? fallback ?? "household-main";
+}
+
+function handleUnauthorized() {
+  activeSessionUser = null;
+  if (import.meta.env.MODE === "test") {
+    return;
+  }
+  if (typeof window !== "undefined" && window.location.pathname !== "/") {
+    window.location.assign("/");
+  }
+}
+
 function requestSync<T>(method: "GET" | "POST", url: string, payload?: unknown): T {
   const request = new XMLHttpRequest();
   request.open(method, url, false);
@@ -72,6 +94,9 @@ function requestSync<T>(method: "GET" | "POST", url: string, payload?: unknown):
   request.send(payload ? JSON.stringify(payload) : null);
 
   if (request.status >= 400 || request.status === 0) {
+    if (request.status === 401) {
+      handleUnauthorized();
+    }
     let message = `HTTP_${request.status}`;
     try {
       const parsed = JSON.parse(request.responseText) as { message?: string };
@@ -193,41 +218,81 @@ function createApiRuntime(): Runtime {
   return {
     accountsController: {
       createAccount: (input: AccountsCreateInput): AccountsCreateOutput =>
-        requestSync<AccountsCreateOutput>("POST", "/api/accounts", input),
-      listAccounts: (householdId: string): AccountsListOutput =>
-        requestSync<AccountsListOutput>("GET", `/api/accounts?householdId=${encodeURIComponent(householdId)}`),
-      getConsolidatedBalance: (householdId: string): AccountsConsolidatedOutput =>
-        requestSync<AccountsConsolidatedOutput>("GET", `/api/accounts/consolidated?householdId=${encodeURIComponent(householdId)}`),
+        requestSync<AccountsCreateOutput>("POST", "/api/accounts", {
+          name: input.name,
+          type: input.type,
+          openingBalance: input.openingBalance,
+        }),
+      listAccounts: (_householdId: string): AccountsListOutput =>
+        requestSync<AccountsListOutput>("GET", "/api/accounts"),
+      getConsolidatedBalance: (_householdId: string): AccountsConsolidatedOutput =>
+        requestSync<AccountsConsolidatedOutput>("GET", "/api/accounts/consolidated"),
     },
     cardsController: {
-      createCard: (input: CardsCreateInput): CardsCreateOutput => requestSync<CardsCreateOutput>("POST", "/api/cards", input),
-      listCards: (householdId: string): CardsListOutput =>
-        requestSync<CardsListOutput>("GET", `/api/cards?householdId=${encodeURIComponent(householdId)}`),
+      createCard: (input: CardsCreateInput): CardsCreateOutput =>
+        requestSync<CardsCreateOutput>("POST", "/api/cards", {
+          name: input.name,
+          closeDay: input.closeDay,
+          dueDay: input.dueDay,
+        }),
+      listCards: (_householdId: string): CardsListOutput =>
+        requestSync<CardsListOutput>("GET", "/api/cards"),
     },
     categoriesController: {
       createCategory: (input: CategoriesCreateInput): CategoriesCreateOutput =>
-        requestSync<CategoriesCreateOutput>("POST", "/api/categories", input),
-      listCategories: (householdId: string): CategoriesListOutput =>
-        requestSync<CategoriesListOutput>("GET", `/api/categories?householdId=${encodeURIComponent(householdId)}`),
+        requestSync<CategoriesCreateOutput>("POST", "/api/categories", { name: input.name }),
+      listCategories: (_householdId: string): CategoriesListOutput =>
+        requestSync<CategoriesListOutput>("GET", "/api/categories"),
     },
     transactionsController: {
       createTransaction: (input: TransactionsCreateInput): TransactionsCreateOutput =>
-        requestSync<TransactionsCreateOutput>("POST", "/api/transactions", input),
+        requestSync<TransactionsCreateOutput>("POST", "/api/transactions", {
+          kind: input.kind,
+          description: input.description,
+          amount: input.amount,
+          occurredAt: input.occurredAt,
+          accountId: input.accountId,
+          creditCardId: input.creditCardId,
+          categoryId: input.categoryId,
+        }),
       createInvestmentTransfer: (input: TransactionsInvestmentCreateInput): TransactionsInvestmentCreateOutput =>
-        requestSync<TransactionsInvestmentCreateOutput>("POST", "/api/transactions/investments", input),
+        requestSync<TransactionsInvestmentCreateOutput>("POST", "/api/transactions/investments", {
+          description: input.description,
+          amount: input.amount,
+          occurredAt: input.occurredAt,
+          categoryId: input.categoryId,
+          sourceAccountId: input.sourceAccountId,
+          destinationAccountId: input.destinationAccountId,
+        }),
       updateTransaction: (input: TransactionsUpdateInput): TransactionsUpdateOutput =>
-        requestSync<TransactionsUpdateOutput>("POST", "/api/transactions/edit", input),
+        requestSync<TransactionsUpdateOutput>("POST", "/api/transactions/edit", {
+          id: input.id,
+          kind: input.kind,
+          description: input.description,
+          amount: input.amount,
+          occurredAt: input.occurredAt,
+          accountId: input.accountId,
+          creditCardId: input.creditCardId,
+          categoryId: input.categoryId,
+        }),
       updateInvestmentTransfer: (input: TransactionsInvestmentUpdateInput): TransactionsInvestmentUpdateOutput =>
-        requestSync<TransactionsInvestmentUpdateOutput>("POST", "/api/transactions/investments/edit", input),
+        requestSync<TransactionsInvestmentUpdateOutput>("POST", "/api/transactions/investments/edit", {
+          transferGroupId: input.transferGroupId,
+          description: input.description,
+          amount: input.amount,
+          occurredAt: input.occurredAt,
+          categoryId: input.categoryId,
+          sourceAccountId: input.sourceAccountId,
+          destinationAccountId: input.destinationAccountId,
+        }),
       deleteTransaction: (input: TransactionsDeleteInput): TransactionsDeleteOutput =>
-        requestSync<TransactionsDeleteOutput>("POST", "/api/transactions/delete", input),
+        requestSync<TransactionsDeleteOutput>("POST", "/api/transactions/delete", { id: input.id }),
       deleteInvestmentTransfer: (input: TransactionsInvestmentDeleteInput): TransactionsInvestmentDeleteOutput =>
-        requestSync<TransactionsInvestmentDeleteOutput>("POST", "/api/transactions/investments/delete", input),
+        requestSync<TransactionsInvestmentDeleteOutput>("POST", "/api/transactions/investments/delete", {
+          transferGroupId: input.transferGroupId,
+        }),
       listTransactionsByMonth: (input: TransactionsListInput): TransactionsListOutput => {
-        const query = new URLSearchParams({
-          householdId: input.householdId,
-          month: input.month,
-        });
+        const query = new URLSearchParams({ month: input.month });
         if (input.accountId) query.set("accountId", input.accountId);
         if (input.creditCardId) query.set("creditCardId", input.creditCardId);
         if (input.categoryId) query.set("categoryId", input.categoryId);
@@ -236,11 +301,7 @@ function createApiRuntime(): Runtime {
     },
     invoicesController: {
       getCardInvoices: (input: CardInvoicesInput): CardInvoicesOutput => {
-        const query = new URLSearchParams({
-          householdId: input.householdId,
-          cardId: input.cardId,
-          referenceDate: input.referenceDate,
-        });
+        const query = new URLSearchParams({ cardId: input.cardId, referenceDate: input.referenceDate });
         return requestSync<CardInvoicesOutput>("GET", `/api/invoices/card?${query.toString()}`);
       },
       getMonthlyCashflowSummary: () => {
@@ -252,27 +313,38 @@ function createApiRuntime(): Runtime {
     },
     freeBalanceController: {
       getFreeBalance: (input: FreeBalanceInput): FreeBalanceOutput =>
-        requestSync<FreeBalanceOutput>(
-          "GET",
-          `/api/free-balance?householdId=${encodeURIComponent(input.householdId)}&month=${encodeURIComponent(input.month)}`,
-        ),
+        requestSync<FreeBalanceOutput>("GET", `/api/free-balance?month=${encodeURIComponent(input.month)}`),
     },
     scheduleManagementController: {
       createRecurringSchedule: (input: RecurringCreateInput): RecurringCreateOutput =>
-        requestSync<RecurringCreateOutput>("POST", "/api/schedules/recurring", input),
+        requestSync<RecurringCreateOutput>("POST", "/api/schedules/recurring", {
+          kind: input.kind,
+          description: input.description,
+          amount: input.amount,
+          startMonth: input.startMonth,
+          categoryId: input.categoryId,
+          accountId: input.accountId,
+          creditCardId: input.creditCardId,
+        }),
       createInstallmentSchedule: (input: InstallmentCreateInput): InstallmentCreateOutput =>
-        requestSync<InstallmentCreateOutput>("POST", "/api/schedules/installment", input),
-      createLaunch: (input: UnifiedLaunchInput): UnifiedLaunchOutput =>
-        requestSync<UnifiedLaunchOutput>("POST", "/api/launches", input),
+        requestSync<InstallmentCreateOutput>("POST", "/api/schedules/installment", {
+          description: input.description,
+          totalAmount: input.totalAmount,
+          installmentsCount: input.installmentsCount,
+          startMonth: input.startMonth,
+          categoryId: input.categoryId,
+          accountId: input.accountId,
+          creditCardId: input.creditCardId,
+        }),
+      createLaunch: (input: UnifiedLaunchInput): UnifiedLaunchOutput => {
+        return requestSync<UnifiedLaunchOutput>("POST", "/api/launches", input);
+      },
       createLaunchBatch: (input: UnifiedLaunchBatchInput): UnifiedLaunchBatchOutput =>
         requestSync<UnifiedLaunchBatchOutput>("POST", "/api/launches/batch", input),
-      listSchedules: (householdId: string): SchedulesListOutput =>
-        requestSync<SchedulesListOutput>("GET", `/api/schedules?householdId=${encodeURIComponent(householdId)}`),
+      listSchedules: (_householdId: string): SchedulesListOutput =>
+        requestSync<SchedulesListOutput>("GET", "/api/schedules"),
       listMonthInstances: (input: SchedulesMonthInstancesInput): SchedulesMonthInstancesOutput =>
-        requestSync<SchedulesMonthInstancesOutput>(
-          "GET",
-          `/api/schedules/instances?householdId=${encodeURIComponent(input.householdId)}&month=${encodeURIComponent(input.month)}`,
-        ),
+        requestSync<SchedulesMonthInstancesOutput>("GET", `/api/schedules/instances?month=${encodeURIComponent(input.month)}`),
       editRecurringSchedule: (input: RecurringEditInput): RecurringEditOutput =>
         requestSync<RecurringEditOutput>("POST", "/api/schedules/recurring/edit", input),
       editInstallmentSchedule: (input: InstallmentEditInput): InstallmentEditOutput =>
@@ -300,3 +372,122 @@ export const transactionsController = runtime.transactionsController;
 export const invoicesController = runtime.invoicesController;
 export const freeBalanceController = runtime.freeBalanceController;
 export const scheduleManagementController = runtime.scheduleManagementController;
+
+const localUsers: Array<{ userId: string; email: string; password: string; householdId: string }> = [];
+
+function readErrorMessage(response: Response, fallback: string) {
+  return response
+    .json()
+    .then((payload: any) => payload?.message ?? fallback)
+    .catch(() => fallback);
+}
+
+export function setSessionUser(user: SessionUser | null) {
+  activeSessionUser = user;
+}
+
+export function getSessionUser() {
+  return activeSessionUser;
+}
+
+export function getRuntimeHouseholdId() {
+  if (import.meta.env.MODE === "test") {
+    return resolveHouseholdId("household-main");
+  }
+  return activeSessionUser?.householdId ?? "";
+}
+
+export async function fetchSessionUser(): Promise<SessionUser | null> {
+  if (import.meta.env.MODE === "test") {
+    return activeSessionUser;
+  }
+
+  const response = await fetch("/api/auth/me", { credentials: "include" });
+  if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized();
+      return null;
+    }
+    activeSessionUser = null;
+    return null;
+  }
+
+  const payload = (await response.json()) as { user: SessionUser };
+  activeSessionUser = payload.user;
+  return payload.user;
+}
+
+export async function registerUser(input: { email: string; password: string }): Promise<SessionUser> {
+  if (import.meta.env.MODE === "test") {
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const duplicate = localUsers.find((item) => item.email === normalizedEmail);
+    if (duplicate) {
+      throw new Error("Nao foi possivel concluir o cadastro.");
+    }
+
+    const user: SessionUser = {
+      userId: `test-${Date.now()}`,
+      email: normalizedEmail,
+      householdId: "household-main",
+    };
+    localUsers.push({ ...user, password: input.password });
+    activeSessionUser = user;
+    return user;
+  }
+
+  const response = await fetch("/api/auth/register", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, "Falha no cadastro."));
+  }
+
+  const payload = (await response.json()) as { user: SessionUser };
+  activeSessionUser = payload.user;
+  return payload.user;
+}
+
+export async function loginUser(input: { email: string; password: string }): Promise<SessionUser> {
+  if (import.meta.env.MODE === "test") {
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const user = localUsers.find((item) => item.email === normalizedEmail && item.password === input.password);
+    if (!user) {
+      throw new Error("Credenciais invalidas");
+    }
+
+    activeSessionUser = { userId: user.userId, email: user.email, householdId: user.householdId };
+    return activeSessionUser;
+  }
+
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, "Credenciais invalidas"));
+  }
+
+  const payload = (await response.json()) as { user: SessionUser };
+  activeSessionUser = payload.user;
+  return payload.user;
+}
+
+export async function logoutUser() {
+  if (import.meta.env.MODE === "test") {
+    activeSessionUser = null;
+    return;
+  }
+
+  await fetch("/api/auth/logout", {
+    method: "POST",
+    credentials: "include",
+  });
+  activeSessionUser = null;
+}

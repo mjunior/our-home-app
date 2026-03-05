@@ -9,9 +9,9 @@
 
 ## Phases
 
-- [ ] **Phase 12: Fundacao de Autenticacao (email/senha)** - Introduzir modelo de usuario, credenciais seguras e sessao autenticada para login.
-- [ ] **Phase 13: Isolamento de Dados e Guardas de Acesso** - Aplicar escopo obrigatorio por `userId` no backend e bloquear rotas privadas para anonimos.
-- [ ] **Phase 14: UX de Login e Cadastro Isolado** - Entregar pagina de login premium non-index na raiz e rota `/n-account` sem navegacao publica.
+- [x] **Phase 12: Fundacao de Autenticacao (email/senha)** - Introduzir modelo de usuario, credenciais seguras e sessao autenticada para login. (completed 2026-03-05)
+- [x] **Phase 13: Isolamento de Dados e Guardas de Acesso** - Aplicar escopo obrigatorio por `userId` no backend e bloquear rotas privadas para anonimos. (completed 2026-03-05)
+- [x] **Phase 14: UX de Login e Cadastro Isolado** - Entregar pagina de login premium non-index na raiz e rota `/n-account` sem navegacao publica. (completed 2026-03-05)
 
 ## Phase Details
 
@@ -47,6 +47,7 @@ Success criteria:
 **Depends on**: Phase 13  
 **Requirements**: UX-01, UX-02, UX-03, UX-04  
 **Plans**: 3 plans
+**Gap Closure**: Fecha os gaps da auditoria `v1.3-MILESTONE-AUDIT.md` (requirements + integration + flows).
 
 Success criteria:
 1. `/` abre login como landing principal com visual polido e identidade de controle familiar.
@@ -61,4 +62,4 @@ Success criteria:
 | v1.0 MVP Finance Core | 1-4.2 | 17/17 | Complete | 2026-03-03 |
 | v1.1 Lancamentos Unificados e Investimento por Transferencia | 7-9 | 8/8 | Complete | 2026-03-03 |
 | v1.2 Ui improvements and Import | 10-11 | 6/6 | Complete | 2026-03-03 |
-| v1.3 Autenticacao e Isolamento de Conta | 12-14 | 0/9 | In Progress | — |
+| v1.3 Autenticacao e Isolamento de Conta | 12-14 | 9/9 | Complete | 2026-03-05 |

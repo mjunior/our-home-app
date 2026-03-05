@@ -2,7 +2,52 @@ import { InvoiceCycleService } from "../modules/invoices/invoice-cycle.service";
 import { InvoicesService } from "../modules/invoices/invoices.service";
 import { FreeBalancePolicy } from "../modules/free-balance/free-balance.policy";
 import { FreeBalanceService } from "../modules/free-balance/free-balance.service";
+import { AuthService } from "../modules/auth/auth.service";
+import { AuthError, isAuthError } from "../modules/auth/auth.errors";
+import { issueSessionToken, verifySessionToken } from "../modules/auth/session-token";
 import { prisma } from "../modules/shared/persistence/prisma";
+
+const sessionCookieName = "ourhome_session";
+const sessionTtlSeconds = 60 * 60 * 24 * 7;
+
+function getSessionSecret() {
+  return process.env.AUTH_SESSION_SECRET ?? "dev-auth-session-secret-change-me";
+}
+
+function parseCookieHeader(raw: string | undefined) {
+  if (!raw) {
+    return {};
+  }
+
+  return raw.split(";").reduce<Record<string, string>>((acc, part) => {
+    const [key, ...value] = part.trim().split("=");
+    if (!key) {
+      return acc;
+    }
+    acc[key] = decodeURIComponent(value.join("=") ?? "");
+    return acc;
+  }, {});
+}
+
+function buildSessionCookie(token: string) {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  return `${sessionCookieName}=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${sessionTtlSeconds}${secure}`;
+}
+
+function buildSessionClearCookie() {
+  return `${sessionCookieName}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`;
+}
+
+async function resolveSessionUser(req: any, auth: AuthService) {
+  const cookies = parseCookieHeader(req.headers?.cookie);
+  const token = cookies[sessionCookieName];
+  if (!token) return null;
+
+  const claims = verifySessionToken(token, getSessionSecret());
+  if (!claims) return null;
+
+  return auth.getUserById(claims.sub);
+}
 
 class AccountsReadRepository {
   constructor(private readonly rows: Array<{ id: string; householdId: string; name: string; type: "CHECKING" | "INVESTMENT"; openingBalance: string }>) {}
@@ -186,18 +231,18 @@ function assertInvestmentTypes(source: any, destination: any) {
   }
 }
 
-async function createInvestmentTransfer(body: any) {
+async function createInvestmentTransfer(body: any, authHouseholdId: string) {
   const source = await prisma.account.findUnique({ where: { id: body.sourceAccountId } });
   const destination = await prisma.account.findUnique({ where: { id: body.destinationAccountId } });
   const category = await prisma.category.findUnique({ where: { id: body.categoryId } });
 
-  if (!source || source.householdId !== body.householdId) {
+  if (!source || source.householdId !== authHouseholdId) {
     throw new Error("ACCOUNT_NOT_FOUND");
   }
-  if (!destination || destination.householdId !== body.householdId) {
+  if (!destination || destination.householdId !== authHouseholdId) {
     throw new Error("ACCOUNT_NOT_FOUND");
   }
-  if (!category || category.householdId !== body.householdId) {
+  if (!category || category.householdId !== authHouseholdId) {
     throw new Error("CATEGORY_NOT_FOUND");
   }
   if (source.id === destination.id) {
@@ -210,7 +255,7 @@ async function createInvestmentTransfer(body: any) {
   const [debit, credit] = await prisma.$transaction([
     prisma.transaction.create({
       data: {
-        householdId: body.householdId,
+        householdId: authHouseholdId,
         kind: "EXPENSE",
         description: body.description,
         amount: body.amount,
@@ -225,7 +270,7 @@ async function createInvestmentTransfer(body: any) {
     }),
     prisma.transaction.create({
       data: {
-        householdId: body.householdId,
+        householdId: authHouseholdId,
         kind: "INCOME",
         description: body.description,
         amount: body.amount,
@@ -333,9 +378,92 @@ export function installViteApi(server: MiddlewareServer) {
     try {
       const url = new URL(req.url, "http://localhost");
       const path = url.pathname;
+      const auth = new AuthService();
+
+      if (req.method === "POST" && path === "/api/auth/register") {
+        const body = await readJsonBody(req);
+        try {
+          const user = await auth.register({
+            email: body.email ?? "",
+            password: body.password ?? "",
+          });
+          const token = issueSessionToken({
+            userId: user.userId,
+            householdId: user.householdId,
+            secret: getSessionSecret(),
+            ttlSeconds: sessionTtlSeconds,
+          });
+          res.setHeader("Set-Cookie", buildSessionCookie(token));
+          sendJson(res, 200, { user });
+          return;
+        } catch (error) {
+          if (isAuthError(error)) {
+            if (error.code === "AUTH_EMAIL_ALREADY_USED") {
+              sendJson(res, 409, { message: "Nao foi possivel concluir o cadastro." });
+              return;
+            }
+
+            if (error.code === "AUTH_INVALID_INPUT") {
+              sendJson(res, 400, { message: "Dados de cadastro invalidos." });
+              return;
+            }
+          }
+
+          throw error;
+        }
+      }
+
+      if (req.method === "POST" && path === "/api/auth/login") {
+        const body = await readJsonBody(req);
+        try {
+          const user = await auth.authenticate({
+            email: body.email ?? "",
+            password: body.password ?? "",
+          });
+          const token = issueSessionToken({
+            userId: user.userId,
+            householdId: user.householdId,
+            secret: getSessionSecret(),
+            ttlSeconds: sessionTtlSeconds,
+          });
+          res.setHeader("Set-Cookie", buildSessionCookie(token));
+          sendJson(res, 200, { user });
+          return;
+        } catch (error) {
+          if (error instanceof AuthError && error.code === "AUTH_INVALID_CREDENTIALS") {
+            sendJson(res, 401, { message: "Credenciais invalidas" });
+            return;
+          }
+          throw error;
+        }
+      }
+
+      if (req.method === "POST" && path === "/api/auth/logout") {
+        res.setHeader("Set-Cookie", buildSessionClearCookie());
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      if (req.method === "GET" && path === "/api/auth/me") {
+        const user = await resolveSessionUser(req, auth);
+        if (!user) {
+          sendJson(res, 401, { message: "AUTH_UNAUTHENTICATED" });
+          return;
+        }
+
+        sendJson(res, 200, { user });
+        return;
+      }
+
+      const user = await resolveSessionUser(req, auth);
+      if (!user) {
+        sendJson(res, 401, { message: "AUTH_UNAUTHENTICATED" });
+        return;
+      }
+      const authHouseholdId = user.householdId;
 
       if (req.method === "GET" && path === "/api/accounts") {
-        const householdId = url.searchParams.get("householdId") ?? "household-main";
+        const householdId = authHouseholdId;
         const rows = await prisma.account.findMany({ where: { householdId }, orderBy: { createdAt: "asc" } });
         sendJson(res, 200, rows.map((item) => ({ ...item, openingBalance: item.openingBalance.toString() })));
         return;
@@ -345,19 +473,19 @@ export function installViteApi(server: MiddlewareServer) {
         const body = await readJsonBody(req);
         const created = await prisma.account.create({
           data: {
-            householdId: body.householdId,
+            householdId: authHouseholdId,
             name: body.name,
             type: body.type,
             openingBalance: body.openingBalance,
           },
         });
-        await ensureBootstrap(body.householdId);
+        await ensureBootstrap(authHouseholdId);
         sendJson(res, 200, { ...created, openingBalance: created.openingBalance.toString() });
         return;
       }
 
       if (req.method === "GET" && path === "/api/accounts/consolidated") {
-        const householdId = url.searchParams.get("householdId") ?? "household-main";
+        const householdId = authHouseholdId;
         const rows = await prisma.account.findMany({ where: { householdId } });
         const transactions = await prisma.transaction.findMany({
           where: {
@@ -404,7 +532,7 @@ export function installViteApi(server: MiddlewareServer) {
       }
 
       if (req.method === "GET" && path === "/api/cards") {
-        const householdId = url.searchParams.get("householdId") ?? "household-main";
+        const householdId = authHouseholdId;
         const rows = await prisma.creditCard.findMany({ where: { householdId }, orderBy: { createdAt: "asc" } });
         sendJson(res, 200, rows);
         return;
@@ -412,13 +540,20 @@ export function installViteApi(server: MiddlewareServer) {
 
       if (req.method === "POST" && path === "/api/cards") {
         const body = await readJsonBody(req);
-        const created = await prisma.creditCard.create({ data: body });
+        const created = await prisma.creditCard.create({
+          data: {
+            householdId: authHouseholdId,
+            name: body.name,
+            closeDay: body.closeDay,
+            dueDay: body.dueDay,
+          },
+        });
         sendJson(res, 200, created);
         return;
       }
 
       if (req.method === "GET" && path === "/api/categories") {
-        const householdId = url.searchParams.get("householdId") ?? "household-main";
+        const householdId = authHouseholdId;
         const rows = await prisma.category.findMany({ where: { householdId }, orderBy: { createdAt: "asc" } });
         sendJson(res, 200, rows);
         return;
@@ -427,14 +562,14 @@ export function installViteApi(server: MiddlewareServer) {
       if (req.method === "POST" && path === "/api/categories") {
         const body = await readJsonBody(req);
         const created = await prisma.category.create({
-          data: { householdId: body.householdId, name: body.name.trim(), normalized: normalizeName(body.name) },
+          data: { householdId: authHouseholdId, name: body.name.trim(), normalized: normalizeName(body.name) },
         });
         sendJson(res, 200, created);
         return;
       }
 
       if (req.method === "GET" && path === "/api/transactions") {
-        const householdId = url.searchParams.get("householdId") ?? "household-main";
+        const householdId = authHouseholdId;
         const month = url.searchParams.get("month") ?? "";
         const accountId = url.searchParams.get("accountId");
         const creditCardId = url.searchParams.get("creditCardId");
@@ -462,7 +597,7 @@ export function installViteApi(server: MiddlewareServer) {
         const body = await readJsonBody(req);
         const created = await prisma.transaction.create({
           data: {
-            householdId: body.householdId,
+            householdId: authHouseholdId,
             kind: body.kind,
             description: body.description,
             amount: body.amount,
@@ -483,7 +618,7 @@ export function installViteApi(server: MiddlewareServer) {
       if (req.method === "POST" && path === "/api/transactions/edit") {
         const body = await readJsonBody(req);
         const existing = await prisma.transaction.findUnique({ where: { id: body.id } });
-        if (!existing) {
+        if (!existing || existing.householdId !== authHouseholdId) {
           sendJson(res, 404, { message: "TRANSACTION_NOT_FOUND" });
           return;
         }
@@ -513,14 +648,14 @@ export function installViteApi(server: MiddlewareServer) {
       if (req.method === "POST" && path === "/api/transactions/delete") {
         const body = await readJsonBody(req);
         const existing = await prisma.transaction.findUnique({ where: { id: body.id } });
-        if (!existing) {
+        if (!existing || existing.householdId !== authHouseholdId) {
           sendJson(res, 404, { message: "TRANSACTION_NOT_FOUND" });
           return;
         }
         if (existing.transferGroupId) {
           await prisma.transaction.deleteMany({
             where: {
-              householdId: body.householdId,
+              householdId: authHouseholdId,
               transferGroupId: existing.transferGroupId,
             },
           });
@@ -534,7 +669,7 @@ export function installViteApi(server: MiddlewareServer) {
 
       if (req.method === "POST" && path === "/api/transactions/investments") {
         const body = await readJsonBody(req);
-        const created = await createInvestmentTransfer(body);
+        const created = await createInvestmentTransfer(body, authHouseholdId);
         sendJson(res, 200, created);
         return;
       }
@@ -543,7 +678,7 @@ export function installViteApi(server: MiddlewareServer) {
         const body = await readJsonBody(req);
         const pair = await prisma.transaction.findMany({
           where: {
-            householdId: body.householdId,
+            householdId: authHouseholdId,
             transferGroupId: body.transferGroupId,
           },
           orderBy: { createdAt: "asc" },
@@ -558,15 +693,15 @@ export function installViteApi(server: MiddlewareServer) {
         const destination = await prisma.account.findUnique({ where: { id: body.destinationAccountId } });
         const category = await prisma.category.findUnique({ where: { id: body.categoryId } });
 
-        if (!source || source.householdId !== body.householdId) {
+        if (!source || source.householdId !== authHouseholdId) {
           sendJson(res, 404, { message: "ACCOUNT_NOT_FOUND" });
           return;
         }
-        if (!destination || destination.householdId !== body.householdId) {
+        if (!destination || destination.householdId !== authHouseholdId) {
           sendJson(res, 404, { message: "ACCOUNT_NOT_FOUND" });
           return;
         }
-        if (!category || category.householdId !== body.householdId) {
+        if (!category || category.householdId !== authHouseholdId) {
           sendJson(res, 404, { message: "CATEGORY_NOT_FOUND" });
           return;
         }
@@ -622,7 +757,7 @@ export function installViteApi(server: MiddlewareServer) {
         const body = await readJsonBody(req);
         const pair = await prisma.transaction.findMany({
           where: {
-            householdId: body.householdId,
+            householdId: authHouseholdId,
             transferGroupId: body.transferGroupId,
           },
         });
@@ -632,7 +767,7 @@ export function installViteApi(server: MiddlewareServer) {
         }
         await prisma.transaction.deleteMany({
           where: {
-            householdId: body.householdId,
+            householdId: authHouseholdId,
             transferGroupId: body.transferGroupId,
           },
         });
@@ -645,7 +780,7 @@ export function installViteApi(server: MiddlewareServer) {
           const transaction = body.transaction ?? {};
           const created = await prisma.transaction.create({
             data: {
-              householdId: transaction.householdId,
+              householdId: authHouseholdId,
               kind: transaction.kind,
               description: transaction.description,
               amount: transaction.amount,
@@ -663,14 +798,14 @@ export function installViteApi(server: MiddlewareServer) {
 
         if (body.launchType === "INVESTMENT") {
           const investment = body.investment ?? {};
-          return createInvestmentTransfer(investment);
+          return createInvestmentTransfer(investment, authHouseholdId);
         }
 
         if (body.launchType === "RECURRING") {
           const recurring = body.recurring ?? {};
           const created = await prisma.recurringRule.create({
             data: {
-              householdId: recurring.householdId,
+              householdId: authHouseholdId,
               kind: recurring.kind,
               description: recurring.description,
               amount: recurring.amount,
@@ -683,7 +818,7 @@ export function installViteApi(server: MiddlewareServer) {
             },
           });
           await createRecurringInstances({
-            householdId: recurring.householdId,
+            householdId: authHouseholdId,
             sourceId: created.id,
             startMonth: recurring.startMonth,
             endMonth: addMonths(recurring.startMonth, 11),
@@ -701,7 +836,7 @@ export function installViteApi(server: MiddlewareServer) {
           const installment = body.installment ?? {};
           const created = await prisma.installmentPlan.create({
             data: {
-              householdId: installment.householdId,
+              householdId: authHouseholdId,
               description: installment.description,
               totalAmount: installment.totalAmount,
               installmentsCount: installment.installmentsCount,
@@ -713,7 +848,7 @@ export function installViteApi(server: MiddlewareServer) {
             },
           });
           await createInstallmentInstances({
-            householdId: installment.householdId,
+            householdId: authHouseholdId,
             sourceId: created.id,
             startMonth: installment.startMonth,
             description: installment.description,
@@ -762,7 +897,7 @@ export function installViteApi(server: MiddlewareServer) {
       }
 
       if (req.method === "GET" && path === "/api/invoices/card") {
-        const householdId = url.searchParams.get("householdId") ?? "household-main";
+        const householdId = authHouseholdId;
         const cardId = url.searchParams.get("cardId") ?? "";
         const referenceDate = url.searchParams.get("referenceDate") ?? new Date().toISOString();
         const { invoicesService } = await loadServices();
@@ -771,7 +906,7 @@ export function installViteApi(server: MiddlewareServer) {
       }
 
       if (req.method === "GET" && path === "/api/free-balance") {
-        const householdId = url.searchParams.get("householdId") ?? "household-main";
+        const householdId = authHouseholdId;
         const month = url.searchParams.get("month") ?? "";
         const { freeBalanceService } = await loadServices();
         sendJson(res, 200, freeBalanceService.getFreeBalance({ householdId, month }));
@@ -779,7 +914,7 @@ export function installViteApi(server: MiddlewareServer) {
       }
 
       if (req.method === "GET" && path === "/api/schedules") {
-        const householdId = url.searchParams.get("householdId") ?? "household-main";
+        const householdId = authHouseholdId;
         const installments = await prisma.installmentPlan.findMany({ where: { householdId }, orderBy: { createdAt: "asc" } });
         const recurrences = await prisma.recurringRule.findMany({ where: { householdId }, orderBy: { createdAt: "asc" } });
         const instances = await prisma.scheduledInstance.findMany({ where: { householdId }, orderBy: [{ monthKey: "asc" }, { sequence: "asc" }] });
@@ -792,7 +927,7 @@ export function installViteApi(server: MiddlewareServer) {
       }
 
       if (req.method === "GET" && path === "/api/schedules/instances") {
-        const householdId = url.searchParams.get("householdId") ?? "household-main";
+        const householdId = authHouseholdId;
         const month = url.searchParams.get("month") ?? "";
         const instances = await prisma.scheduledInstance.findMany({
           where: { householdId, monthKey: month },
@@ -806,7 +941,7 @@ export function installViteApi(server: MiddlewareServer) {
         const body = await readJsonBody(req);
         const created = await prisma.installmentPlan.create({
           data: {
-            householdId: body.householdId,
+            householdId: authHouseholdId,
             description: body.description,
             totalAmount: body.totalAmount,
             installmentsCount: body.installmentsCount,
@@ -836,7 +971,7 @@ export function installViteApi(server: MiddlewareServer) {
         const body = await readJsonBody(req);
         const created = await prisma.recurringRule.create({
           data: {
-            householdId: body.householdId,
+            householdId: authHouseholdId,
             kind: body.kind,
             description: body.description,
             amount: body.amount,
@@ -867,7 +1002,7 @@ export function installViteApi(server: MiddlewareServer) {
       if (req.method === "POST" && path === "/api/schedules/recurring/edit") {
         const body = await readJsonBody(req);
         const original = await prisma.recurringRule.findUnique({ where: { id: body.ruleId } });
-        if (!original) {
+        if (!original || original.householdId !== authHouseholdId) {
           sendJson(res, 404, { message: "RECURRING_RULE_NOT_FOUND" });
           return;
         }
@@ -929,7 +1064,7 @@ export function installViteApi(server: MiddlewareServer) {
       if (req.method === "POST" && path === "/api/schedules/recurring/delete") {
         const body = await readJsonBody(req);
         const original = await prisma.recurringRule.findUnique({ where: { id: body.ruleId } });
-        if (!original) {
+        if (!original || original.householdId !== authHouseholdId) {
           sendJson(res, 404, { message: "RECURRING_RULE_NOT_FOUND" });
           return;
         }
@@ -975,7 +1110,7 @@ export function installViteApi(server: MiddlewareServer) {
       if (req.method === "POST" && path === "/api/schedules/installment/edit") {
         const body = await readJsonBody(req);
         const plan = await prisma.installmentPlan.findUnique({ where: { id: body.planId } });
-        if (!plan) {
+        if (!plan || plan.householdId !== authHouseholdId) {
           sendJson(res, 404, { message: "INSTALLMENT_PLAN_NOT_FOUND" });
           return;
         }
@@ -1021,7 +1156,7 @@ export function installViteApi(server: MiddlewareServer) {
       if (req.method === "POST" && path === "/api/schedules/installment/delete") {
         const body = await readJsonBody(req);
         const plan = await prisma.installmentPlan.findUnique({ where: { id: body.planId } });
-        if (!plan) {
+        if (!plan || plan.householdId !== authHouseholdId) {
           sendJson(res, 404, { message: "INSTALLMENT_PLAN_NOT_FOUND" });
           return;
         }
@@ -1067,7 +1202,7 @@ export function installViteApi(server: MiddlewareServer) {
       if (req.method === "POST" && path === "/api/schedules/recurring/stop") {
         const body = await readJsonBody(req);
         const original = await prisma.recurringRule.findUnique({ where: { id: body.ruleId } });
-        if (!original) {
+        if (!original || original.householdId !== authHouseholdId) {
           sendJson(res, 404, { message: "RECURRING_RULE_NOT_FOUND" });
           return;
         }
