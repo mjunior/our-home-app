@@ -6,13 +6,25 @@ export default defineConfig({
     host: true,
     port: Number(process.env.PORT ?? 5174),
     strictPort: true,
-    allowedHosts: ["localhost", "127.0.0.1", "home.jsjunior.cloud", "instrutor-autonomo-ourhomeapp.0niizy.easypanel.host"],
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      "home.jsjunior.cloud",
+      "trevo.jsjunior.cloud",
+      "instrutor-autonomo-ourhomeapp.0niizy.easypanel.host",
+    ],
   },
   preview: {
     host: true,
     port: Number(process.env.PORT ?? 5174),
     strictPort: true,
-    allowedHosts: ["localhost", "127.0.0.1", "home.jsjunior.cloud", "instrutor-autonomo-ourhomeapp.0niizy.easypanel.host"],
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      "home.jsjunior.cloud",
+      "trevo.jsjunior.cloud",
+      "instrutor-autonomo-ourhomeapp.0niizy.easypanel.host",
+    ],
   },
   plugins: [
     react(),
