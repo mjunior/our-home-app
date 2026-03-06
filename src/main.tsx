@@ -9,8 +9,23 @@ import { AppShell } from "./components/layout/app-shell";
 import { SnackbarProvider } from "./components/ui/snackbar";
 import "./styles.css";
 
+const registerPaths = new Set(["/register", "/cadastro", "/n-account"]);
+
+function normalizePathname(pathname: string): string {
+  const raw = (pathname || "/").trim();
+  const withSlash = raw.startsWith("/") ? raw : `/${raw}`;
+  const withoutTrailing = withSlash.replace(/\/+$/g, "");
+  const normalized = withoutTrailing === "" ? "/" : withoutTrailing;
+  return normalized.toLowerCase();
+}
+
+function isRegisterPath(pathname: string): boolean {
+  return registerPaths.has(normalizePathname(pathname));
+}
+
 function setNoIndexForAuthRoutes(pathname: string) {
-  const shouldNoIndex = pathname === "/" || pathname === "/login";
+  const normalizedPath = normalizePathname(pathname);
+  const shouldNoIndex = normalizedPath === "/" || normalizedPath === "/login" || isRegisterPath(normalizedPath);
   const existing = document.querySelector('meta[name="robots"]');
 
   if (!shouldNoIndex) {
@@ -36,7 +51,7 @@ function App() {
   const [darkMode, setDarkMode] = React.useState(true);
   const [loadingSession, setLoadingSession] = React.useState(true);
   const [authenticated, setAuthenticated] = React.useState(false);
-  const [pathname, setPathname] = React.useState(() => window.location.pathname || "/");
+  const [pathname, setPathname] = React.useState(() => normalizePathname(window.location.pathname || "/"));
 
   React.useEffect(() => {
     const root = document.documentElement;
@@ -64,15 +79,20 @@ function App() {
   }, []);
 
   const goTo = (next: string) => {
-    if (window.location.pathname !== next) {
-      window.history.replaceState({}, "", next);
+    const normalizedNext = normalizePathname(next);
+    if (normalizePathname(window.location.pathname) !== normalizedNext) {
+      window.history.replaceState({}, "", normalizedNext);
     }
-    setPathname(next);
+    setPathname(normalizedNext);
   };
 
   const handleAuthenticated = () => {
     setAuthenticated(true);
     goTo("/");
+  };
+
+  const handleGoToRegister = () => {
+    goTo("/register");
   };
 
   const handleLogout = async () => {
@@ -82,7 +102,7 @@ function App() {
   };
 
   React.useEffect(() => {
-    setNoIndexForAuthRoutes(pathname || window.location.pathname || "/");
+    setNoIndexForAuthRoutes(normalizePathname(pathname || window.location.pathname || "/"));
   }, [pathname]);
 
   React.useEffect(() => {
@@ -90,15 +110,15 @@ function App() {
       return;
     }
 
-    const current = pathname || window.location.pathname || "/";
+    const current = normalizePathname(pathname || window.location.pathname || "/");
     const user = getSessionUser();
 
-    if (!user && current !== "/" && current !== "/login" && current !== "/n-account") {
+    if (!user && current !== "/" && current !== "/login" && !isRegisterPath(current)) {
       goTo("/");
       return;
     }
 
-    if (user && (current === "/login" || current === "/n-account")) {
+    if (user && (current === "/login" || isRegisterPath(current))) {
       goTo("/");
     }
   }, [loadingSession, pathname]);
@@ -111,12 +131,12 @@ function App() {
     );
   }
 
-  if (!authenticated && pathname === "/n-account") {
+  if (!authenticated && isRegisterPath(normalizePathname(pathname))) {
     return <RegisterPage onRegistered={handleAuthenticated} />;
   }
 
   if (!authenticated) {
-    return <LoginPage onAuthenticated={handleAuthenticated} />;
+    return <LoginPage onAuthenticated={handleAuthenticated} onGoToRegister={handleGoToRegister} />;
   }
 
   return (

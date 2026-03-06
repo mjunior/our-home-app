@@ -7,9 +7,10 @@ import { loginUser } from "../foundation/runtime";
 
 interface LoginPageProps {
   onAuthenticated: () => void;
+  onGoToRegister?: () => void;
 }
 
-export default function LoginPage({ onAuthenticated }: LoginPageProps) {
+export default function LoginPage({ onAuthenticated, onGoToRegister }: LoginPageProps) {
   const { notify } = useSnackbar();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -63,6 +64,21 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
 
             <Button type="submit" disabled={busy} className="mt-2 w-full">
               {busy ? "Entrando..." : "Entrar"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-2 w-full"
+              onClick={() => {
+                if (onGoToRegister) {
+                  onGoToRegister();
+                  return;
+                }
+                window.history.pushState({}, "", "/register");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              }}
+            >
+              Criar conta
             </Button>
           </form>
 

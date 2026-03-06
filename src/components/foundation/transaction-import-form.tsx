@@ -140,6 +140,23 @@ export function TransactionImportForm({
 
       const occurredAt = toIsoDateAtNoon(line.dateToken, referenceYear);
 
+      if (line.valueMode === "INSTALLMENT") {
+        prepared.push({
+          launchType: "INSTALLMENT",
+          installment: {
+            householdId,
+            description: line.description.replaceAll("_", " "),
+            totalAmount: line.totalAmount,
+            installmentsCount: line.installmentsCount,
+            startMonth: occurredAt.slice(0, 7),
+            categoryId: category.id,
+            accountId: matchedAccount?.id,
+            creditCardId: matchedAccount ? undefined : matchedCard?.id,
+          },
+        });
+        continue;
+      }
+
       if (line.recurring) {
         if (line.kind === "INCOME" && !matchedAccount) {
           extraErrors.push({
@@ -222,9 +239,13 @@ export function TransactionImportForm({
           Cole uma transacao por linha no formato:
           <strong className="ml-1">data tipo descricao valor categoria conta recorrente</strong>
         </p>
+        <p className="text-xs text-slate-500 dark:text-slate-300">
+          Valor numerico puro = nao parcelado. Parcelado: <code>50.22x3</code> (3x de 50.22) ou <code>150/3</code> (total 150 em 3x).
+        </p>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
-          Exemplo: <code>01/02 saida compra_bahamas 50.00 mercado c6 recorrente</code>
+          Exemplos: <code>01/02 saida compra_bahamas 50.00 mercado c6 nao</code>, <code>01/02 saida celular 50.22x3 mercado c6 nao</code>,{" "}
+          <code>01/02 saida notebook 150/3 mercado c6 nao</code>
         </div>
 
         <label className="grid gap-1 text-sm">

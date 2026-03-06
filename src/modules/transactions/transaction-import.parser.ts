@@ -1,14 +1,29 @@
-export interface ParsedImportLine {
+import Decimal from "decimal.js";
+
+interface ParsedImportLineBase {
   lineNumber: number;
   raw: string;
   dateToken: string;
   kind: "INCOME" | "EXPENSE";
   description: string;
-  amount: string;
   categoryToken: string;
   accountToken: string;
   recurring: boolean;
 }
+
+type ParsedImportSingleLine = ParsedImportLineBase & {
+  valueMode: "SINGLE";
+  amount: string;
+};
+
+type ParsedImportInstallmentLine = ParsedImportLineBase & {
+  valueMode: "INSTALLMENT";
+  totalAmount: string;
+  installmentsCount: number;
+};
+
+export type ParsedImportValidatedLine = ParsedImportSingleLine | ParsedImportInstallmentLine;
+export type ParsedImportLine = ParsedImportValidatedLine;
 
 export interface ParsedImportError {
   lineNumber: number;
@@ -17,11 +32,11 @@ export interface ParsedImportError {
 }
 
 export interface ParsedImportResult {
-  valid: ParsedImportLine[];
+  valid: ParsedImportValidatedLine[];
   invalid: ParsedImportError[];
 }
 
-const kindMap: Record<string, ParsedImportLine["kind"]> = {
+const kindMap: Record<string, ParsedImportLineBase["kind"]> = {
   entrada: "INCOME",
   income: "INCOME",
   in: "INCOME",
@@ -32,13 +47,8 @@ const kindMap: Record<string, ParsedImportLine["kind"]> = {
 
 const recurringMap: Record<string, boolean> = {
   recorrente: true,
-  sim: true,
-  true: true,
-  "1": true,
   nao: false,
   não: false,
-  false: false,
-  "0": false,
 };
 
 function isValidDayMonth(day: number, month: number): boolean {
@@ -50,8 +60,61 @@ function isValidDayMonth(day: number, month: number): boolean {
   return day <= maxByMonth[month - 1]!;
 }
 
+const singleAmountPattern = /^\d+([.,]\d+)?$/;
+const installmentByValuePattern = /^(\d+([.,]\d+)?)x(\d+)$/;
+const installmentByTotalPattern = /^(\d+([.,]\d+)?)\/(\d+)$/;
+
+function toDecimalAmount(value: string): Decimal {
+  return new Decimal(value.replace(",", "."));
+}
+
+function parseAmountToken(amountToken: string):
+  | { valueMode: "SINGLE"; amount: string }
+  | { valueMode: "INSTALLMENT"; totalAmount: string; installmentsCount: number }
+  | null {
+  if (singleAmountPattern.test(amountToken)) {
+    const amount = toDecimalAmount(amountToken);
+    if (amount.lte(0)) return null;
+    return { valueMode: "SINGLE", amount: amount.toFixed(2) };
+  }
+
+  const byValueMatch = installmentByValuePattern.exec(amountToken);
+  if (byValueMatch) {
+    const amount = toDecimalAmount(byValueMatch[1] ?? "");
+    const installmentsCount = Number(byValueMatch[3]);
+    if (!amount.gt(0) || !Number.isInteger(installmentsCount) || installmentsCount < 2) return null;
+    return {
+      valueMode: "INSTALLMENT",
+      totalAmount: amount.mul(installmentsCount).toFixed(2),
+      installmentsCount,
+    };
+  }
+
+  const byTotalMatch = installmentByTotalPattern.exec(amountToken);
+  if (byTotalMatch) {
+    const totalAmount = toDecimalAmount(byTotalMatch[1] ?? "");
+    const installmentsCount = Number(byTotalMatch[3]);
+    if (!totalAmount.gt(0) || !Number.isInteger(installmentsCount) || installmentsCount < 2) return null;
+    return {
+      valueMode: "INSTALLMENT",
+      totalAmount: totalAmount.toFixed(2),
+      installmentsCount,
+    };
+  }
+
+  return null;
+}
+
+function isSpaceSeparatedInstallmentToken(parts: string[]): boolean {
+  if (parts.length !== 8) return false;
+  const amountLeft = parts[3] ?? "";
+  const amountRight = parts[4] ?? "";
+  if (!singleAmountPattern.test(amountLeft)) return false;
+  return /^x\d+$/.test(amountRight) || /^\/\d+$/.test(amountRight);
+}
+
 export function parseTransactionImportText(input: string): ParsedImportResult {
-  const valid: ParsedImportLine[] = [];
+  const valid: ParsedImportValidatedLine[] = [];
   const invalid: ParsedImportError[] = [];
 
   const lines = input.split(/\r?\n/);
@@ -69,7 +132,7 @@ export function parseTransactionImportText(input: string): ParsedImportResult {
       invalid.push({
         lineNumber,
         raw,
-        reason: "FORMATO_INVALIDO_ESPERADO_7_TOKENS",
+        reason: isSpaceSeparatedInstallmentToken(parts) ? "VALOR_INVALIDO" : "FORMATO_INVALIDO_ESPERADO_7_TOKENS",
       });
       continue;
     }
@@ -107,12 +170,21 @@ export function parseTransactionImportText(input: string): ParsedImportResult {
       continue;
     }
 
-    const numericAmount = Number((amountToken ?? "").replace(",", "."));
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    const parsedAmount = parseAmountToken(amountToken ?? "");
+    if (!parsedAmount) {
       invalid.push({
         lineNumber,
         raw,
         reason: "VALOR_INVALIDO",
+      });
+      continue;
+    }
+
+    if (kind === "INCOME" && parsedAmount.valueMode === "INSTALLMENT") {
+      invalid.push({
+        lineNumber,
+        raw,
+        reason: "PARCELAMENTO_PERMITE_APENAS_SAIDA",
       });
       continue;
     }
@@ -122,21 +194,36 @@ export function parseTransactionImportText(input: string): ParsedImportResult {
       invalid.push({
         lineNumber,
         raw,
-        reason: "RECORRENCIA_INVALIDA_USE_SIM_NAO",
+        reason: "RECORRENCIA_INVALIDA_USE_RECORRENTE_OU_NAO",
       });
       continue;
     }
 
-    valid.push({
+    const base = {
       lineNumber,
       raw,
       dateToken: dateToken!,
       kind,
       description: description!,
-      amount: numericAmount.toFixed(2),
       categoryToken: categoryToken!,
       accountToken: accountToken!,
       recurring,
+    };
+
+    if (parsedAmount.valueMode === "SINGLE") {
+      valid.push({
+        ...base,
+        valueMode: "SINGLE",
+        amount: parsedAmount.amount,
+      });
+      continue;
+    }
+
+    valid.push({
+      ...base,
+      valueMode: "INSTALLMENT",
+      totalAmount: parsedAmount.totalAmount,
+      installmentsCount: parsedAmount.installmentsCount,
     });
   }
 

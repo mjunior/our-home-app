@@ -34,7 +34,7 @@ export default function RegisterPage({ onRegistered }: RegisterPageProps) {
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Criar conta</CardTitle>
-          <CardDescription>Cadastro isolado em /n-account para habilitar a sessao autenticada.</CardDescription>
+          <CardDescription>Cadastro acessivel por URL direta em /register (tambem /cadastro).</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>

@@ -45,7 +45,7 @@ describe("cashflow import flow", () => {
     categories.createCategory({ householdId, name: "Renda" });
   });
 
-  it("processes textarea lines, shows invalid feedback and imports only valid launches", async () => {
+  it("imports single and installment values from textarea, keeping invalid feedback", async () => {
     const user = userEvent.setup();
     render(React.createElement(CashflowPage));
 
@@ -56,21 +56,25 @@ describe("cashflow import flow", () => {
       screen.getByLabelText("Linhas de importacao"),
       [
         "01/03 entrada salario 5000.00 renda c6 nao",
-        "02/03 saida compra_bahamas 50.00 mercado c6 recorrente",
-        "03/03 saida erro xx mercado c6 nao",
+        "02/03 saida compra_bahamas 50.00 mercado c6 nao",
+        "03/03 saida celular 50.22x3 mercado c6 recorrente",
+        "04/03 saida notebook 150/3 mercado c6 nao",
+        "05/03 saida erro xx mercado c6 nao",
       ].join("\n"),
     );
 
     await user.click(screen.getByRole("button", { name: "Processar linhas" }));
 
-    expect(screen.getByText("Validas: 2")).toBeInTheDocument();
+    expect(screen.getByText("Validas: 4")).toBeInTheDocument();
     expect(screen.getByText("Invalidas: 1")).toBeInTheDocument();
-    expect(screen.getByText(/Linha 3: VALOR_INVALIDO/)).toBeInTheDocument();
+    expect(screen.getByText(/Linha 5: VALOR_INVALIDO/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Importar lancamentos validos" }));
 
     expect(screen.getByText(/Importacao finalizada:/)).toBeInTheDocument();
     expect(screen.getByText("salario")).toBeInTheDocument();
     expect(screen.getByText("compra bahamas")).toBeInTheDocument();
+    expect(screen.getByText("celular (1/3) (1)")).toBeInTheDocument();
+    expect(screen.getByText("notebook (1/3) (1)")).toBeInTheDocument();
   });
 });
