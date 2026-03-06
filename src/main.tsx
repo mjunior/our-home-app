@@ -1,5 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { registerSW } from "virtual:pwa-register";
 
 import type { RouteKey } from "./app/routes";
 import LoginPage from "./app/auth/login-page";
@@ -8,6 +9,10 @@ import { fetchSessionUser, getSessionUser, logoutUser } from "./app/foundation/r
 import { AppShell } from "./components/layout/app-shell";
 import { SnackbarProvider } from "./components/ui/snackbar";
 import "./styles.css";
+
+registerSW({
+  immediate: true,
+});
 
 const registerPaths = new Set(["/register", "/cadastro", "/n-account"]);
 
