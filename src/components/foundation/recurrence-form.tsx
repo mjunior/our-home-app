@@ -40,7 +40,7 @@ export function RecurrenceForm({ accounts, cards, categories, onSubmit }: Recurr
         onSubmit({
           kind,
           description,
-          amount: currencyInputToDecimal(amount),
+          amount: currencyInputToDecimal(amount, { allowNegative: kind === "EXPENSE" }),
           startMonth,
           categoryId,
           accountId: target === "account" ? targetId : undefined,
@@ -69,9 +69,15 @@ export function RecurrenceForm({ accounts, cards, categories, onSubmit }: Recurr
         Valor recorrencia
         <input
           aria-label="Valor recorrencia"
-          inputMode="numeric"
+          inputMode="decimal"
           value={amount}
-          onChange={(event) => setAmount(formatCurrencyInputBRL(event.target.value))}
+          onChange={(event) =>
+            setAmount(
+              formatCurrencyInputBRL(event.target.value, {
+                allowNegative: kind === "EXPENSE",
+              }),
+            )
+          }
         />
       </label>
       <label>

@@ -20,4 +20,5 @@ export const HOUSEHOLD_FINANCE_CATEGORIES = [
   "Salario",
   "Investimentos",
   "Reserva de emergencia",
+  "Outros",
 ] as const;

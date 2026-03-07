@@ -10,7 +10,9 @@ import CashflowPage from "../../src/app/foundation/cashflow/page";
 import { AccountsController } from "../../src/modules/accounts/accounts.controller";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository";
 import { AccountsService } from "../../src/modules/accounts/accounts.service";
+import { CardsController } from "../../src/modules/cards/cards.controller";
 import { CardsRepository } from "../../src/modules/cards/cards.repository";
+import { CardsService } from "../../src/modules/cards/cards.service";
 import { CategoriesController } from "../../src/modules/categories/categories.controller";
 import { CategoriesRepository } from "../../src/modules/categories/categories.repository";
 import { CategoriesService } from "../../src/modules/categories/categories.service";
@@ -38,11 +40,14 @@ describe("cashflow import flow", () => {
     schedulesRepo.clearAll();
 
     const accounts = new AccountsController(new AccountsService(accountsRepo));
+    const cards = new CardsController(new CardsService(cardsRepo));
     const categories = new CategoriesController(new CategoriesService(categoriesRepo));
 
     accounts.createAccount({ householdId, name: "C6 Bank", type: "CHECKING", openingBalance: "1000.00" });
+    cards.createCard({ householdId, name: "Cartao C6", closeDay: 5, dueDay: 10 });
     categories.createCategory({ householdId, name: "Mercado" });
     categories.createCategory({ householdId, name: "Renda" });
+    categories.createCategory({ householdId, name: "Outros" });
   });
 
   it("imports single and installment values from textarea, keeping invalid feedback", async () => {
@@ -76,5 +81,26 @@ describe("cashflow import flow", () => {
     expect(screen.getByText("compra bahamas")).toBeInTheDocument();
     expect(screen.getByText("celular (1/3) (1)")).toBeInTheDocument();
     expect(screen.getByText("notebook (1/3) (1)")).toBeInTheDocument();
+  });
+
+  it("starts imported credit-card installment in invoice month when purchase is after close day", async () => {
+    const user = userEvent.setup();
+    render(React.createElement(CashflowPage));
+
+    await user.click(screen.getByRole("button", { name: "Importar texto" }));
+    expect(screen.getByText("Importacao por texto")).toBeInTheDocument();
+
+    await user.type(
+      screen.getByLabelText("Linhas de importacao"),
+      "06/02 saida compra_pos_fechamento 120x3 outros cartaoc6 nao",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Processar linhas" }));
+    expect(screen.getByText("Validas: 1")).toBeInTheDocument();
+    expect(screen.getByText("Invalidas: 0")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Importar lancamentos validos" }));
+    expect(screen.getByText("Fatura Cartao C6")).toBeInTheDocument();
+    expect(screen.getAllByText("R$ 120,00").length).toBeGreaterThan(0);
   });
 });

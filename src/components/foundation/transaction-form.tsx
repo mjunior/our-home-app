@@ -80,7 +80,7 @@ export function TransactionForm({
             onSubmit({
               kind,
               description,
-              amount: currencyInputToDecimal(amount),
+              amount: currencyInputToDecimal(amount, { allowNegative: kind === "EXPENSE" }),
               occurredAt,
               categoryId,
               accountId: target === "account" ? targetId : undefined,
@@ -125,9 +125,15 @@ export function TransactionForm({
             Valor
             <input
               aria-label="Valor da transacao"
-              inputMode="numeric"
+              inputMode="decimal"
               value={amount}
-              onChange={(event) => setAmount(formatCurrencyInputBRL(event.target.value))}
+              onChange={(event) =>
+                setAmount(
+                  formatCurrencyInputBRL(event.target.value, {
+                    allowNegative: kind === "EXPENSE",
+                  }),
+                )
+              }
             />
           </label>
 

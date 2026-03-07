@@ -163,7 +163,7 @@ export function UnifiedLaunchForm({
                   householdId,
                   kind,
                   description,
-                  amount: currencyInputToDecimal(amount),
+                  amount: currencyInputToDecimal(amount, { allowNegative: kind === "EXPENSE" }),
                   occurredAt: `${occurredDate}T12:00:00.000Z`,
                   categoryId: resolvedCategoryId,
                   accountId,
@@ -178,7 +178,7 @@ export function UnifiedLaunchForm({
                   householdId,
                   kind,
                   description,
-                  amount: currencyInputToDecimal(amount),
+                  amount: currencyInputToDecimal(amount, { allowNegative: kind === "EXPENSE" }),
                   startMonth,
                   categoryId: resolvedCategoryId,
                   accountId,
@@ -252,9 +252,15 @@ export function UnifiedLaunchForm({
             {launchType === "INSTALLMENT" ? "Valor total parcelado" : "Valor da transacao"}
             <input
               aria-label={launchType === "INSTALLMENT" ? "Valor total parcelado" : "Valor da transacao"}
-              inputMode="numeric"
+              inputMode="decimal"
               value={amount}
-              onChange={(event) => setAmount(formatCurrencyInputBRL(event.target.value))}
+              onChange={(event) =>
+                setAmount(
+                  formatCurrencyInputBRL(event.target.value, {
+                    allowNegative: launchType !== "INSTALLMENT" && launchType !== "INVESTMENT" && kind === "EXPENSE",
+                  }),
+                )
+              }
             />
           </label>
 

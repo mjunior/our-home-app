@@ -406,6 +406,35 @@ describe("invoice services", () => {
     expect(due.total).toBe("80.00");
   });
 
+  it("applies negative expenses as chargeback in invoice total", () => {
+    const card = cards.createCard({ householdId, name: "Master Estorno", closeDay: 5, dueDay: 10 });
+    const category = categories.createCategory({ householdId, name: "Compras" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra",
+      amount: "100.00",
+      occurredAt: "2026-03-03T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Estorno",
+      amount: "-30.00",
+      occurredAt: "2026-03-03T10:30:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    const due = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-03" });
+    expect(due.total).toBe("70.00");
+    expect(due.cards.find((item) => item.cardId === card.id)?.total).toBe("70.00");
+  });
+
   it("returns monthly invoices list by due month", () => {
     const card = cards.createCard({ householdId, name: "Lista Mensal", closeDay: 5, dueDay: 10 });
     const emptyCard = cards.createCard({ householdId, name: "Sem Movimentacao", closeDay: 7, dueDay: 15 });

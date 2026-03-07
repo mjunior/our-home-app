@@ -157,6 +157,30 @@ describe("transactions api", () => {
     expect(edited.invoiceDueDate).toBe("2026-05-10T00:00:00.000Z");
   });
 
+  it("accepts negative expense amount for credit card chargeback", () => {
+    const card = cardsController.createCard({
+      householdId,
+      name: "Visa",
+      closeDay: 5,
+      dueDay: 10,
+    });
+    const category = categoriesController.createCategory({ householdId, name: "Lazer" });
+
+    const created = transactionsController.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Estorno cashback",
+      amount: "-30.00",
+      occurredAt: "2026-04-04T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    expect(created.amount).toBe("-30.00");
+    expect(created.invoiceMonthKey).toBe("2026-04");
+    expect(created.invoiceDueDate).toBe("2026-04-10T00:00:00.000Z");
+  });
+
   it("enforces account-card binding rules", () => {
     const category = categoriesController.createCategory({ householdId, name: "Casa" });
 

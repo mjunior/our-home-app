@@ -206,41 +206,7 @@ export default function CashflowPage() {
         sourceType: item.sourceType,
       }));
 
-    const scheduledCardDueByCard = new Map<string, number>();
-    for (const item of scheduleInstances) {
-      if (item.kind !== "EXPENSE" || item.creditCardId === null || item.monthKey !== month) {
-        continue;
-      }
-      const current = scheduledCardDueByCard.get(item.creditCardId) ?? 0;
-      scheduledCardDueByCard.set(item.creditCardId, current + Number(item.amount));
-    }
-
     const all = [...oneOff, ...invoices, ...investments, ...scheduled].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
-
-    for (const [cardId, extraTotal] of scheduledCardDueByCard.entries()) {
-      const rowId = `invoice:${cardId}:${month}`;
-      const existing = all.find((item) => item.id === rowId);
-      if (existing) {
-        existing.amount = (Number(existing.amount) + extraTotal).toFixed(2);
-        continue;
-      }
-
-      const dueDay = cardDueDayMap[cardId] ?? 1;
-      all.push({
-        id: rowId,
-        kind: "EXPENSE",
-        description: `Fatura ${cardLabels[cardId] ?? "Cartao"}`,
-        amount: extraTotal.toFixed(2),
-        occurredAt: `${month}-${String(dueDay).padStart(2, "0")}T12:00:00.000Z`,
-        categoryId: "__invoice__",
-        accountId: null,
-        creditCardId: cardId,
-        settlementStatus: "UNPAID",
-        paymentAccountId: null,
-        sourceLabel: "Fatura",
-        sourceType: "INVOICE",
-      });
-    }
 
     const sorted = all.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
     return sorted.map((item) => {
@@ -536,7 +502,7 @@ export default function CashflowPage() {
               householdId={householdId}
               month={month}
               accounts={accounts.map((item) => ({ id: item.id, label: item.name }))}
-              cards={cards.map((item) => ({ id: item.id, label: item.name }))}
+              cards={cards.map((item) => ({ id: item.id, label: item.name, closeDay: item.closeDay, dueDay: item.dueDay }))}
               categories={categories.map((item) => ({ id: item.id, label: item.name, normalized: item.normalized }))}
               onSubmitBatch={(payloads) => {
                 const result = scheduleManagementController.createLaunchBatch({ entries: payloads });

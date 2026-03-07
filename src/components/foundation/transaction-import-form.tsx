@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 
+import { InvoiceCycleService } from "../../modules/invoices/invoice-cycle.service";
 import { parseTransactionImportText, toIsoDateAtNoon, type ParsedImportError } from "../../modules/transactions/transaction-import.parser";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -9,6 +10,8 @@ import type { UnifiedLaunchPayload } from "./unified-launch-form";
 interface AccountOption {
   id: string;
   label: string;
+  closeDay?: number;
+  dueDay?: number;
 }
 
 interface CategoryOption {
@@ -90,6 +93,27 @@ function resolveCategory(token: string, options: CategoryOption[]): CategoryOpti
   return null;
 }
 
+function resolveScheduleStartMonth(input: {
+  occurredAt: string;
+  kind: "INCOME" | "EXPENSE";
+  matchedAccount: AccountOption | null;
+  matchedCard: AccountOption | null;
+}): string {
+  const defaultMonth = input.occurredAt.slice(0, 7);
+  if (input.kind !== "EXPENSE" || input.matchedAccount || !input.matchedCard) {
+    return defaultMonth;
+  }
+
+  const closeDay = input.matchedCard.closeDay;
+  const dueDay = input.matchedCard.dueDay;
+  if (!closeDay || !dueDay) {
+    return defaultMonth;
+  }
+
+  const cycle = new InvoiceCycleService().resolveExpenseCycle(input.occurredAt, closeDay, dueDay);
+  return cycle.monthKey;
+}
+
 export function TransactionImportForm({
   householdId,
   month,
@@ -139,6 +163,12 @@ export function TransactionImportForm({
       }
 
       const occurredAt = toIsoDateAtNoon(line.dateToken, referenceYear);
+      const startMonth = resolveScheduleStartMonth({
+        occurredAt,
+        kind: line.kind,
+        matchedAccount,
+        matchedCard,
+      });
 
       if (line.valueMode === "INSTALLMENT") {
         prepared.push({
@@ -148,7 +178,7 @@ export function TransactionImportForm({
             description: line.description.replaceAll("_", " "),
             totalAmount: line.totalAmount,
             installmentsCount: line.installmentsCount,
-            startMonth: occurredAt.slice(0, 7),
+            startMonth,
             categoryId: category.id,
             accountId: matchedAccount?.id,
             creditCardId: matchedAccount ? undefined : matchedCard?.id,
@@ -174,7 +204,7 @@ export function TransactionImportForm({
             kind: line.kind,
             description: line.description.replaceAll("_", " "),
             amount: line.amount,
-            startMonth: occurredAt.slice(0, 7),
+            startMonth,
             categoryId: category.id,
             accountId: matchedAccount?.id,
             creditCardId: matchedAccount ? undefined : matchedCard?.id,
@@ -235,30 +265,37 @@ export function TransactionImportForm({
         <CardTitle>Importacao por texto</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-slate-500 dark:text-slate-300">
-          Cole uma transacao por linha no formato:
-          <strong className="ml-1">data tipo descricao valor categoria conta recorrente</strong>
-        </p>
-        <p className="text-xs text-slate-500 dark:text-slate-300">
-          Valor numerico puro = nao parcelado. Parcelado: <code>50.22x3</code> (3x de 50.22) ou <code>150/3</code> (total 150 em 3x).
-        </p>
-
-        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
-          Exemplos: <code>01/02 saida compra_bahamas 50.00 mercado c6 nao</code>, <code>01/02 saida celular 50.22x3 mercado c6 nao</code>,{" "}
-          <code>01/02 saida notebook 150/3 mercado c6 nao</code>
-        </div>
-
         <label className="grid gap-1 text-sm">
           Linhas de importacao
           <textarea
             aria-label="Linhas de importacao"
-            rows={8}
+            rows={16}
             value={textValue}
             onChange={(event) => setTextValue(event.target.value)}
             placeholder="01/03 entrada salario 5000.00 renda conta_principal nao"
-            className="w-full resize-y rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-teal dark:border-slate-700 dark:bg-slate-900"
+            className="min-h-[44vh] w-full resize-y rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-teal dark:border-slate-700 dark:bg-slate-900"
           />
         </label>
+
+        <details className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/35 dark:text-slate-300">
+          <summary className="cursor-pointer select-none text-sm font-medium text-slate-700 dark:text-slate-100">
+            Ajuda do formato
+          </summary>
+          <div className="mt-2 space-y-2">
+            <p>
+              Cole uma transacao por linha no formato:
+              <strong className="ml-1">data tipo descricao valor categoria conta recorrente</strong>
+            </p>
+            <p>
+              Valor numerico puro = nao parcelado (aceita negativo, ex.: <code>-120.50</code>). Parcelado: <code>50.22x3</code> (3x de 50.22) ou{" "}
+              <code>150/3</code> (total 150 em 3x).
+            </p>
+            <p>
+              Exemplos: <code>01/02 saida compra_bahamas 50.00 mercado c6 nao</code>, <code>01/02 saida celular 50.22x3 mercado c6 nao</code>,{" "}
+              <code>01/02 saida notebook 150/3 mercado c6 nao</code>
+            </p>
+          </div>
+        </details>
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" onClick={handleProcess}>

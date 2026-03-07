@@ -45,18 +45,24 @@ export function formatMonthLabelBR(monthKey: string): string {
   return `${shortMonths[month - 1]}/${String(year).slice(-2)}`;
 }
 
-export function formatCurrencyInputBRL(raw: string): string {
+export function formatCurrencyInputBRL(raw: string, options?: { allowNegative?: boolean }): string {
+  const allowNegative = options?.allowNegative ?? false;
+  const negative = allowNegative && raw.trim().startsWith("-");
   const digits = raw.replace(/\D/g, "");
   const cents = Number(digits || "0");
   const amount = cents / 100;
-  return amount.toLocaleString("pt-BR", {
+  const formatted = amount.toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+  return negative ? `-${formatted}` : formatted;
 }
 
-export function currencyInputToDecimal(raw: string): string {
+export function currencyInputToDecimal(raw: string, options?: { allowNegative?: boolean }): string {
+  const allowNegative = options?.allowNegative ?? false;
+  const negative = allowNegative && raw.trim().startsWith("-");
   const digits = raw.replace(/\D/g, "");
   const cents = Number(digits || "0");
-  return (cents / 100).toFixed(2);
+  const value = cents / 100;
+  return (negative ? value * -1 : value).toFixed(2);
 }

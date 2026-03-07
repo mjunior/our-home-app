@@ -45,6 +45,19 @@ describe("transaction import parser", () => {
     });
   });
 
+  it("accepts negative single amount for chargeback/storno", () => {
+    const input = "06/02 saida estorno_cartao -120.50 outros cartaoc6 nao";
+    const parsed = parseTransactionImportText(input);
+    expect(parsed.invalid).toHaveLength(0);
+    expect(parsed.valid).toHaveLength(1);
+    expect(parsed.valid[0]).toMatchObject({
+      valueMode: "SINGLE",
+      kind: "EXPENSE",
+      amount: "-120.50",
+      recurring: false,
+    });
+  });
+
   it("reports line-specific parsing errors without dropping valid lines", () => {
     const input = `
 01/03 entrada salario 1000.00 renda c6 nao

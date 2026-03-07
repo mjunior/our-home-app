@@ -60,7 +60,7 @@ function isValidDayMonth(day: number, month: number): boolean {
   return day <= maxByMonth[month - 1]!;
 }
 
-const singleAmountPattern = /^\d+([.,]\d+)?$/;
+const singleAmountPattern = /^-?\d+([.,]\d+)?$/;
 const installmentByValuePattern = /^(\d+([.,]\d+)?)x(\d+)$/;
 const installmentByTotalPattern = /^(\d+([.,]\d+)?)\/(\d+)$/;
 
@@ -74,7 +74,7 @@ function parseAmountToken(amountToken: string):
   | null {
   if (singleAmountPattern.test(amountToken)) {
     const amount = toDecimalAmount(amountToken);
-    if (amount.lte(0)) return null;
+    if (amount.eq(0)) return null;
     return { valueMode: "SINGLE", amount: amount.toFixed(2) };
   }
 
