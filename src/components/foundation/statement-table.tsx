@@ -15,8 +15,8 @@ export interface StatementEntry {
   categoryId: string;
   accountId: string | null;
   creditCardId: string | null;
-  sourceLabel?: "Avulso" | "Recorrente" | "Parcela" | "Investimento";
-  sourceType?: "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT";
+  sourceLabel?: "Avulso" | "Recorrente" | "Parcela" | "Investimento" | "Fatura";
+  sourceType?: "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT" | "INVOICE";
   sourceId?: string;
   transferGroupId?: string | null;
   destinationAccountId?: string | null;
@@ -152,7 +152,7 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                             </Badge>
                           </td>
                           <td className="px-3 py-3 align-middle">
-                            {onEditEntry ? (
+                            {onEditEntry && entry.sourceType !== "INVOICE" ? (
                               <Button
                                 type="button"
                                 variant="outline"
@@ -197,7 +197,7 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                         </div>
                         <div className="flex items-center gap-2">
                           <strong className="whitespace-nowrap text-[1.12rem]">{formatCurrencyBR(entry.amount)}</strong>
-                          {onEditEntry ? (
+                          {onEditEntry && entry.sourceType !== "INVOICE" ? (
                             <Button
                               type="button"
                               variant="outline"

@@ -191,6 +191,8 @@ function createApiRuntime(): Runtime {
 
   type CardInvoicesInput = MethodArgs<Runtime["invoicesController"]["getCardInvoices"]>[0];
   type CardInvoicesOutput = MethodReturn<Runtime["invoicesController"]["getCardInvoices"]>;
+  type DueObligationsInput = MethodArgs<Runtime["invoicesController"]["getDueObligationsByMonth"]>[0];
+  type DueObligationsOutput = MethodReturn<Runtime["invoicesController"]["getDueObligationsByMonth"]>;
 
   type FreeBalanceInput = MethodArgs<Runtime["freeBalanceController"]["getFreeBalance"]>[0];
   type FreeBalanceOutput = MethodReturn<Runtime["freeBalanceController"]["getFreeBalance"]>;
@@ -316,9 +318,8 @@ function createApiRuntime(): Runtime {
       getMonthlyCashflowSummary: () => {
         throw new Error("NOT_IMPLEMENTED_IN_API_RUNTIME");
       },
-      getDueObligationsByMonth: () => {
-        throw new Error("NOT_IMPLEMENTED_IN_API_RUNTIME");
-      },
+      getDueObligationsByMonth: (input: DueObligationsInput): DueObligationsOutput =>
+        requestSync<DueObligationsOutput>("GET", `/api/invoices/due?dueMonth=${encodeURIComponent(input.dueMonth)}`),
     },
     freeBalanceController: {
       getFreeBalance: (input: FreeBalanceInput): FreeBalanceOutput =>

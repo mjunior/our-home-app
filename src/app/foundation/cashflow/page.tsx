@@ -15,6 +15,7 @@ import {
   cardsController,
   categoriesController,
   freeBalanceController,
+  invoicesController,
   scheduleManagementController,
   transactionsController,
   getRuntimeHouseholdId,
@@ -76,9 +77,17 @@ export default function CashflowPage() {
     () => Object.fromEntries(cards.map((item) => [item.id, item.name])),
     [cards],
   );
+  const cardDueDayMap = useMemo(
+    () => Object.fromEntries(cards.map((item) => [item.id, item.dueDay])),
+    [cards],
+  );
   const categoryLabels = useMemo(
     () => Object.fromEntries(categories.map((item) => [item.id, item.name])),
     [categories],
+  );
+  const categoryLabelsWithInvoice = useMemo(
+    () => ({ ...categoryLabels, __invoice__: "Fatura" }),
+    [categoryLabels],
   );
 
   const transactions = useMemo(
@@ -94,15 +103,36 @@ export default function CashflowPage() {
     () => scheduleManagementController.listMonthInstances({ householdId: householdId, month }),
     [refreshKey, month, householdId],
   );
+  const dueObligations = useMemo(
+    () => invoicesController.getDueObligationsByMonth({ householdId, dueMonth: month }),
+    [refreshKey, month, householdId],
+  );
 
   const statementEntries = useMemo(() => {
     const oneOff = transactions
-      .filter((item) => !item.transferGroupId)
+      .filter((item) => !item.transferGroupId && !(item.kind === "EXPENSE" && item.creditCardId))
       .map((item) => ({
         ...item,
         sourceLabel: "Avulso" as const,
         sourceType: "ONE_OFF" as const,
       }));
+
+    const invoices = dueObligations.cards.map((item) => {
+      const dueDay = cardDueDayMap[item.cardId] ?? 1;
+      const occurredAt = `${month}-${String(dueDay).padStart(2, "0")}T12:00:00.000Z`;
+      return {
+        id: `invoice:${item.cardId}:${month}`,
+        kind: "EXPENSE" as const,
+        description: `Fatura ${item.cardName}`,
+        amount: item.total,
+        occurredAt,
+        categoryId: "__invoice__",
+        accountId: null,
+        creditCardId: item.cardId,
+        sourceLabel: "Fatura" as const,
+        sourceType: "INVOICE" as const,
+      };
+    });
 
     const investmentsByGroup = new Map<
       string,
@@ -152,7 +182,7 @@ export default function CashflowPage() {
       sourceType: item.sourceType,
     }));
 
-    const all = [...oneOff, ...investments, ...scheduled].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+    const all = [...oneOff, ...invoices, ...investments, ...scheduled].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
     if (originFilter === "ALL") {
       return all;
@@ -167,7 +197,7 @@ export default function CashflowPage() {
     }
 
     return all.filter((item) => item.sourceType === originFilter);
-  }, [originFilter, scheduleInstances, transactions]);
+  }, [cardDueDayMap, dueObligations.cards, month, originFilter, scheduleInstances, transactions]);
 
   const freeBalance = useMemo(
     () =>
@@ -259,8 +289,12 @@ export default function CashflowPage() {
         entries={statementEntries}
         accountLabels={accountLabels}
         cardLabels={cardLabels}
-        categoryLabels={categoryLabels}
+        categoryLabels={categoryLabelsWithInvoice}
         onEditEntry={(entry) => {
+          if (entry.sourceType === "INVOICE") {
+            notify({ message: "Edite as compras no modulo de cartoes/faturas.", tone: "info" });
+            return;
+          }
           const isInvestment = entry.sourceType === "INVESTMENT";
           const isOneOff = entry.sourceType === "ONE_OFF";
           setEditMode(entry.sourceType ?? "ONE_OFF");
