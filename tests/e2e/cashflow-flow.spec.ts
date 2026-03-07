@@ -95,11 +95,7 @@ describe("cashflow flow", () => {
     expect(screen.getByText("Reserva Invest")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Close" }));
 
-    await user.selectOptions(screen.getByLabelText("Filtro de origem"), "INVOICE");
     expect(screen.getByText("Fatura Visa Casa")).toBeInTheDocument();
-    expect(screen.queryByText("Salario")).not.toBeInTheDocument();
-
-    await user.selectOptions(screen.getByLabelText("Filtro de origem"), "ALL");
 
     await user.click(screen.getAllByRole("button", { name: "Editar lancamento" })[0]!);
     await user.clear(screen.getByLabelText("Editar descricao da transacao"));
@@ -128,9 +124,6 @@ describe("cashflow flow", () => {
     expect(screen.getAllByText(/Investimento/).length).toBeGreaterThan(0);
     expect(screen.queryByText("Saida")).not.toBeInTheDocument();
     expect(screen.getByText("Conta Casa -> Reserva Invest")).toBeInTheDocument();
-
-    await user.selectOptions(screen.getByLabelText("Filtro de origem"), "INVESTMENT");
-    expect(screen.getAllByText("Aporte")).toHaveLength(1);
 
     await user.click(screen.getAllByRole("button", { name: "Editar lancamento" })[0]!);
     await user.clear(screen.getByLabelText("Editar descricao da transacao"));

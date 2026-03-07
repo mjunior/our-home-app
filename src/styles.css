@@ -122,6 +122,48 @@
     @apply border-slate-800 bg-slate-950/90;
   }
 
+  .trevo-mobile-topbar {
+    @apply rounded-3xl border border-slate-700/70 bg-slate-950/55 p-1.5 backdrop-blur;
+    background-image: linear-gradient(112deg, rgba(194, 234, 69, 0.05), rgba(34, 211, 238, 0.04));
+    box-shadow: inset 0 0 0 1px rgba(194, 234, 69, 0.06), 0 10px 22px rgba(2, 8, 23, 0.34);
+  }
+
+  .trevo-mobile-topbar__inner {
+    @apply flex items-center justify-between rounded-2xl border border-slate-700/60 bg-slate-900/45 px-2.5 py-1.5;
+  }
+
+  .cashflow-month-rail {
+    @apply flex gap-1.5 overflow-x-auto rounded-2xl border border-slate-700/45 bg-slate-900/25 p-1.5;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    mask-image: linear-gradient(90deg, transparent 0, black 4%, black 96%, transparent 100%);
+  }
+
+  .cashflow-month-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cashflow-month-rail__item {
+    @apply shrink-0 rounded-xl border border-transparent px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-300 transition;
+    background: linear-gradient(150deg, rgba(30, 41, 59, 0.66), rgba(15, 23, 42, 0.55));
+  }
+
+  .cashflow-month-rail__item.is-active {
+    @apply border-brand-lime/55 text-slate-50;
+    background: linear-gradient(140deg, rgba(194, 234, 69, 0.2), rgba(34, 211, 238, 0.12));
+    box-shadow: inset 0 0 0 1px rgba(194, 234, 69, 0.18), 0 8px 18px rgba(194, 234, 69, 0.14);
+  }
+
+  @media (min-width: 640px) {
+    .cashflow-month-rail {
+      @apply rounded-3xl p-2;
+    }
+
+    .cashflow-month-rail__item {
+      @apply px-4 py-2.5 text-xs tracking-[0.14em];
+    }
+  }
+
   .motivational-splash {
     position: relative;
     min-height: 100vh;

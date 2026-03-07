@@ -40,13 +40,19 @@ function addMonths(monthKey: string, count: number): string {
 }
 
 export default function CashflowPage() {
+  const [monthRailEl, setMonthRailEl] = useState<HTMLDivElement | null>(null);
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return true;
+    }
+    return window.matchMedia("(min-width: 640px)").matches;
+  });
   const [refreshKey, setRefreshKey] = useState(0);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailMonthKey, setDetailMonthKey] = useState<"current" | "next">("current");
   const [month, setMonth] = useState("2026-03");
-  const [originFilter, setOriginFilter] = useState<"ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT" | "INVOICE">("ALL");
   const [editMode, setEditMode] = useState<"ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT" | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
@@ -113,6 +119,10 @@ export default function CashflowPage() {
     () => invoicesController.getDueObligationsByMonth({ householdId, dueMonth: month }),
     [refreshKey, month, householdId],
   );
+  const monthRail = useMemo(() => {
+    const offsets = isDesktop ? [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6] : [-3, -2, -1, 0, 1, 2, 3];
+    return offsets.map((offset) => addMonths(month, offset));
+  }, [isDesktop, month]);
 
   const statementEntries = useMemo(() => {
     const oneOff = transactions
@@ -230,26 +240,8 @@ export default function CashflowPage() {
       });
     }
 
-    all.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
-
-    if (originFilter === "ALL") {
-      return all;
-    }
-
-    if (originFilter === "ONE_OFF") {
-      return all.filter((item) => item.sourceType === "ONE_OFF");
-    }
-
-    if (originFilter === "INVESTMENT") {
-      return all.filter((item) => item.sourceType === "INVESTMENT");
-    }
-
-    if (originFilter === "INVOICE") {
-      return all.filter((item) => item.sourceType === "INVOICE");
-    }
-
-    return all.filter((item) => item.sourceType === originFilter);
-  }, [cardDueDayMap, cardLabels, dueObligations.cards, month, originFilter, scheduleInstances, transactions]);
+    return all.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  }, [cardDueDayMap, cardLabels, dueObligations.cards, month, scheduleInstances, transactions]);
 
   const freeBalance = useMemo(
     () =>
@@ -259,6 +251,30 @@ export default function CashflowPage() {
       }),
     [month, refreshKey, householdId],
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+    const mediaQuery = window.matchMedia("(min-width: 640px)");
+    const handleChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
+    setIsDesktop(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  useEffect(() => {
+    if (!monthRailEl) {
+      return;
+    }
+    const activeButton = monthRailEl.querySelector<HTMLButtonElement>('[aria-selected="true"]');
+    if (!activeButton) {
+      return;
+    }
+    if (typeof activeButton.scrollIntoView === "function") {
+      activeButton.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+    }
+  }, [month, monthRailEl]);
 
   useEffect(() => {
     const openLaunch = () => setTransactionModalOpen(true);
@@ -285,37 +301,31 @@ export default function CashflowPage() {
 
       <Card className="section-reveal">
         <CardContent className="pt-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" variant="outline" onClick={() => setMonth((prev) => addMonths(prev, -1))}>
-                Mes anterior
-              </Button>
-              <Badge variant="secondary">{formatMonthLabelBR(month)}</Badge>
-              <Button type="button" variant="outline" onClick={() => setMonth((prev) => addMonths(prev, 1))}>
-                Proximo mes
-              </Button>
-              <Button type="button" variant="outline" onClick={() => setImportModalOpen(true)}>
-                Importar texto
-              </Button>
-            </div>
-            <div className="grid grid-cols-[auto,1fr] items-center gap-2 lg:flex lg:items-center">
-              <label htmlFor="origin-filter" className="text-sm text-slate-500 dark:text-slate-300">
-                Origem
-              </label>
-              <select
-                id="origin-filter"
-                aria-label="Filtro de origem"
-                className="w-full lg:w-auto"
-                value={originFilter}
-                onChange={(event) => setOriginFilter(event.target.value as "ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT" | "INVOICE")}
-              >
-                <option value="ALL">Todos</option>
-                <option value="ONE_OFF">Avulso</option>
-                <option value="INVOICE">Fatura</option>
-                <option value="INVESTMENT">Investimento</option>
-                <option value="RECURRING">Recorrencia</option>
-                <option value="INSTALLMENT">Parcelamento</option>
-              </select>
+          <div className="flex flex-col gap-3">
+            <div className="space-y-2.5 lg:space-y-0">
+              <div className="cashflow-month-rail" role="tablist" aria-label="Selecionar mes" ref={setMonthRailEl}>
+                {monthRail.map((monthItem) => {
+                  const active = monthItem === month;
+                  return (
+                    <button
+                      key={monthItem}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      className={`cashflow-month-rail__item ${active ? "is-active" : ""}`}
+                      onClick={() => setMonth(monthItem)}
+                    >
+                      {formatMonthLabelBR(monthItem)}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="sm:inline-flex">
+                <Button type="button" variant="outline" className="w-full rounded-xl sm:w-auto" onClick={() => setImportModalOpen(true)}>
+                  Importar texto
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>

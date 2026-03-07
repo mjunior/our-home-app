@@ -1,5 +1,5 @@
 import React from "react";
-import { Menu, MoonStar, Plus, SunMedium } from "lucide-react";
+import { LogOut, Menu, MoonStar, Plus, SunMedium } from "lucide-react";
 
 import type { RouteKey } from "../../app/routes";
 import { routes } from "../../app/routes";
@@ -97,10 +97,11 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange, onL
       </aside>
 
       <main className="safe-bottom p-3 pb-24 pt-4 lg:p-8 lg:pb-8">
-        <header className="surface-card section-reveal mb-4 flex items-center justify-between px-3 py-2 lg:hidden">
+        <header className="trevo-mobile-topbar section-reveal mb-4 lg:hidden">
+          <div className="trevo-mobile-topbar__inner">
           <Sheet>
             <SheetTrigger asChild>
-              <Button type="button" variant="ghost" size="icon" aria-label="Abrir menu">
+              <Button type="button" variant="ghost" size="icon" aria-label="Abrir menu" className="rounded-xl">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -127,38 +128,45 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange, onL
                   );
                 })}
               </div>
+              <Separator className="my-4" />
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full justify-start rounded-xl"
+                  aria-label="Alternar tema"
+                  onClick={() => onDarkModeChange(!darkMode)}
+                >
+                  {darkMode ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
+                  {darkMode ? "Modo claro" : "Modo escuro"}
+                </Button>
+                <Button type="button" variant="ghost" className="w-full justify-start rounded-xl" aria-label="Sair" onClick={onLogout}>
+                  <LogOut className="h-4 w-4" />
+                  Sair
+                </Button>
+              </div>
             </SheetContent>
           </Sheet>
 
-          <div className="text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Hoje</p>
-            <p className="font-display text-sm">{routes[route].label}</p>
+          <div className="min-w-0 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-lime">TREVO</p>
+            <p className="truncate font-display text-base leading-tight">{routes[route].label}</p>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {route === "cashflow" ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 aria-label="Novo lancamento"
+                className="rounded-xl"
                 onClick={() => window.dispatchEvent(new CustomEvent("cashflow:new-launch"))}
               >
                 <Plus className="h-4 w-4" />
               </Button>
             ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Alternar tema"
-              onClick={() => onDarkModeChange(!darkMode)}
-            >
-              {darkMode ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
-            </Button>
-            <Button type="button" variant="ghost" size="icon" aria-label="Sair" onClick={onLogout}>
-              <Menu className="h-4 w-4" />
-            </Button>
+          </div>
           </div>
         </header>
 
