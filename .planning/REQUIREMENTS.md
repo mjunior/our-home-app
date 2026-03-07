@@ -1,45 +1,15 @@
 # Requirements: Nosso Lar Financeiro
 
-**Defined:** 2026-03-06
+**Defined:** 2026-03-07
 **Core Value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
-
-## v1 Requirements
-
-### Credit Card Billing Rules
-
-- [x] **CCB-01**: Compra no cartao com dia do mes menor que `closeDay` entra na fatura do mesmo mes de competencia.
-- [x] **CCB-02**: Compra no cartao com dia do mes igual ou maior que `closeDay` entra na fatura do mes seguinte.
-- [x] **CCB-03**: Regra de fechamento e aplicada com `closeDay` configuravel por cartao.
-- [x] **CCB-04**: Dia de pagamento (`dueDay`) e configuravel por cartao e usado para data de vencimento da fatura no fluxo de caixa.
-
-### Cashflow Invoice Projection
-
-- [x] **CFI-01**: Extrato principal do cashflow nao exibe despesas individuais de cartao de credito.
-- [x] **CFI-02**: Extrato principal exibe lancamento consolidado `Fatura [Cartao]` por cartao e competencia.
-- [x] **CFI-03**: Lancamento de fatura no cashflow ocorre no dia de pagamento (`dueDay`) do cartao para o mes correspondente.
-- [x] **CFI-04**: Total da fatura consolidada considera todas as despesas de cartao daquela competencia, respeitando edicoes/exclusoes.
-
-### Card Invoices View
-
-- [x] **CIV-01**: Tela de cartao exibe lista simples de faturas por mes com total consolidado.
-- [x] **CIV-02**: Usuario consegue abrir uma fatura e visualizar despesas individuais vinculadas.
-- [x] **CIV-03**: A partir da fatura aberta, usuario consegue editar despesa individual com mesmo fluxo atual de edicao.
-- [x] **CIV-04**: Alteracao em despesa individual atualiza imediatamente o total da fatura e a projecao consolidada do cashflow.
-
-### Invoice UX Polish
-
-- [x] **UXP-01**: Lista de faturas em cartoes apresenta hierarquia visual clara para mes, cartao e total.
-- [x] **UXP-02**: Detalhe dos itens da fatura melhora legibilidade e acao em mobile e desktop.
-- [x] **UXP-03**: Estados de vazio/erro/carregamento no modulo de cartoes sao consistentes e explicitos.
-- [x] **UXP-04**: Fluxo de edicao/exclusao de itens da fatura reduz friccao e ambiguidades visuais.
 
 ## v2 Requirements
 
 ### Credit Card Enhancements
 
-- **CCX-01**: Registrar pagamento parcial de fatura com saldo remanescente.
-- **CCX-02**: Simular juros de rotativo e parcelamento da fatura.
-- **CCX-03**: Notificar vencimento de fatura por push/email.
+- [ ] **CCX-01**: Registrar pagamento parcial de fatura com saldo remanescente.
+- [ ] **CCX-02**: Simular juros de rotativo e parcelamento da fatura.
+- [ ] **CCX-03**: Notificar vencimento de fatura por push/email.
 
 ## Out of Scope
 
@@ -51,30 +21,15 @@
 
 ## Traceability
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| CCB-01 | Phase 15 | Complete |
-| CCB-02 | Phase 15 | Complete |
-| CCB-03 | Phase 15 | Complete |
-| CCB-04 | Phase 15 | Complete |
-| CFI-01 | Phase 16 | Complete |
-| CFI-02 | Phase 16 | Complete |
-| CFI-03 | Phase 16 | Complete |
-| CFI-04 | Phase 16 | Complete |
-| CIV-01 | Phase 17 | Complete |
-| CIV-02 | Phase 17 | Complete |
-| CIV-03 | Phase 17 | Complete |
-| CIV-04 | Phase 17 | Complete |
-| UXP-01 | Phase 18 | Complete |
-| UXP-02 | Phase 18 | Complete |
-| UXP-03 | Phase 18 | Complete |
-| UXP-04 | Phase 18 | Complete |
+| Requirement | Planned Phase | Status |
+|-------------|---------------|--------|
+| CCX-01 | Phase 19+ | Planned |
+| CCX-02 | Phase 19+ | Planned |
+| CCX-03 | Phase 19+ | Planned |
 
 **Coverage:**
-- v1 requirements: 16 total
-- Mapped to phases: 16
-- Unmapped: 0 ✓
+- v2 requirements: 3 total
+- Mapped to phases: pending planejamento detalhado
 
 ---
-*Requirements defined: 2026-03-06*
-*Last updated: 2026-03-07 after phase 18 verification*
+*Requirements defined: 2026-03-07*

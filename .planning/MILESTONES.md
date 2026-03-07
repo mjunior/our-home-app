@@ -1,5 +1,30 @@
 # Milestones
 
+## v1.5 UX de Faturas em Cartoes (Shipped: 2026-03-07)
+
+**Phases completed:** 1 phase, 3 plans
+
+**Key accomplishments:**
+- Refino visual da tela de faturas com hierarquia mais clara entre lista e detalhe.
+- Estados vazios/erro/sem selecao padronizados e explicitos.
+- Fluxo de edicao/exclusao no contexto da fatura simplificado e mais direto.
+- Responsividade e legibilidade melhoradas sem regressao funcional.
+
+---
+
+## v1.4 Faturas de Cartao no Fluxo de Caixa (Shipped: 2026-03-07)
+
+**Phases completed:** 3 phases, 9 plans
+
+**Key accomplishments:**
+- Regra de fechamento/vencimento por cartao aplicada na competencia da fatura.
+- Materializacao de `invoiceMonthKey`/`invoiceDueDate` para estabilidade de leitura.
+- Cashflow principal consolidado por `Fatura [Cartao]` no dia de vencimento.
+- Navegacao contextual cashflow -> cartoes com abertura direta da fatura.
+- Tela de cartoes com lista de faturas e manutencao de itens no proprio contexto.
+
+---
+
 ## v1.3 Autenticacao e Isolamento de Conta (Shipped: 2026-03-05)
 
 **Phases completed:** 3 phases, 9 plans
