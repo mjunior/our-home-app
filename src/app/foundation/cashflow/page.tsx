@@ -45,7 +45,7 @@ export default function CashflowPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailMonthKey, setDetailMonthKey] = useState<"current" | "next">("current");
   const [month, setMonth] = useState("2026-03");
-  const [originFilter, setOriginFilter] = useState<"ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT">("ALL");
+  const [originFilter, setOriginFilter] = useState<"ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT" | "INVOICE">("ALL");
   const [editMode, setEditMode] = useState<"ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT" | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
@@ -232,6 +232,10 @@ export default function CashflowPage() {
       return all.filter((item) => item.sourceType === "INVESTMENT");
     }
 
+    if (originFilter === "INVOICE") {
+      return all.filter((item) => item.sourceType === "INVOICE");
+    }
+
     return all.filter((item) => item.sourceType === originFilter);
   }, [cardDueDayMap, cardLabels, dueObligations.cards, month, originFilter, scheduleInstances, transactions]);
 
@@ -291,10 +295,11 @@ export default function CashflowPage() {
                 aria-label="Filtro de origem"
                 className="w-full lg:w-auto"
                 value={originFilter}
-                onChange={(event) => setOriginFilter(event.target.value as "ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT")}
+                onChange={(event) => setOriginFilter(event.target.value as "ALL" | "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT" | "INVOICE")}
               >
                 <option value="ALL">Todos</option>
                 <option value="ONE_OFF">Avulso</option>
+                <option value="INVOICE">Fatura</option>
                 <option value="INVESTMENT">Investimento</option>
                 <option value="RECURRING">Recorrencia</option>
                 <option value="INSTALLMENT">Parcelamento</option>
