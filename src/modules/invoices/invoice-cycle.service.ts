@@ -8,7 +8,7 @@ function addMonths(date: Date, amount: number): Date {
 
 function toDueDateForMonth(monthKey: string, dueDay: number): string {
   const [year, month] = monthKey.split("-").map(Number);
-  const dueDate = new Date(Date.UTC(year, month, dueDay));
+  const dueDate = new Date(Date.UTC(year, month - 1, dueDay));
   return dueDate.toISOString();
 }
 
@@ -22,7 +22,7 @@ export class InvoiceCycleService {
     const occurredAt = new Date(occurredAtIso);
     const day = occurredAt.getUTCDate();
 
-    const cycleBase = day > closeDay ? addMonths(occurredAt, 1) : occurredAt;
+    const cycleBase = day >= closeDay ? addMonths(occurredAt, 1) : occurredAt;
     const monthKey = toMonthKey(cycleBase);
 
     return {
@@ -38,7 +38,7 @@ export class InvoiceCycleService {
     const reference = new Date(referenceIso);
     const day = reference.getUTCDate();
 
-    const currentBase = day > closeDay ? addMonths(reference, 1) : reference;
+    const currentBase = day >= closeDay ? addMonths(reference, 1) : reference;
     const nextBase = addMonths(currentBase, 1);
 
     const currentMonthKey = toMonthKey(currentBase);
