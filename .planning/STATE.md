@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: faturas-de-cartao-no-fluxo-de-caixa
 status: in_progress
-last_updated: "2026-03-07T01:35:00.000Z"
+last_updated: "2026-03-07T22:30:00.000Z"
 progress:
   total_phases: 17
   completed_phases: 16
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 ## Current Position
 
 Phase: 17 - tela de cartao com lista de faturas e drill-down
-Plan: pendente
-Status: Fase 16 concluida e verificada (3/3 planos executados)
-Last activity: 2026-03-07 — fase 16 finalizada com consolidacao de fatura no cashflow e navegacao contextual para cartoes.
+Plan: planejada (3 planos prontos)
+Status: Fase 16 concluida e verificada; fase 17 estruturada para execucao.
+Last activity: 2026-03-07 — fase 17 formalizada com CONTEXT + PLANs para lista de faturas, drill-down e edicao.
 
 Progress: [█████████░] 94%
 
@@ -45,7 +45,7 @@ Progress: [█████████░] 94%
 
 ### Pending Todos
 
-- Planejar fase 17 com `$gsd-plan-phase 17`.
+- Executar fase 17 com `$gsd-execute-phase 17`.
 
 ### Blockers/Concerns
 
