@@ -38,7 +38,10 @@ type TransactionsControllerContract = Pick<
   | "deleteInvestmentTransfer"
   | "listTransactionsByMonth"
 >;
-type InvoicesControllerContract = Pick<InvoicesController, "getCardInvoices" | "getMonthlyCashflowSummary" | "getDueObligationsByMonth">;
+type InvoicesControllerContract = Pick<
+  InvoicesController,
+  "getCardInvoices" | "getMonthlyCashflowSummary" | "getDueObligationsByMonth" | "getCardInvoiceEntriesByDueMonth"
+>;
 type FreeBalanceControllerContract = Pick<FreeBalanceController, "getFreeBalance">;
 type ScheduleManagementControllerContract = Pick<
   ScheduleManagementController,
@@ -193,6 +196,8 @@ function createApiRuntime(): Runtime {
   type CardInvoicesOutput = MethodReturn<Runtime["invoicesController"]["getCardInvoices"]>;
   type DueObligationsInput = MethodArgs<Runtime["invoicesController"]["getDueObligationsByMonth"]>[0];
   type DueObligationsOutput = MethodReturn<Runtime["invoicesController"]["getDueObligationsByMonth"]>;
+  type CardInvoiceEntriesInput = MethodArgs<Runtime["invoicesController"]["getCardInvoiceEntriesByDueMonth"]>[0];
+  type CardInvoiceEntriesOutput = MethodReturn<Runtime["invoicesController"]["getCardInvoiceEntriesByDueMonth"]>;
 
   type FreeBalanceInput = MethodArgs<Runtime["freeBalanceController"]["getFreeBalance"]>[0];
   type FreeBalanceOutput = MethodReturn<Runtime["freeBalanceController"]["getFreeBalance"]>;
@@ -320,6 +325,13 @@ function createApiRuntime(): Runtime {
       },
       getDueObligationsByMonth: (input: DueObligationsInput): DueObligationsOutput =>
         requestSync<DueObligationsOutput>("GET", `/api/invoices/due?dueMonth=${encodeURIComponent(input.dueMonth)}`),
+      getCardInvoiceEntriesByDueMonth: (input: CardInvoiceEntriesInput): CardInvoiceEntriesOutput => {
+        const query = new URLSearchParams({
+          cardId: input.cardId,
+          dueMonth: input.dueMonth,
+        });
+        return requestSync<CardInvoiceEntriesOutput>("GET", `/api/invoices/items?${query.toString()}`);
+      },
     },
     freeBalanceController: {
       getFreeBalance: (input: FreeBalanceInput): FreeBalanceOutput =>

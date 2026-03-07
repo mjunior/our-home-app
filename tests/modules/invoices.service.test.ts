@@ -299,6 +299,44 @@ describe("invoice services", () => {
     expect(due.cards[0]?.total).toBe("150.00");
   });
 
+  it("lists invoice entries for card and due month with one-off and scheduled items", () => {
+    const card = cards.createCard({ householdId, name: "Detalhe Fatura", closeDay: 5, dueDay: 12 });
+    const category = categories.createCategory({ householdId, name: "Lazer" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Cinema",
+      amount: "120.00",
+      occurredAt: "2026-03-01T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    scheduleRepo.createInstanceIfMissing({
+      householdId,
+      sourceType: "INSTALLMENT",
+      sourceId: "installment-1",
+      sequence: 2,
+      monthKey: "2026-03",
+      occurredAt: "2026-03-12T12:00:00.000Z",
+      kind: "EXPENSE",
+      description: "Notebook (2/10)",
+      amount: "80.00",
+      categoryId: category.id,
+      accountId: null,
+      creditCardId: card.id,
+      instanceKey: "INSTALLMENT:installment-1:2:2026-03",
+      locked: false,
+    });
+
+    const details = invoices.getCardInvoiceEntriesByDueMonth({ householdId, cardId: card.id, dueMonth: "2026-03" });
+    expect(details.total).toBe("200.00");
+    expect(details.entries).toHaveLength(2);
+    expect(details.entries.some((entry) => entry.description === "Cinema" && entry.sourceType === "ONE_OFF")).toBe(true);
+    expect(details.entries.some((entry) => entry.description === "Notebook (2/10)" && entry.sourceType === "INSTALLMENT")).toBe(true);
+  });
+
   it("recomputes consolidated invoice total after card expense edits and deletes", () => {
     const card = cards.createCard({ householdId, name: "Master Recalc", closeDay: 5, dueDay: 12 });
     const category = categories.createCategory({ householdId, name: "Casa" });

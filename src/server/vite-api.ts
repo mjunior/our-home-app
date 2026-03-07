@@ -977,6 +977,15 @@ export function installViteApi(server: MiddlewareServer) {
         return;
       }
 
+      if (req.method === "GET" && path === "/api/invoices/items") {
+        const householdId = authHouseholdId;
+        const cardId = url.searchParams.get("cardId") ?? "";
+        const dueMonth = url.searchParams.get("dueMonth") ?? "";
+        const { invoicesService } = await loadServices();
+        sendJson(res, 200, invoicesService.getCardInvoiceEntriesByDueMonth({ householdId, cardId, dueMonth }));
+        return;
+      }
+
       if (req.method === "GET" && path === "/api/free-balance") {
         const householdId = authHouseholdId;
         const month = url.searchParams.get("month") ?? "";

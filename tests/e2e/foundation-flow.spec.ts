@@ -178,5 +178,6 @@ describe("foundation flow", () => {
 
     expect(screen.getAllByText("Cartoes cadastrados").length).toBeGreaterThan(0);
     expect(screen.getByText("Contexto da fatura: 2026-03")).toBeInTheDocument();
+    expect(screen.getByText("Cinema")).toBeInTheDocument();
   });
 });

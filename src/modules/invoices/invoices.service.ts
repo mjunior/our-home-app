@@ -29,9 +29,17 @@ export interface DueObligationsInput {
   dueMonth: string;
 }
 
+export interface CardInvoiceEntriesInput {
+  householdId: string;
+  cardId: string;
+  dueMonth: string;
+}
+
 interface ScheduleReadRepositoryLike {
   listInstancesByHousehold(householdId: string): ScheduledInstanceRecord[];
 }
+
+type InvoiceEntryOrigin = "ONE_OFF" | "RECURRING" | "INSTALLMENT";
 
 export class InvoicesService {
   constructor(
@@ -158,6 +166,74 @@ export class InvoicesService {
       dueMonth: input.dueMonth,
       total: sumMoney(cardsDue.map((item) => item.total)),
       cards: cardsDue,
+    };
+  }
+
+  getCardInvoiceEntriesByDueMonth(input: CardInvoiceEntriesInput) {
+    const card = this.cardsRepository.findById(input.cardId);
+    if (!card || card.householdId !== input.householdId) {
+      throw new Error("CARD_NOT_FOUND");
+    }
+
+    const entries: Array<{
+      id: string;
+      description: string;
+      amount: string;
+      occurredAt: string;
+      categoryId: string;
+      sourceType: InvoiceEntryOrigin;
+    }> = [];
+
+    for (const expense of this.transactionsRepository.listByHousehold(input.householdId)) {
+      if (expense.kind !== "EXPENSE" || expense.creditCardId !== card.id) {
+        continue;
+      }
+
+      const cycle = this.resolveStoredOrLegacyCycle(expense, card.closeDay, card.dueDay);
+      const dueMonth = monthFromIsoDate(cycle.dueDate);
+      if (dueMonth !== input.dueMonth) {
+        continue;
+      }
+
+      entries.push({
+        id: expense.id,
+        description: expense.description,
+        amount: expense.amount,
+        occurredAt: expense.occurredAt,
+        categoryId: expense.categoryId,
+        sourceType: "ONE_OFF",
+      });
+    }
+
+    const scheduledInstances = this.scheduleRepository?.listInstancesByHousehold(input.householdId) ?? [];
+    for (const instance of scheduledInstances) {
+      if (
+        instance.kind !== "EXPENSE" ||
+        instance.creditCardId !== card.id ||
+        instance.monthKey !== input.dueMonth
+      ) {
+        continue;
+      }
+
+      entries.push({
+        id: `schedule:${instance.id}`,
+        description: instance.description,
+        amount: instance.amount,
+        occurredAt: instance.occurredAt,
+        categoryId: instance.categoryId,
+        sourceType: instance.sourceType,
+      });
+    }
+
+    entries.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+
+    return {
+      cardId: card.id,
+      cardName: card.name,
+      dueMonth: input.dueMonth,
+      dueDate: toDueDateForMonth(input.dueMonth, card.dueDay),
+      total: sumMoney(entries.map((item) => item.amount)),
+      entries,
     };
   }
 
