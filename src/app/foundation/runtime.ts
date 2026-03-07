@@ -40,7 +40,7 @@ type TransactionsControllerContract = Pick<
 >;
 type InvoicesControllerContract = Pick<
   InvoicesController,
-  "getCardInvoices" | "getMonthlyCashflowSummary" | "getDueObligationsByMonth" | "getCardInvoiceEntriesByDueMonth"
+  "getCardInvoices" | "getMonthlyCashflowSummary" | "getMonthlyInvoices" | "getDueObligationsByMonth" | "getCardInvoiceEntriesByDueMonth"
 >;
 type FreeBalanceControllerContract = Pick<FreeBalanceController, "getFreeBalance">;
 type ScheduleManagementControllerContract = Pick<
@@ -194,6 +194,8 @@ function createApiRuntime(): Runtime {
 
   type CardInvoicesInput = MethodArgs<Runtime["invoicesController"]["getCardInvoices"]>[0];
   type CardInvoicesOutput = MethodReturn<Runtime["invoicesController"]["getCardInvoices"]>;
+  type MonthlyInvoicesInput = MethodArgs<Runtime["invoicesController"]["getMonthlyInvoices"]>[0];
+  type MonthlyInvoicesOutput = MethodReturn<Runtime["invoicesController"]["getMonthlyInvoices"]>;
   type DueObligationsInput = MethodArgs<Runtime["invoicesController"]["getDueObligationsByMonth"]>[0];
   type DueObligationsOutput = MethodReturn<Runtime["invoicesController"]["getDueObligationsByMonth"]>;
   type CardInvoiceEntriesInput = MethodArgs<Runtime["invoicesController"]["getCardInvoiceEntriesByDueMonth"]>[0];
@@ -323,6 +325,8 @@ function createApiRuntime(): Runtime {
       getMonthlyCashflowSummary: () => {
         throw new Error("NOT_IMPLEMENTED_IN_API_RUNTIME");
       },
+      getMonthlyInvoices: (input: MonthlyInvoicesInput): MonthlyInvoicesOutput =>
+        requestSync<MonthlyInvoicesOutput>("GET", `/api/invoices/monthly?month=${encodeURIComponent(input.month)}`),
       getDueObligationsByMonth: (input: DueObligationsInput): DueObligationsOutput =>
         requestSync<DueObligationsOutput>("GET", `/api/invoices/due?dueMonth=${encodeURIComponent(input.dueMonth)}`),
       getCardInvoiceEntriesByDueMonth: (input: CardInvoiceEntriesInput): CardInvoiceEntriesOutput => {

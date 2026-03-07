@@ -177,7 +177,20 @@ describe("foundation flow", () => {
     await user.click(screen.getByText("Fatura Visa Navegacao"));
 
     expect(screen.getAllByText("Cartoes cadastrados").length).toBeGreaterThan(0);
-    expect(screen.getByText("Contexto da fatura: 2026-03")).toBeInTheDocument();
-    expect(screen.getByText("Cinema")).toBeInTheDocument();
+    expect(screen.getAllByText("Faturas do mes 2026-03").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Cinema").length).toBeGreaterThan(0);
+
+    await user.click(screen.getAllByRole("button", { name: "Editar item da fatura" })[0]!);
+    await user.clear(screen.getByLabelText("Editar descricao da transacao"));
+    await user.type(screen.getByLabelText("Editar descricao da transacao"), "Cinema VIP");
+    await user.clear(screen.getByLabelText("Editar valor da transacao"));
+    await user.type(screen.getByLabelText("Editar valor da transacao"), "80.00");
+    await user.click(screen.getAllByRole("button", { name: "Salvar edicao" })[0]!);
+
+    expect(screen.getAllByText("Cinema VIP").length).toBeGreaterThan(0);
+
+    await user.click(screen.getAllByRole("tab", { name: "Caixa" })[0]!);
+    expect(screen.getAllByText("Fatura Visa Navegacao").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/R\$\s*80[,.]00/).length).toBeGreaterThan(0);
   });
 });

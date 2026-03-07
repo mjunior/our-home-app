@@ -333,8 +333,24 @@ describe("invoice services", () => {
     const details = invoices.getCardInvoiceEntriesByDueMonth({ householdId, cardId: card.id, dueMonth: "2026-03" });
     expect(details.total).toBe("200.00");
     expect(details.entries).toHaveLength(2);
-    expect(details.entries.some((entry) => entry.description === "Cinema" && entry.sourceType === "ONE_OFF")).toBe(true);
-    expect(details.entries.some((entry) => entry.description === "Notebook (2/10)" && entry.sourceType === "INSTALLMENT")).toBe(true);
+    expect(
+      details.entries.some(
+        (entry) =>
+          entry.description === "Cinema" &&
+          entry.sourceType === "ONE_OFF" &&
+          entry.sourceId === null &&
+          entry.monthKey === null,
+      ),
+    ).toBe(true);
+    expect(
+      details.entries.some(
+        (entry) =>
+          entry.description === "Notebook (2/10)" &&
+          entry.sourceType === "INSTALLMENT" &&
+          entry.sourceId === "installment-1" &&
+          entry.monthKey === "2026-03",
+      ),
+    ).toBe(true);
   });
 
   it("recomputes consolidated invoice total after card expense edits and deletes", () => {
@@ -381,5 +397,26 @@ describe("invoice services", () => {
     transactions.deleteTransaction({ id: first.id, householdId });
     due = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-03" });
     expect(due.total).toBe("80.00");
+  });
+
+  it("returns monthly invoices list by due month", () => {
+    const card = cards.createCard({ householdId, name: "Lista Mensal", closeDay: 5, dueDay: 10 });
+    const category = categories.createCategory({ householdId, name: "Compras" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Item mensal",
+      amount: "90.00",
+      occurredAt: "2026-03-01T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    const monthly = invoices.getMonthlyInvoices({ householdId, month: "2026-03" });
+    expect(monthly.month).toBe("2026-03");
+    expect(monthly.total).toBe("90.00");
+    expect(monthly.cards).toHaveLength(1);
+    expect(monthly.cards[0]?.cardId).toBe(card.id);
   });
 });

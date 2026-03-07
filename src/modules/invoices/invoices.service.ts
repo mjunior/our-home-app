@@ -24,6 +24,11 @@ export interface MonthlyCashflowInput {
   month: string;
 }
 
+export interface MonthlyInvoicesInput {
+  householdId: string;
+  month: string;
+}
+
 export interface DueObligationsInput {
   householdId: string;
   dueMonth: string;
@@ -169,6 +174,15 @@ export class InvoicesService {
     };
   }
 
+  getMonthlyInvoices(input: MonthlyInvoicesInput) {
+    const due = this.getDueObligationsByMonth({ householdId: input.householdId, dueMonth: input.month });
+    return {
+      month: input.month,
+      total: due.total,
+      cards: due.cards,
+    };
+  }
+
   getCardInvoiceEntriesByDueMonth(input: CardInvoiceEntriesInput) {
     const card = this.cardsRepository.findById(input.cardId);
     if (!card || card.householdId !== input.householdId) {
@@ -182,6 +196,8 @@ export class InvoicesService {
       occurredAt: string;
       categoryId: string;
       sourceType: InvoiceEntryOrigin;
+      sourceId: string | null;
+      monthKey: string | null;
     }> = [];
 
     for (const expense of this.transactionsRepository.listByHousehold(input.householdId)) {
@@ -202,6 +218,8 @@ export class InvoicesService {
         occurredAt: expense.occurredAt,
         categoryId: expense.categoryId,
         sourceType: "ONE_OFF",
+        sourceId: null,
+        monthKey: null,
       });
     }
 
@@ -222,6 +240,8 @@ export class InvoicesService {
         occurredAt: instance.occurredAt,
         categoryId: instance.categoryId,
         sourceType: instance.sourceType,
+        sourceId: instance.sourceId,
+        monthKey: instance.monthKey,
       });
     }
 
