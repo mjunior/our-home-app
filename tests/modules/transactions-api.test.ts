@@ -53,7 +53,7 @@ describe("transactions api", () => {
 
     const category = categoriesController.createCategory({ householdId, name: "Mercado" });
 
-    transactionsController.createTransaction({
+    const income = transactionsController.createTransaction({
       householdId,
       kind: "INCOME",
       description: "Salario",
@@ -63,7 +63,7 @@ describe("transactions api", () => {
       categoryId: category.id,
     });
 
-    transactionsController.createTransaction({
+    const expense = transactionsController.createTransaction({
       householdId,
       kind: "EXPENSE",
       description: "Compra no cartao",
@@ -75,6 +75,47 @@ describe("transactions api", () => {
 
     const march = transactionsController.listTransactionsByMonth({ householdId, month: "2026-03" });
     expect(march).toHaveLength(2);
+    expect(income.invoiceMonthKey).toBeNull();
+    expect(income.invoiceDueDate).toBeNull();
+    expect(expense.invoiceMonthKey).toBe("2026-03");
+    expect(expense.invoiceDueDate).toBe("2026-03-12T00:00:00.000Z");
+  });
+
+  it("recalculates invoice cycle when card expense is edited", () => {
+    const card = cardsController.createCard({
+      householdId,
+      name: "Visa",
+      closeDay: 5,
+      dueDay: 10,
+    });
+    const category = categoriesController.createCategory({ householdId, name: "Lazer" });
+
+    const created = transactionsController.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Cinema",
+      amount: "120.00",
+      occurredAt: "2026-04-04T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    expect(created.invoiceMonthKey).toBe("2026-04");
+    expect(created.invoiceDueDate).toBe("2026-04-10T00:00:00.000Z");
+
+    const edited = transactionsController.updateTransaction({
+      id: created.id,
+      householdId,
+      kind: "EXPENSE",
+      description: "Cinema VIP",
+      amount: "150.00",
+      occurredAt: "2026-04-05T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    expect(edited.invoiceMonthKey).toBe("2026-05");
+    expect(edited.invoiceDueDate).toBe("2026-05-10T00:00:00.000Z");
   });
 
   it("enforces account-card binding rules", () => {

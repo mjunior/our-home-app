@@ -124,6 +124,31 @@ function splitInstallments(totalAmount: string, count: number): string[] {
   return values;
 }
 
+async function resolveInvoiceFieldsForTransaction(input: {
+  householdId: string;
+  kind: "INCOME" | "EXPENSE";
+  occurredAt: string;
+  creditCardId?: string | null;
+}) {
+  if (input.kind !== "EXPENSE" || !input.creditCardId) {
+    return {
+      invoiceMonthKey: null,
+      invoiceDueDate: null,
+    };
+  }
+
+  const card = await prisma.creditCard.findUnique({ where: { id: input.creditCardId } });
+  if (!card || card.householdId !== input.householdId) {
+    throw new Error("CARD_NOT_FOUND");
+  }
+
+  const cycle = new InvoiceCycleService().resolveExpenseCycle(input.occurredAt, card.closeDay, card.dueDay);
+  return {
+    invoiceMonthKey: cycle.monthKey,
+    invoiceDueDate: new Date(cycle.dueDate),
+  };
+}
+
 async function createRecurringInstances(input: {
   householdId: string;
   sourceId: string;
@@ -595,6 +620,12 @@ export function installViteApi(server: MiddlewareServer) {
 
       if (req.method === "POST" && path === "/api/transactions") {
         const body = await readJsonBody(req);
+        const invoiceFields = await resolveInvoiceFieldsForTransaction({
+          householdId: authHouseholdId,
+          kind: body.kind,
+          occurredAt: body.occurredAt,
+          creditCardId: body.creditCardId ?? null,
+        });
         const created = await prisma.transaction.create({
           data: {
             householdId: authHouseholdId,
@@ -605,8 +636,8 @@ export function installViteApi(server: MiddlewareServer) {
             accountId: body.accountId ?? null,
             creditCardId: body.creditCardId ?? null,
             categoryId: body.categoryId,
-            invoiceMonthKey: null,
-            invoiceDueDate: null,
+            invoiceMonthKey: invoiceFields.invoiceMonthKey,
+            invoiceDueDate: invoiceFields.invoiceDueDate,
             transferGroupId: null,
           },
         });
@@ -626,6 +657,12 @@ export function installViteApi(server: MiddlewareServer) {
           sendJson(res, 400, { message: "INVESTMENT_TRANSFER_REQUIRES_GROUP_UPDATE" });
           return;
         }
+        const invoiceFields = await resolveInvoiceFieldsForTransaction({
+          householdId: authHouseholdId,
+          kind: body.kind,
+          occurredAt: body.occurredAt,
+          creditCardId: body.creditCardId ?? null,
+        });
         const updated = await prisma.transaction.update({
           where: { id: body.id },
           data: {
@@ -636,8 +673,8 @@ export function installViteApi(server: MiddlewareServer) {
             accountId: body.accountId ?? null,
             creditCardId: body.creditCardId ?? null,
             categoryId: body.categoryId,
-            invoiceMonthKey: null,
-            invoiceDueDate: null,
+            invoiceMonthKey: invoiceFields.invoiceMonthKey,
+            invoiceDueDate: invoiceFields.invoiceDueDate,
           },
         });
 
@@ -778,6 +815,12 @@ export function installViteApi(server: MiddlewareServer) {
       const createLaunchByType = async (body: any) => {
         if (body.launchType === "ONE_OFF") {
           const transaction = body.transaction ?? {};
+          const invoiceFields = await resolveInvoiceFieldsForTransaction({
+            householdId: authHouseholdId,
+            kind: transaction.kind,
+            occurredAt: transaction.occurredAt,
+            creditCardId: transaction.creditCardId ?? null,
+          });
           const created = await prisma.transaction.create({
             data: {
               householdId: authHouseholdId,
@@ -788,8 +831,8 @@ export function installViteApi(server: MiddlewareServer) {
               accountId: transaction.accountId ?? null,
               creditCardId: transaction.creditCardId ?? null,
               categoryId: transaction.categoryId,
-              invoiceMonthKey: null,
-              invoiceDueDate: null,
+              invoiceMonthKey: invoiceFields.invoiceMonthKey,
+              invoiceDueDate: invoiceFields.invoiceDueDate,
               transferGroupId: null,
             },
           });

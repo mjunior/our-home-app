@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AccountsRepository } from "../accounts/accounts.repository";
 import { CardsRepository } from "../cards/cards.repository";
 import { CategoriesRepository } from "../categories/categories.repository";
+import { InvoiceCycleService } from "../invoices/invoice-cycle.service";
 import {
   TransactionsRepository,
   type TransactionKind,
@@ -119,6 +120,8 @@ function sortTransferPair(items: TransactionRecord[]): { debit: TransactionRecor
 }
 
 export class TransactionsService {
+  private readonly invoiceCycleService = new InvoiceCycleService();
+
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly accountsRepository: AccountsRepository,
@@ -173,9 +176,30 @@ export class TransactionsService {
     }
   }
 
+  private resolveInvoiceFields(parsed: CreateTransactionInput | UpdateTransactionInput): {
+    invoiceMonthKey: string | null;
+    invoiceDueDate: string | null;
+  } {
+    if (parsed.kind !== "EXPENSE" || !parsed.creditCardId) {
+      return {
+        invoiceMonthKey: null,
+        invoiceDueDate: null,
+      };
+    }
+
+    const card = this.assertCardOwnership(parsed.householdId, parsed.creditCardId);
+    const cycle = this.invoiceCycleService.resolveExpenseCycle(parsed.occurredAt, card.closeDay, card.dueDay);
+
+    return {
+      invoiceMonthKey: cycle.monthKey,
+      invoiceDueDate: cycle.dueDate,
+    };
+  }
+
   create(input: CreateTransactionInput): TransactionRecord {
     const parsed = transactionInputSchema.parse(input);
     this.validateCoreBinding(parsed);
+    const invoiceFields = this.resolveInvoiceFields(parsed);
 
     return this.transactionsRepository.create({
       householdId: parsed.householdId,
@@ -186,8 +210,8 @@ export class TransactionsService {
       accountId: parsed.accountId ?? null,
       creditCardId: parsed.creditCardId ?? null,
       categoryId: parsed.categoryId,
-      invoiceMonthKey: null,
-      invoiceDueDate: null,
+      invoiceMonthKey: invoiceFields.invoiceMonthKey,
+      invoiceDueDate: invoiceFields.invoiceDueDate,
       transferGroupId: null,
     });
   }
@@ -259,6 +283,7 @@ export class TransactionsService {
     }
 
     this.validateCoreBinding(parsed);
+    const invoiceFields = this.resolveInvoiceFields(parsed);
 
     return this.transactionsRepository.update(parsed.id, {
       kind: parsed.kind,
@@ -268,8 +293,8 @@ export class TransactionsService {
       accountId: parsed.accountId ?? null,
       creditCardId: parsed.creditCardId ?? null,
       categoryId: parsed.categoryId,
-      invoiceMonthKey: null,
-      invoiceDueDate: null,
+      invoiceMonthKey: invoiceFields.invoiceMonthKey,
+      invoiceDueDate: invoiceFields.invoiceDueDate,
     });
   }
 
