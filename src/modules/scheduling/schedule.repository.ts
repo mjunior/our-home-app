@@ -182,6 +182,32 @@ export class ScheduleRepository {
     }
   }
 
+  removeByCreditCardId(householdId: string, creditCardId: string): void {
+    for (let index = installmentPlansStore.length - 1; index >= 0; index -= 1) {
+      const item = installmentPlansStore[index];
+      if (!item) continue;
+      if (item.householdId === householdId && item.creditCardId === creditCardId) {
+        installmentPlansStore.splice(index, 1);
+      }
+    }
+
+    for (let index = recurringRulesStore.length - 1; index >= 0; index -= 1) {
+      const item = recurringRulesStore[index];
+      if (!item) continue;
+      if (item.householdId === householdId && item.creditCardId === creditCardId) {
+        recurringRulesStore.splice(index, 1);
+      }
+    }
+
+    for (let index = scheduledInstancesStore.length - 1; index >= 0; index -= 1) {
+      const item = scheduledInstancesStore[index];
+      if (!item) continue;
+      if (item.householdId === householdId && item.creditCardId === creditCardId) {
+        scheduledInstancesStore.splice(index, 1);
+      }
+    }
+  }
+
   clearAll(): void {
     installmentPlansStore.length = 0;
     recurringRulesStore.length = 0;

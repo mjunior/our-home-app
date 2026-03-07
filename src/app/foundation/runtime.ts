@@ -27,7 +27,7 @@ import { TransactionsService } from "../../modules/transactions/transactions.ser
 type MethodArgs<T> = T extends (...args: infer A) => unknown ? A : never;
 type MethodReturn<T> = T extends (...args: any[]) => infer R ? R : never;
 type AccountsControllerContract = Pick<AccountsController, "createAccount" | "listAccounts" | "getConsolidatedBalance">;
-type CardsControllerContract = Pick<CardsController, "createCard" | "listCards" | "updateCard">;
+type CardsControllerContract = Pick<CardsController, "createCard" | "listCards" | "updateCard" | "deleteCard">;
 type CategoriesControllerContract = Pick<CategoriesController, "createCategory" | "listCategories">;
 type TransactionsControllerContract = Pick<
   TransactionsController,
@@ -133,7 +133,7 @@ function createLocalRuntime(): Runtime {
   const accountsController = new AccountsController(
     new AccountsService(accountsRepository, transactionsRepository, invoiceSettlementRepository, scheduleRepository),
   );
-  const cardsController = new CardsController(new CardsService(cardsRepository));
+  const cardsModuleController = new CardsController(new CardsService(cardsRepository));
   const categoriesController = new CategoriesController(new CategoriesService(categoriesRepository));
   const transactionsController = new TransactionsController(
     new TransactionsService(transactionsRepository, accountsRepository, cardsRepository, categoriesRepository),
@@ -169,7 +169,22 @@ function createLocalRuntime(): Runtime {
 
   return {
     accountsController,
-    cardsController,
+    cardsController: {
+      createCard: (input) => cardsModuleController.createCard(input),
+      listCards: (householdId) => cardsModuleController.listCards(householdId),
+      updateCard: (input) => cardsModuleController.updateCard(input),
+      deleteCard: (input) => {
+        const card = cardsRepository.findById(input.id);
+        if (!card || card.householdId !== input.householdId) {
+          throw new Error("CARD_NOT_FOUND");
+        }
+
+        transactionsRepository.removeByCreditCardId(input.householdId, input.id);
+        scheduleRepository.removeByCreditCardId(input.householdId, input.id);
+        invoiceSettlementRepository.removeByCard({ householdId: input.householdId, cardId: input.id });
+        return cardsModuleController.deleteCard(input);
+      },
+    },
     categoriesController,
     transactionsController,
     invoicesController,
@@ -188,6 +203,8 @@ function createApiRuntime(): Runtime {
   type CardsCreateOutput = MethodReturn<Runtime["cardsController"]["createCard"]>;
   type CardsUpdateInput = MethodArgs<Runtime["cardsController"]["updateCard"]>[0];
   type CardsUpdateOutput = MethodReturn<Runtime["cardsController"]["updateCard"]>;
+  type CardsDeleteInput = MethodArgs<Runtime["cardsController"]["deleteCard"]>[0];
+  type CardsDeleteOutput = MethodReturn<Runtime["cardsController"]["deleteCard"]>;
   type CardsListOutput = MethodReturn<Runtime["cardsController"]["listCards"]>;
 
   type CategoriesCreateInput = MethodArgs<Runtime["categoriesController"]["createCategory"]>[0];
@@ -275,6 +292,10 @@ function createApiRuntime(): Runtime {
           name: input.name,
           closeDay: input.closeDay,
           dueDay: input.dueDay,
+        }),
+      deleteCard: (input: CardsDeleteInput): CardsDeleteOutput =>
+        requestSync<CardsDeleteOutput>("POST", "/api/cards/delete", {
+          id: input.id,
         }),
       listCards: (_householdId: string): CardsListOutput =>
         requestSync<CardsListOutput>("GET", "/api/cards"),

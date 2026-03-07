@@ -39,6 +39,14 @@ export class CardsRepository {
     return card;
   }
 
+  remove(id: string): void {
+    for (let index = cardsStore.length - 1; index >= 0; index -= 1) {
+      if (cardsStore[index]?.id === id) {
+        cardsStore.splice(index, 1);
+      }
+    }
+  }
+
   clearAll(): void {
     cardsStore.length = 0;
   }

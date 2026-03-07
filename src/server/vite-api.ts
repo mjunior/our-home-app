@@ -671,6 +671,54 @@ export function installViteApi(server: MiddlewareServer) {
         return;
       }
 
+      if (req.method === "POST" && path === "/api/cards/delete") {
+        const body = await readJsonBody(req);
+        const existing = await prisma.creditCard.findUnique({ where: { id: body.id } });
+        if (!existing || existing.householdId !== authHouseholdId) {
+          sendJson(res, 404, { message: "CARD_NOT_FOUND" });
+          return;
+        }
+
+        await prisma.$transaction([
+          prisma.transaction.deleteMany({
+            where: {
+              householdId: authHouseholdId,
+              creditCardId: existing.id,
+            },
+          }),
+          prisma.scheduledInstance.deleteMany({
+            where: {
+              householdId: authHouseholdId,
+              creditCardId: existing.id,
+            },
+          }),
+          prisma.installmentPlan.deleteMany({
+            where: {
+              householdId: authHouseholdId,
+              creditCardId: existing.id,
+            },
+          }),
+          prisma.recurringRule.deleteMany({
+            where: {
+              householdId: authHouseholdId,
+              creditCardId: existing.id,
+            },
+          }),
+          prisma.invoiceSettlement.deleteMany({
+            where: {
+              householdId: authHouseholdId,
+              cardId: existing.id,
+            },
+          }),
+          prisma.creditCard.delete({
+            where: { id: existing.id },
+          }),
+        ]);
+
+        sendJson(res, 200, { deleted: true });
+        return;
+      }
+
       if (req.method === "GET" && path === "/api/categories") {
         const householdId = authHouseholdId;
         const rows = await prisma.category.findMany({ where: { householdId }, orderBy: { createdAt: "asc" } });

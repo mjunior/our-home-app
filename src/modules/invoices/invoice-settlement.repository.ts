@@ -59,8 +59,19 @@ export class InvoiceSettlementRepository {
     );
   }
 
+  removeByCard(input: { householdId: string; cardId: string }): { deleted: boolean } {
+    const before = settlementsStore.length;
+    for (let index = settlementsStore.length - 1; index >= 0; index -= 1) {
+      const item = settlementsStore[index];
+      if (!item) continue;
+      if (item.householdId === input.householdId && item.cardId === input.cardId) {
+        settlementsStore.splice(index, 1);
+      }
+    }
+    return { deleted: settlementsStore.length !== before };
+  }
+
   clearAll() {
     settlementsStore.length = 0;
   }
 }
-

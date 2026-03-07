@@ -1,4 +1,4 @@
-import { CardsService, type CreateCardInput, type UpdateCardInput } from "./cards.service";
+import { CardsService, type CreateCardInput, type DeleteCardInput, type UpdateCardInput } from "./cards.service";
 
 export class CardsController {
   constructor(private readonly service: CardsService) {}
@@ -13,5 +13,9 @@ export class CardsController {
 
   updateCard(payload: UpdateCardInput) {
     return this.service.update(payload);
+  }
+
+  deleteCard(payload: DeleteCardInput) {
+    return this.service.delete(payload);
   }
 }

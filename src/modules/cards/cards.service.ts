@@ -14,6 +14,11 @@ const cardUpdateSchema = cardInputSchema.extend({
   id: z.string().min(1),
 });
 
+const cardDeleteSchema = z.object({
+  id: z.string().min(1),
+  householdId: z.string().min(1),
+});
+
 export interface CreateCardInput {
   householdId: string;
   name: string;
@@ -23,6 +28,11 @@ export interface CreateCardInput {
 
 export interface UpdateCardInput extends CreateCardInput {
   id: string;
+}
+
+export interface DeleteCardInput {
+  id: string;
+  householdId: string;
 }
 
 export class CardsService {
@@ -57,6 +67,17 @@ export class CardsService {
       closeDay: card.closeDay,
       dueDay: card.dueDay,
     });
+  }
+
+  delete(input: DeleteCardInput): { deleted: boolean } {
+    const parsed = cardDeleteSchema.parse(input);
+    const existing = this.repository.findById(parsed.id);
+    if (!existing || existing.householdId !== parsed.householdId) {
+      throw new Error("CARD_NOT_FOUND");
+    }
+
+    this.repository.remove(parsed.id);
+    return { deleted: true };
   }
 
   clearAll() {

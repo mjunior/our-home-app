@@ -29,6 +29,8 @@ type EditMode = "ONE_OFF" | "RECURRING" | "INSTALLMENT" | null;
 export default function CardsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [createCardModalOpen, setCreateCardModalOpen] = useState(false);
+  const [deleteCardModalOpen, setDeleteCardModalOpen] = useState(false);
+  const [pendingDeleteCardId, setPendingDeleteCardId] = useState<string | null>(null);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [navigationContext] = useState<{ cardId: string; dueMonth: string } | null>(() => {
     const raw = sessionStorage.getItem("cards:navigation-context");
@@ -111,6 +113,7 @@ export default function CardsPage() {
   }, [householdId, refreshKey, selectedDueMonth, selectedInvoiceCardId]);
 
   const selectedInvoiceSummary = monthlyInvoices.cards.find((item) => item.cardId === selectedInvoiceCardId) ?? null;
+  const pendingDeleteCard = cards.find((item) => item.id === pendingDeleteCardId) ?? null;
 
   return (
     <main className="space-y-4">
@@ -369,9 +372,22 @@ export default function CardsPage() {
                   <span>
                     {card.name} - fecha {card.closeDay} vence {card.dueDay}
                   </span>
-                  <button type="button" onClick={() => setEditingCardId(card.id)}>
-                    Editar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setEditingCardId(card.id)}>
+                      Editar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      onClick={() => {
+                        setPendingDeleteCardId(card.id);
+                        setDeleteCardModalOpen(true);
+                      }}
+                    >
+                      Excluir
+                    </Button>
+                  </div>
                 </div>
                 {editingCardId === card.id ? (
                   <CardForm
@@ -577,6 +593,62 @@ export default function CardsPage() {
                 }
               }}
             />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={deleteCardModalOpen}
+        onOpenChange={(open) => {
+          setDeleteCardModalOpen(open);
+          if (!open) {
+            setPendingDeleteCardId(null);
+          }
+        }}
+      >
+        <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto w-[94%] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
+          <SheetHeader>
+            <SheetTitle>Excluir cartao</SheetTitle>
+            <SheetDescription>
+              {pendingDeleteCard
+                ? `Voce esta prestes a excluir ${pendingDeleteCard.name}.`
+                : "Voce esta prestes a excluir um cartao."}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-4 space-y-3">
+            <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+              Esta acao remove o cartao e todos os dados relacionados: faturas, transacoes, recorrencias, parcelamentos e instancias.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Button type="button" variant="outline" onClick={() => setDeleteCardModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => {
+                  if (!pendingDeleteCardId) {
+                    return;
+                  }
+                  try {
+                    cardsController.deleteCard({ id: pendingDeleteCardId, householdId });
+                    if (selectedInvoiceCardId === pendingDeleteCardId) {
+                      setSelectedInvoiceCardId("");
+                    }
+                    setEditingCardId((current) => (current === pendingDeleteCardId ? null : current));
+                    setDeleteCardModalOpen(false);
+                    setPendingDeleteCardId(null);
+                    setRefreshKey((prev) => prev + 1);
+                    notify({ message: "Cartao e dados relacionados excluidos.", tone: "success" });
+                  } catch {
+                    notify({ message: "Nao foi possivel excluir o cartao.", tone: "error" });
+                  }
+                }}
+              >
+                Confirmar exclusao
+              </Button>
+            </div>
           </div>
         </SheetContent>
       </Sheet>

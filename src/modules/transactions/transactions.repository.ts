@@ -109,6 +109,16 @@ export class TransactionsRepository {
     }
   }
 
+  removeByCreditCardId(householdId: string, creditCardId: string): void {
+    for (let index = transactionsStore.length - 1; index >= 0; index -= 1) {
+      const item = transactionsStore[index];
+      if (!item) continue;
+      if (item.householdId === householdId && item.creditCardId === creditCardId) {
+        transactionsStore.splice(index, 1);
+      }
+    }
+  }
+
   clearAll(): void {
     transactionsStore.length = 0;
   }
