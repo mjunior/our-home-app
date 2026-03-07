@@ -166,7 +166,9 @@ export default function CashflowPage() {
         sourceType: "INVESTMENT" as const,
       }));
 
-    const scheduled = scheduleInstances.map((item) => ({
+    const scheduled = scheduleInstances
+      .filter((item) => item.creditCardId === null)
+      .map((item) => ({
       id: `schedule:${item.id}`,
       kind: item.kind,
       description: item.sourceType === "INSTALLMENT" ? `${item.description} (${item.sequence})` : item.description,
@@ -180,9 +182,43 @@ export default function CashflowPage() {
       creditCardId: item.creditCardId,
       sourceLabel: item.sourceType === "INSTALLMENT" ? ("Parcela" as const) : ("Recorrente" as const),
       sourceType: item.sourceType,
-    }));
+      }));
+
+    const scheduledCardDueByCard = new Map<string, number>();
+    for (const item of scheduleInstances) {
+      if (item.kind !== "EXPENSE" || item.creditCardId === null || item.monthKey !== month) {
+        continue;
+      }
+      const current = scheduledCardDueByCard.get(item.creditCardId) ?? 0;
+      scheduledCardDueByCard.set(item.creditCardId, current + Number(item.amount));
+    }
 
     const all = [...oneOff, ...invoices, ...investments, ...scheduled].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+
+    for (const [cardId, extraTotal] of scheduledCardDueByCard.entries()) {
+      const rowId = `invoice:${cardId}:${month}`;
+      const existing = all.find((item) => item.id === rowId);
+      if (existing) {
+        existing.amount = (Number(existing.amount) + extraTotal).toFixed(2);
+        continue;
+      }
+
+      const dueDay = cardDueDayMap[cardId] ?? 1;
+      all.push({
+        id: rowId,
+        kind: "EXPENSE",
+        description: `Fatura ${cardLabels[cardId] ?? "Cartao"}`,
+        amount: extraTotal.toFixed(2),
+        occurredAt: `${month}-${String(dueDay).padStart(2, "0")}T12:00:00.000Z`,
+        categoryId: "__invoice__",
+        accountId: null,
+        creditCardId: cardId,
+        sourceLabel: "Fatura",
+        sourceType: "INVOICE",
+      });
+    }
+
+    all.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
     if (originFilter === "ALL") {
       return all;
@@ -197,7 +233,7 @@ export default function CashflowPage() {
     }
 
     return all.filter((item) => item.sourceType === originFilter);
-  }, [cardDueDayMap, dueObligations.cards, month, originFilter, scheduleInstances, transactions]);
+  }, [cardDueDayMap, cardLabels, dueObligations.cards, month, originFilter, scheduleInstances, transactions]);
 
   const freeBalance = useMemo(
     () =>
