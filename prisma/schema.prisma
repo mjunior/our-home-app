@@ -36,6 +36,7 @@ model Account {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   transactions   Transaction[]
+  invoiceSettlements InvoiceSettlement[]
   installmentPlans InstallmentPlan[]
   recurringRules RecurringRule[]
   scheduledInstances ScheduledInstance[]
@@ -52,6 +53,7 @@ model CreditCard {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
+  invoiceSettlements InvoiceSettlement[]
   installmentPlans InstallmentPlan[]
   recurringRules RecurringRule[]
   scheduledInstances ScheduledInstance[]
@@ -166,6 +168,7 @@ model Household {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   users     User[]
+  invoiceSettlements InvoiceSettlement[]
 }
 
 model User {
@@ -178,4 +181,23 @@ model User {
   updatedAt    DateTime  @updatedAt
 
   @@unique([householdId])
+}
+
+model InvoiceSettlement {
+  id               String   @id @default(cuid())
+  householdId      String
+  cardId           String
+  dueMonth         String
+  paymentAccountId String
+  paidAt           DateTime
+  paidAmount       Decimal
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  card      CreditCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  account   Account    @relation(fields: [paymentAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, cardId, dueMonth])
+  @@index([householdId, dueMonth])
 }

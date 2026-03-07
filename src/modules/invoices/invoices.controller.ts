@@ -29,4 +29,19 @@ export class InvoicesController {
   getCardInvoiceEntriesByDueMonth(payload: CardInvoiceEntriesInput) {
     return this.service.getCardInvoiceEntriesByDueMonth(payload);
   }
+
+  settleInvoice(payload: {
+    householdId: string;
+    cardId: string;
+    dueMonth: string;
+    paymentAccountId: string;
+    paidAt: string;
+    paidAmount: string;
+  }) {
+    return this.service.settleInvoice(payload);
+  }
+
+  unsettleInvoice(payload: { householdId: string; cardId: string; dueMonth: string }) {
+    return this.service.unsettleInvoice(payload);
+  }
 }

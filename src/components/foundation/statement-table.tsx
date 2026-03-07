@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Landmark, Pencil, Repeat2, TrendingDown, TrendingUp } from "lucide-react";
+import { Check, Landmark, Pencil, Repeat2, TrendingDown, TrendingUp } from "lucide-react";
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -81,6 +81,34 @@ function TypeOriginCell({ entry }: { entry: StatementEntry }) {
   return <KindPill kind={entry.kind} />;
 }
 
+function SettlementToggle({
+  checked,
+  onToggle,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={checked ? "Marcar como nao pago" : "Marcar como pago"}
+      aria-pressed={checked}
+      onClick={onToggle}
+      className={`group inline-flex h-7 w-7 items-center justify-center rounded-[10px] border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/40 ${
+        checked
+          ? "border-brand-lime/70 bg-brand-lime/20 text-brand-lime shadow-[0_0_0_1px_rgba(194,234,69,0.35),0_8px_18px_rgba(194,234,69,0.25)]"
+          : "border-slate-300 bg-slate-100/70 text-slate-400 hover:border-slate-400 hover:bg-slate-200/70 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-500 dark:hover:border-slate-500"
+      }`}
+    >
+      <Check
+        className={`h-4 w-4 transition-all duration-200 ${
+          checked ? "scale-100 opacity-100" : "scale-75 opacity-0 group-hover:scale-90 group-hover:opacity-60"
+        }`}
+      />
+    </button>
+  );
+}
+
 export function StatementTable({ entries, categoryLabels, accountLabels, cardLabels, onEditEntry, onToggleSettlement }: StatementTableProps) {
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -115,13 +143,13 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                 <table className="w-full min-w-[940px] text-sm">
                   <thead>
                     <tr className="border-b border-slate-200/70 dark:border-slate-700/70">
+                      <th className="px-3 py-3 text-left">Pago</th>
                       <th className="px-3 py-3 text-left">Data</th>
                       <th className="px-3 py-3 text-left">Descricao</th>
                       <th className="px-3 py-3 text-left">Valor</th>
                       <th className="px-3 py-3 text-left">Tipo/Origem</th>
                       <th className="px-3 py-3 text-left">Categoria</th>
                       <th className="px-3 py-3 text-left">Destino</th>
-                      <th className="px-3 py-3 text-left">Status</th>
                       <th className="px-3 py-3 text-left">Acoes</th>
                     </tr>
                   </thead>
@@ -144,6 +172,13 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                             }
                           }}
                         >
+                          <td className="px-3 py-3 align-middle">
+                            {onToggleSettlement && entry.accountId && !entry.transferGroupId ? (
+                              <SettlementToggle checked={entry.settlementStatus !== "UNPAID"} onToggle={() => onToggleSettlement(entry)} />
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
+                          </td>
                           <td className="px-3 py-3 align-middle text-base" title={formatDateBR(entry.occurredAt)}>
                             {formatDateShortBR(entry.occurredAt)}
                           </td>
@@ -163,24 +198,6 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                             </Badge>
                           </td>
                           <td className="px-3 py-3 align-middle">
-                            {entry.accountId && !entry.transferGroupId ? (
-                              <Badge variant={entry.settlementStatus === "UNPAID" ? "secondary" : "lime"}>
-                                {entry.settlementStatus === "UNPAID" ? "Nao pago" : "Pago"}
-                              </Badge>
-                            ) : (
-                              <span className="text-xs text-slate-400">—</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3 align-middle">
-                            {onToggleSettlement && entry.accountId && !entry.transferGroupId ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => onToggleSettlement(entry)}
-                              >
-                                {entry.settlementStatus === "UNPAID" ? "Marcar pago" : "Marcar nao pago"}
-                              </Button>
-                            ) : null}
                             {onEditEntry && entry.sourceType !== "INVOICE" ? (
                               <Button
                                 type="button"
@@ -251,17 +268,13 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                         <Badge variant="outline" className="normal-case tracking-normal">
                           {destinationLabel}
                         </Badge>
-                        {entry.accountId && !entry.transferGroupId ? (
-                          <Badge variant={entry.settlementStatus === "UNPAID" ? "secondary" : "lime"}>
-                            {entry.settlementStatus === "UNPAID" ? "Nao pago" : "Pago"}
-                          </Badge>
-                        ) : null}
                       </div>
                       {onToggleSettlement && entry.accountId && !entry.transferGroupId ? (
                         <div className="mt-2">
-                          <Button type="button" variant="outline" onClick={() => onToggleSettlement(entry)}>
-                            {entry.settlementStatus === "UNPAID" ? "Marcar pago" : "Marcar nao pago"}
-                          </Button>
+                          <div className="inline-flex items-center gap-2 text-sm">
+                            <SettlementToggle checked={entry.settlementStatus !== "UNPAID"} onToggle={() => onToggleSettlement(entry)} />
+                            <span className="text-slate-500 dark:text-slate-300">Pago</span>
+                          </div>
                         </div>
                       ) : null}
                     </article>

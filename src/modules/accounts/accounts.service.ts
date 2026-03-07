@@ -5,6 +5,16 @@ import { sumMoney } from "../../domain/shared/money";
 import { AccountsRepository } from "./accounts.repository";
 import { TransactionsRepository } from "../transactions/transactions.repository";
 
+interface InvoiceSettlementLike {
+  householdId: string;
+  paymentAccountId: string;
+  paidAmount: string;
+  paidAt: string;
+}
+interface InvoiceSettlementReadRepositoryLike {
+  listByHousehold(householdId: string): InvoiceSettlementLike[];
+}
+
 const accountInputSchema = z.object({
   householdId: z.string().min(1),
   name: z.string().min(1),
@@ -23,6 +33,7 @@ export class AccountsService {
   constructor(
     private readonly repository: AccountsRepository,
     private readonly transactionsRepository?: TransactionsRepository,
+    private readonly invoiceSettlementRepository?: InvoiceSettlementReadRepositoryLike,
   ) {}
 
   create(input: CreateAccountInput) {
@@ -55,6 +66,16 @@ export class AccountsService {
       if ((item.settlementStatus ?? "PAID") !== "PAID") continue;
       const signed = item.kind === "INCOME" ? Number(item.amount) : Number(item.amount) * -1;
       netByAccountId.set(item.accountId, (netByAccountId.get(item.accountId) ?? 0) + signed);
+    }
+
+    const nowIso = new Date().toISOString();
+    const settlements = this.invoiceSettlementRepository?.listByHousehold(householdId) ?? [];
+    for (const settlement of settlements) {
+      if (settlement.paidAt > nowIso) continue;
+      netByAccountId.set(
+        settlement.paymentAccountId,
+        (netByAccountId.get(settlement.paymentAccountId) ?? 0) - Number(settlement.paidAmount),
+      );
     }
 
     const accountRows = accounts.map((item) => {

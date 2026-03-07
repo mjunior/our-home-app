@@ -11,6 +11,7 @@ import { CategoriesRepository } from "../../src/modules/categories/categories.re
 import { CategoriesService } from "../../src/modules/categories/categories.service";
 import { InvoiceCycleService } from "../../src/modules/invoices/invoice-cycle.service";
 import { InvoicesController } from "../../src/modules/invoices/invoices.controller";
+import { InvoiceSettlementRepository } from "../../src/modules/invoices/invoice-settlement.repository";
 import { InvoicesService } from "../../src/modules/invoices/invoices.service";
 import { ScheduleRepository } from "../../src/modules/scheduling/schedule.repository";
 import { TransactionsController } from "../../src/modules/transactions/transactions.controller";
@@ -24,6 +25,7 @@ const cardsRepo = new CardsRepository();
 const categoriesRepo = new CategoriesRepository();
 const transactionsRepo = new TransactionsRepository();
 const scheduleRepo = new ScheduleRepository();
+const invoiceSettlementRepo = new InvoiceSettlementRepository();
 
 const accounts = new AccountsController(new AccountsService(accountsRepo));
 const cards = new CardsController(new CardsService(cardsRepo));
@@ -32,7 +34,7 @@ const transactions = new TransactionsController(
   new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo),
 );
 const invoices = new InvoicesController(
-  new InvoicesService(transactionsRepo, cardsRepo, new InvoiceCycleService(), scheduleRepo),
+  new InvoicesService(transactionsRepo, cardsRepo, new InvoiceCycleService(), scheduleRepo, invoiceSettlementRepo),
 );
 
 describe("invoice services", () => {
@@ -42,6 +44,7 @@ describe("invoice services", () => {
     categoriesRepo.clearAll();
     transactionsRepo.clearAll();
     scheduleRepo.clearAll();
+    invoiceSettlementRepo.clearAll();
   });
 
   it("assigns purchases to current and next invoice based on close day", () => {
@@ -422,5 +425,46 @@ describe("invoice services", () => {
     expect(monthly.cards).toHaveLength(2);
     expect(monthly.cards.find((item) => item.cardId === card.id)?.total).toBe("90.00");
     expect(monthly.cards.find((item) => item.cardId === emptyCard.id)?.total).toBe("0.00");
+  });
+
+  it("marks invoice as paid/unpaid for card and due month", () => {
+    const account = accounts.createAccount({
+      householdId,
+      name: "Conta Pagadora",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const card = cards.createCard({ householdId, name: "Fatura Pay", closeDay: 5, dueDay: 10 });
+    const category = categories.createCategory({ householdId, name: "Casa" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra A",
+      amount: "100.00",
+      occurredAt: "2026-03-01T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    let monthly = invoices.getMonthlyInvoices({ householdId, month: "2026-03" });
+    expect(monthly.cards.find((item) => item.cardId === card.id)?.paid).toBe(false);
+
+    invoices.settleInvoice({
+      householdId,
+      cardId: card.id,
+      dueMonth: "2026-03",
+      paymentAccountId: account.id,
+      paidAt: "2026-03-10T12:00:00.000Z",
+      paidAmount: "100.00",
+    });
+
+    monthly = invoices.getMonthlyInvoices({ householdId, month: "2026-03" });
+    expect(monthly.cards.find((item) => item.cardId === card.id)?.paid).toBe(true);
+    expect(monthly.cards.find((item) => item.cardId === card.id)?.paymentAccountId).toBe(account.id);
+
+    invoices.unsettleInvoice({ householdId, cardId: card.id, dueMonth: "2026-03" });
+    monthly = invoices.getMonthlyInvoices({ householdId, month: "2026-03" });
+    expect(monthly.cards.find((item) => item.cardId === card.id)?.paid).toBe(false);
   });
 });

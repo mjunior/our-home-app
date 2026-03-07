@@ -78,6 +78,33 @@ class ScheduleReadRepository {
   constructor(private readonly rows: Array<any>) {}
   listInstancesByHousehold(householdId: string) { return this.rows.filter((item) => item.householdId === householdId); }
 }
+class InvoiceSettlementReadRepository {
+  constructor(private readonly rows: Array<any>) {}
+  listByHousehold(householdId: string) { return this.rows.filter((item) => item.householdId === householdId); }
+  upsert(data: any) {
+    const existing = this.rows.find(
+      (item) => item.householdId === data.householdId && item.cardId === data.cardId && item.dueMonth === data.dueMonth,
+    );
+    if (existing) {
+      Object.assign(existing, data);
+      return existing;
+    }
+    const created = { id: `mem:${Date.now()}:${Math.random()}`, ...data };
+    this.rows.push(created);
+    return created;
+  }
+  remove(input: { householdId: string; cardId: string; dueMonth: string }) {
+    const before = this.rows.length;
+    for (let index = this.rows.length - 1; index >= 0; index -= 1) {
+      const item = this.rows[index];
+      if (!item) continue;
+      if (item.householdId === input.householdId && item.cardId === input.cardId && item.dueMonth === input.dueMonth) {
+        this.rows.splice(index, 1);
+      }
+    }
+    return { deleted: this.rows.length !== before };
+  }
+}
 
 async function readJsonBody(req: any): Promise<any> {
   const chunks: Uint8Array[] = [];
@@ -322,6 +349,7 @@ async function loadServices() {
   const cards = await prisma.creditCard.findMany();
   const transactions = await prisma.transaction.findMany();
   const instances = await prisma.scheduledInstance.findMany();
+  const invoiceSettlements = await prisma.invoiceSettlement.findMany();
 
   const accountRepo = new AccountsReadRepository(accounts.map((item) => ({
     id: item.id,
@@ -357,11 +385,26 @@ async function loadServices() {
     instanceKey: item.instanceKey,
     locked: item.locked,
   })));
+  const invoiceSettlementRepo = new InvoiceSettlementReadRepository(invoiceSettlements.map((item) => ({
+    id: item.id,
+    householdId: item.householdId,
+    cardId: item.cardId,
+    dueMonth: item.dueMonth,
+    paymentAccountId: item.paymentAccountId,
+    paidAt: item.paidAt.toISOString(),
+    paidAmount: item.paidAmount.toString(),
+  })));
 
   const cycleService = new InvoiceCycleService();
 
   return {
-    invoicesService: new InvoicesService(transactionRepo as any, cardRepo as any, cycleService, scheduleRepo as any),
+    invoicesService: new InvoicesService(
+      transactionRepo as any,
+      cardRepo as any,
+      cycleService,
+      scheduleRepo as any,
+      invoiceSettlementRepo as any,
+    ),
     freeBalanceService: new FreeBalanceService(
       accountRepo as any,
       cardRepo as any,
@@ -521,6 +564,12 @@ export function installViteApi(server: MiddlewareServer) {
             accountId: { not: null },
           },
         });
+        const invoiceSettlements = await prisma.invoiceSettlement.findMany({
+          where: {
+            householdId,
+            paidAt: { lte: new Date() },
+          },
+        });
 
         const netByAccountId = new Map<string, number>();
         for (const item of transactions) {
@@ -528,6 +577,12 @@ export function installViteApi(server: MiddlewareServer) {
           if ((item.settlementStatus ?? "PAID") !== "PAID") continue;
           const signed = item.kind === "INCOME" ? Number(item.amount.toString()) : Number(item.amount.toString()) * -1;
           netByAccountId.set(item.accountId, (netByAccountId.get(item.accountId) ?? 0) + signed);
+        }
+        for (const settlement of invoiceSettlements) {
+          netByAccountId.set(
+            settlement.paymentAccountId,
+            (netByAccountId.get(settlement.paymentAccountId) ?? 0) - Number(settlement.paidAmount.toString()),
+          );
         }
 
         const accounts = rows.map((item) => {
@@ -1000,6 +1055,78 @@ export function installViteApi(server: MiddlewareServer) {
         const dueMonth = url.searchParams.get("dueMonth") ?? "";
         const { invoicesService } = await loadServices();
         sendJson(res, 200, invoicesService.getCardInvoiceEntriesByDueMonth({ householdId, cardId, dueMonth }));
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/invoices/settle") {
+        const householdId = authHouseholdId;
+        const body = await readJsonBody(req);
+        const cardId = String(body.cardId ?? "");
+        const dueMonth = String(body.dueMonth ?? "");
+        const paymentAccountId = String(body.paymentAccountId ?? "");
+
+        const card = await prisma.creditCard.findUnique({ where: { id: cardId } });
+        const account = await prisma.account.findUnique({ where: { id: paymentAccountId } });
+        if (!card || card.householdId !== householdId) {
+          sendJson(res, 404, { message: "CARD_NOT_FOUND" });
+          return;
+        }
+        if (!account || account.householdId !== householdId) {
+          sendJson(res, 404, { message: "ACCOUNT_NOT_FOUND" });
+          return;
+        }
+
+        const { invoicesService } = await loadServices();
+        const monthly = invoicesService.getMonthlyInvoices({ householdId, month: dueMonth });
+        const invoice = monthly.cards.find((item: any) => item.cardId === cardId);
+        if (!invoice) {
+          sendJson(res, 404, { message: "INVOICE_NOT_FOUND" });
+          return;
+        }
+
+        const paidAtIso = body.paidAt ? new Date(body.paidAt).toISOString() : new Date().toISOString();
+        await prisma.invoiceSettlement.upsert({
+          where: {
+            householdId_cardId_dueMonth: {
+              householdId,
+              cardId,
+              dueMonth,
+            },
+          },
+          create: {
+            householdId,
+            cardId,
+            dueMonth,
+            paymentAccountId,
+            paidAt: new Date(paidAtIso),
+            paidAmount: invoice.total,
+          },
+          update: {
+            paymentAccountId,
+            paidAt: new Date(paidAtIso),
+            paidAmount: invoice.total,
+          },
+        });
+
+        sendJson(res, 200, { settled: true });
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/invoices/unsettle") {
+        const householdId = authHouseholdId;
+        const body = await readJsonBody(req);
+        const cardId = String(body.cardId ?? "");
+        const dueMonth = String(body.dueMonth ?? "");
+
+        await prisma.invoiceSettlement.deleteMany({
+          where: {
+            householdId,
+            cardId,
+            dueMonth,
+          },
+        });
+
+        sendJson(res, 200, { settled: false });
         return;
       }
 

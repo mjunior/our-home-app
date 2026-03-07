@@ -1,5 +1,6 @@
 import { sumMoney } from "../../domain/shared/money";
 import { CardsRepository } from "../cards/cards.repository";
+import { type InvoiceSettlementRecord } from "./invoice-settlement.repository";
 import { type ScheduledInstanceRecord } from "../scheduling/schedule.repository";
 import { TransactionsRepository } from "../transactions/transactions.repository";
 import { InvoiceCycleService } from "./invoice-cycle.service";
@@ -44,6 +45,12 @@ interface ScheduleReadRepositoryLike {
   listInstancesByHousehold(householdId: string): ScheduledInstanceRecord[];
 }
 
+interface InvoiceSettlementRepositoryLike {
+  listByHousehold(householdId: string): InvoiceSettlementRecord[];
+  upsert(data: Omit<InvoiceSettlementRecord, "id">): InvoiceSettlementRecord;
+  remove(input: { householdId: string; cardId: string; dueMonth: string }): { deleted: boolean };
+}
+
 type InvoiceEntryOrigin = "ONE_OFF" | "RECURRING" | "INSTALLMENT";
 
 export class InvoicesService {
@@ -52,6 +59,7 @@ export class InvoicesService {
     private readonly cardsRepository: CardsRepository,
     private readonly cycleService: InvoiceCycleService,
     private readonly scheduleRepository?: ScheduleReadRepositoryLike,
+    private readonly invoiceSettlementRepository?: InvoiceSettlementRepositoryLike,
   ) {}
 
   getCardCurrentAndNext(input: CardInvoicesInput) {
@@ -157,6 +165,12 @@ export class InvoicesService {
       totalsByCard.set(card.id, current);
     }
 
+    const settlementsByCard = new Map(
+      (this.invoiceSettlementRepository?.listByHousehold(input.householdId) ?? [])
+        .filter((item) => item.dueMonth === input.dueMonth)
+        .map((item) => [item.cardId, item]),
+    );
+
     const cardsDue = cards
       .map((card) => ({
         cardId: card.id,
@@ -164,6 +178,9 @@ export class InvoicesService {
         dueDay: card.dueDay,
         dueDate: toDueDateForMonth(input.dueMonth, card.dueDay),
         total: sumMoney(totalsByCard.get(card.id) ?? []),
+        paid: settlementsByCard.has(card.id),
+        paymentAccountId: settlementsByCard.get(card.id)?.paymentAccountId ?? null,
+        paidAt: settlementsByCard.get(card.id)?.paidAt ?? null,
       }))
       .filter((item) => item.total !== "0.00");
 
@@ -185,6 +202,9 @@ export class InvoicesService {
         dueDay: card.dueDay,
         dueDate: toDueDateForMonth(input.month, card.dueDay),
         total: dueForCard?.total ?? "0.00",
+        paid: dueForCard?.paid ?? false,
+        paymentAccountId: dueForCard?.paymentAccountId ?? null,
+        paidAt: dueForCard?.paidAt ?? null,
       };
     });
 
@@ -193,6 +213,35 @@ export class InvoicesService {
       total: due.total,
       cards,
     };
+  }
+
+  settleInvoice(input: {
+    householdId: string;
+    cardId: string;
+    dueMonth: string;
+    paymentAccountId: string;
+    paidAt: string;
+    paidAmount: string;
+  }) {
+    if (!this.invoiceSettlementRepository) {
+      throw new Error("INVOICE_SETTLEMENT_REPOSITORY_NOT_CONFIGURED");
+    }
+
+    return this.invoiceSettlementRepository.upsert({
+      householdId: input.householdId,
+      cardId: input.cardId,
+      dueMonth: input.dueMonth,
+      paymentAccountId: input.paymentAccountId,
+      paidAt: input.paidAt,
+      paidAmount: input.paidAmount,
+    });
+  }
+
+  unsettleInvoice(input: { householdId: string; cardId: string; dueMonth: string }) {
+    if (!this.invoiceSettlementRepository) {
+      throw new Error("INVOICE_SETTLEMENT_REPOSITORY_NOT_CONFIGURED");
+    }
+    return this.invoiceSettlementRepository.remove(input);
   }
 
   getCardInvoiceEntriesByDueMonth(input: CardInvoiceEntriesInput) {

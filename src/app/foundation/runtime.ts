@@ -12,6 +12,7 @@ import { FreeBalancePolicy } from "../../modules/free-balance/free-balance.polic
 import { FreeBalanceService } from "../../modules/free-balance/free-balance.service";
 import { InvoiceCycleService } from "../../modules/invoices/invoice-cycle.service";
 import { InvoicesController } from "../../modules/invoices/invoices.controller";
+import { InvoiceSettlementRepository } from "../../modules/invoices/invoice-settlement.repository";
 import { InvoicesService } from "../../modules/invoices/invoices.service";
 import { InstallmentsService } from "../../modules/scheduling/installments.service";
 import { RecurrenceService } from "../../modules/scheduling/recurrence.service";
@@ -40,7 +41,13 @@ type TransactionsControllerContract = Pick<
 >;
 type InvoicesControllerContract = Pick<
   InvoicesController,
-  "getCardInvoices" | "getMonthlyCashflowSummary" | "getMonthlyInvoices" | "getDueObligationsByMonth" | "getCardInvoiceEntriesByDueMonth"
+  | "getCardInvoices"
+  | "getMonthlyCashflowSummary"
+  | "getMonthlyInvoices"
+  | "getDueObligationsByMonth"
+  | "getCardInvoiceEntriesByDueMonth"
+  | "settleInvoice"
+  | "unsettleInvoice"
 >;
 type FreeBalanceControllerContract = Pick<FreeBalanceController, "getFreeBalance">;
 type ScheduleManagementControllerContract = Pick<
@@ -119,16 +126,25 @@ function createLocalRuntime(): Runtime {
   const categoriesRepository = new CategoriesRepository();
   const transactionsRepository = new TransactionsRepository();
   const scheduleRepository = new ScheduleRepository();
+  const invoiceSettlementRepository = new InvoiceSettlementRepository();
   const scheduleEngine = new ScheduleEngineService();
 
-  const accountsController = new AccountsController(new AccountsService(accountsRepository, transactionsRepository));
+  const accountsController = new AccountsController(
+    new AccountsService(accountsRepository, transactionsRepository, invoiceSettlementRepository),
+  );
   const cardsController = new CardsController(new CardsService(cardsRepository));
   const categoriesController = new CategoriesController(new CategoriesService(categoriesRepository));
   const transactionsController = new TransactionsController(
     new TransactionsService(transactionsRepository, accountsRepository, cardsRepository, categoriesRepository),
   );
   const invoicesController = new InvoicesController(
-    new InvoicesService(transactionsRepository, cardsRepository, new InvoiceCycleService(), scheduleRepository),
+    new InvoicesService(
+      transactionsRepository,
+      cardsRepository,
+      new InvoiceCycleService(),
+      scheduleRepository,
+      invoiceSettlementRepository,
+    ),
   );
   const freeBalanceController = new FreeBalanceController(
     new FreeBalanceService(
@@ -200,6 +216,10 @@ function createApiRuntime(): Runtime {
   type DueObligationsOutput = MethodReturn<Runtime["invoicesController"]["getDueObligationsByMonth"]>;
   type CardInvoiceEntriesInput = MethodArgs<Runtime["invoicesController"]["getCardInvoiceEntriesByDueMonth"]>[0];
   type CardInvoiceEntriesOutput = MethodReturn<Runtime["invoicesController"]["getCardInvoiceEntriesByDueMonth"]>;
+  type SettleInvoiceInput = MethodArgs<Runtime["invoicesController"]["settleInvoice"]>[0];
+  type SettleInvoiceOutput = MethodReturn<Runtime["invoicesController"]["settleInvoice"]>;
+  type UnsettleInvoiceInput = MethodArgs<Runtime["invoicesController"]["unsettleInvoice"]>[0];
+  type UnsettleInvoiceOutput = MethodReturn<Runtime["invoicesController"]["unsettleInvoice"]>;
 
   type FreeBalanceInput = MethodArgs<Runtime["freeBalanceController"]["getFreeBalance"]>[0];
   type FreeBalanceOutput = MethodReturn<Runtime["freeBalanceController"]["getFreeBalance"]>;
@@ -338,6 +358,10 @@ function createApiRuntime(): Runtime {
         });
         return requestSync<CardInvoiceEntriesOutput>("GET", `/api/invoices/items?${query.toString()}`);
       },
+      settleInvoice: (input: SettleInvoiceInput): SettleInvoiceOutput =>
+        requestSync<SettleInvoiceOutput>("POST", "/api/invoices/settle", input),
+      unsettleInvoice: (input: UnsettleInvoiceInput): UnsettleInvoiceOutput =>
+        requestSync<UnsettleInvoiceOutput>("POST", "/api/invoices/unsettle", input),
     },
     freeBalanceController: {
       getFreeBalance: (input: FreeBalanceInput): FreeBalanceOutput =>

@@ -8,6 +8,7 @@ import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
 import { formatCurrencyBR, formatDateShortBR, formatMonthLabelBR } from "../../../lib/utils";
 import {
+  accountsController,
   cardsController,
   categoriesController,
   getRuntimeHouseholdId,
@@ -26,6 +27,7 @@ type EditMode = "ONE_OFF" | "RECURRING" | "INSTALLMENT" | null;
 
 export default function CardsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [createCardModalOpen, setCreateCardModalOpen] = useState(false);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [navigationContext] = useState<{ cardId: string; dueMonth: string } | null>(() => {
     const raw = sessionStorage.getItem("cards:navigation-context");
@@ -60,6 +62,8 @@ export default function CardsPage() {
 
   const { notify } = useSnackbar();
   const householdId = getRuntimeHouseholdId();
+  const accounts = useMemo(() => accountsController.listAccounts(householdId), [refreshKey, householdId]);
+  const checkingAccounts = useMemo(() => accounts.filter((item) => item.type === "CHECKING"), [accounts]);
   const cards = useMemo(() => cardsController.listCards(householdId), [refreshKey, householdId]);
   const categories = useMemo(() => categoriesController.listCategories(householdId), [refreshKey, householdId]);
   const categoryLabels = useMemo(() => Object.fromEntries(categories.map((item) => [item.id, item.name])), [categories]);
@@ -100,24 +104,11 @@ export default function CardsPage() {
   return (
     <main className="space-y-4">
       <section className="section-reveal flex items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h1>Cartoes</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-300">Faturas mensais com detalhe operacional das despesas.</p>
-        </div>
-        <Badge variant="secondary">Foundation</Badge>
+        <p className="text-sm text-slate-500 dark:text-slate-300">Faturas mensais com detalhe operacional das despesas.</p>
+        <Button type="button" onClick={() => setCreateCardModalOpen(true)}>
+          Novo cartao
+        </Button>
       </section>
-
-      <CardForm
-        onSubmit={(values) => {
-          try {
-            cardsController.createCard({ householdId, ...values });
-            setRefreshKey((prev) => prev + 1);
-            notify({ message: "Cartao cadastrado com sucesso.", tone: "success" });
-          } catch {
-            notify({ message: "Nao foi possivel cadastrar o cartao.", tone: "error" });
-          }
-        }}
-      />
 
       <Card className="section-reveal">
         <CardHeader>
@@ -148,21 +139,105 @@ export default function CardsPage() {
                   <ul className="space-y-2">
                     {monthlyInvoices.cards.map((invoice) => (
                       <li key={`${invoice.cardId}:${selectedDueMonth}`}>
-                        <button
-                          type="button"
+                        <div
+                          role="button"
+                          tabIndex={0}
                           className={`w-full rounded-xl border p-3 text-left transition ${
                             selectedInvoiceCardId === invoice.cardId
                               ? "border-brand-lime bg-brand-lime/10 ring-1 ring-brand-lime/40"
                               : "border-slate-200 bg-slate-50/70 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950/70 dark:hover:border-slate-700"
                           }`}
                           onClick={() => setSelectedInvoiceCardId(invoice.cardId)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setSelectedInvoiceCardId(invoice.cardId);
+                            }
+                          }}
                         >
                           <div className="flex items-center justify-between gap-3">
                             <span className="font-medium">Fatura {invoice.cardName}</span>
                             <strong>{formatCurrencyBR(invoice.total)}</strong>
                           </div>
-                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Vencimento: dia {invoice.dueDay}</p>
-                        </button>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            <span>Vencimento: dia {invoice.dueDay}</span>
+                            {invoice.paid ? (
+                              <span className="rounded-full border border-brand-lime/40 bg-brand-lime/20 px-2 py-0.5 text-brand-lime">
+                                Paga {invoice.paidAt ? formatDateShortBR(invoice.paidAt) : ""}
+                              </span>
+                            ) : (
+                              <span className="rounded-full border border-slate-300 px-2 py-0.5 dark:border-slate-700">Nao paga</span>
+                            )}
+                          </div>
+                          <div className="mt-2">
+                            {invoice.paid ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  try {
+                                    invoicesController.unsettleInvoice({
+                                      householdId,
+                                      cardId: invoice.cardId,
+                                      dueMonth: selectedDueMonth,
+                                    });
+                                    setRefreshKey((prev) => prev + 1);
+                                    notify({ message: "Pagamento da fatura desfeito.", tone: "info" });
+                                  } catch {
+                                    notify({ message: "Nao foi possivel desfazer pagamento.", tone: "error" });
+                                  }
+                                }}
+                              >
+                                Desfazer pagamento
+                              </Button>
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <select
+                                  aria-label={`Conta pagamento ${invoice.cardName}`}
+                                  defaultValue={checkingAccounts[0]?.id ?? ""}
+                                  onClick={(event) => event.stopPropagation()}
+                                  className="h-9 rounded-md border border-slate-300 bg-white px-2 text-xs dark:border-slate-700 dark:bg-slate-900"
+                                  id={`invoice-account-${invoice.cardId}`}
+                                >
+                                  {checkingAccounts.map((account) => (
+                                    <option key={account.id} value={account.id}>
+                                      {account.name}
+                                    </option>
+                                  ))}
+                                </select>
+                                <Button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    const field = document.getElementById(`invoice-account-${invoice.cardId}`) as HTMLSelectElement | null;
+                                    const paymentAccountId = field?.value ?? checkingAccounts[0]?.id;
+                                    if (!paymentAccountId) {
+                                      notify({ message: "Selecione uma conta para pagar a fatura.", tone: "error" });
+                                      return;
+                                    }
+                                    try {
+                                      invoicesController.settleInvoice({
+                                        householdId,
+                                        cardId: invoice.cardId,
+                                        dueMonth: selectedDueMonth,
+                                        paymentAccountId,
+                                        paidAt: new Date().toISOString(),
+                                        paidAmount: invoice.total,
+                                      });
+                                      setRefreshKey((prev) => prev + 1);
+                                      notify({ message: "Fatura marcada como paga.", tone: "success" });
+                                    } catch {
+                                      notify({ message: "Nao foi possivel pagar a fatura.", tone: "error" });
+                                    }
+                                  }}
+                                >
+                                  Marcar paga
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -195,55 +270,58 @@ export default function CardsPage() {
                     Esta fatura nao possui transacoes no periodo.
                   </div>
                 ) : (
-                  <ul className="space-y-2">
-                    {invoiceDetails.entries.map((entry) => (
-                      <li
-                        key={entry.id}
-                        className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/70"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 space-y-1">
-                            <p className="truncate font-medium text-slate-900 dark:text-slate-100">{entry.description}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {formatDateShortBR(entry.occurredAt)} - {categoryLabels[entry.categoryId] ?? "Sem categoria"}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-slate-900 dark:text-slate-100">{formatCurrencyBR(entry.amount)}</p>
-                            <Badge variant="outline" className="mt-1 normal-case tracking-normal">
-                              {entry.sourceType === "ONE_OFF"
-                                ? "Avulso"
-                                : entry.sourceType === "RECURRING"
-                                  ? "Recorrente"
-                                  : "Parcela"}
-                            </Badge>
-                          </div>
-                        </div>
+                  <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200/70 bg-slate-100/70 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                          <th className="px-3 py-2 text-left">Data</th>
+                          <th className="px-3 py-2 text-left">Descricao</th>
+                          <th className="px-3 py-2 text-right">Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {invoiceDetails.entries.map((entry, index) => {
+                          const installmentMatch = entry.description.match(/\((\d+\/\d+)\)\s*$/);
+                          const installmentLabel = entry.sourceType === "INSTALLMENT" ? installmentMatch?.[1] ?? "" : "";
+                          const baseDescription = installmentMatch
+                            ? entry.description.replace(/\s*\(\d+\/\d+\)\s*$/, "")
+                            : entry.description;
+                          const recurringMark = entry.sourceType === "RECURRING" ? "↻ " : "";
 
-                        <div className="mt-3 flex items-center justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            aria-label="Editar item da fatura"
-                            onClick={() => {
-                              setEditMode(entry.sourceType);
-                              setEditingEntryId(entry.sourceType === "ONE_OFF" ? entry.id : null);
-                              setEditingSourceId(entry.sourceType !== "ONE_OFF" ? entry.sourceId : null);
-                              setEditingSourceMonth(entry.monthKey ?? selectedDueMonth);
-                              setEditDescription(entry.description);
-                              setEditAmount(entry.amount);
-                              setEditOccurredAt(entry.occurredAt.slice(0, 10));
-                              setEditCategoryId(entry.categoryId);
-                              setDeleteScope("CURRENT_AND_FUTURE");
-                              setEditModalOpen(true);
-                            }}
-                          >
-                            Editar
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                          return (
+                            <tr
+                              key={entry.id}
+                              className={`cursor-pointer border-b border-slate-200/70 text-slate-700 transition hover:bg-slate-100/70 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900/70 ${
+                                index % 2 === 0 ? "bg-transparent" : "bg-slate-50/60 dark:bg-slate-950/40"
+                              }`}
+                              onClick={() => {
+                                setEditMode(entry.sourceType);
+                                setEditingEntryId(entry.sourceType === "ONE_OFF" ? entry.id : null);
+                                setEditingSourceId(entry.sourceType !== "ONE_OFF" ? entry.sourceId : null);
+                                setEditingSourceMonth(entry.monthKey ?? selectedDueMonth);
+                                setEditDescription(entry.description);
+                                setEditAmount(entry.amount);
+                                setEditOccurredAt(entry.occurredAt.slice(0, 10));
+                                setEditCategoryId(entry.categoryId);
+                                setDeleteScope("CURRENT_AND_FUTURE");
+                                setEditModalOpen(true);
+                              }}
+                            >
+                              <td className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">{formatDateShortBR(entry.occurredAt)}</td>
+                              <td className="px-3 py-2">
+                                <span className="font-medium">
+                                  {recurringMark}
+                                  {baseDescription}
+                                  {installmentLabel ? ` ${installmentLabel}` : ""}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-right font-semibold">{formatCurrencyBR(entry.amount)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -454,6 +532,29 @@ export default function CardsPage() {
               </Button>
             </div>
           </form>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={createCardModalOpen} onOpenChange={setCreateCardModalOpen}>
+        <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[88vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
+          <SheetHeader>
+            <SheetTitle>Novo cartao</SheetTitle>
+            <SheetDescription>Cadastre um cartao com fechamento e vencimento.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4">
+            <CardForm
+              onSubmit={(values) => {
+                try {
+                  cardsController.createCard({ householdId, ...values });
+                  setRefreshKey((prev) => prev + 1);
+                  setCreateCardModalOpen(false);
+                  notify({ message: "Cartao cadastrado com sucesso.", tone: "success" });
+                } catch {
+                  notify({ message: "Nao foi possivel cadastrar o cartao.", tone: "error" });
+                }
+              }}
+            />
+          </div>
         </SheetContent>
       </Sheet>
     </main>
