@@ -1,10 +1,16 @@
 import { sumMoney } from "../../domain/shared/money";
 import { CardsRepository } from "../cards/cards.repository";
+import { type ScheduledInstanceRecord } from "../scheduling/schedule.repository";
 import { TransactionsRepository } from "../transactions/transactions.repository";
 import { InvoiceCycleService } from "./invoice-cycle.service";
 
 function monthFromIsoDate(value: string): string {
   return value.slice(0, 7);
+}
+
+function toDueDateForMonth(monthKey: string, dueDay: number): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, dueDay)).toISOString();
 }
 
 export interface CardInvoicesInput {
@@ -23,11 +29,16 @@ export interface DueObligationsInput {
   dueMonth: string;
 }
 
+interface ScheduleReadRepositoryLike {
+  listInstancesByHousehold(householdId: string): ScheduledInstanceRecord[];
+}
+
 export class InvoicesService {
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly cardsRepository: CardsRepository,
     private readonly cycleService: InvoiceCycleService,
+    private readonly scheduleRepository?: ScheduleReadRepositoryLike,
   ) {}
 
   getCardCurrentAndNext(input: CardInvoicesInput) {
@@ -117,8 +128,30 @@ export class InvoicesService {
       totalsByCard.set(card.id, current);
     }
 
+    const scheduledInstances = this.scheduleRepository?.listInstancesByHousehold(input.householdId) ?? [];
+    for (const instance of scheduledInstances) {
+      if (instance.kind !== "EXPENSE" || instance.creditCardId === null || instance.monthKey !== input.dueMonth) {
+        continue;
+      }
+
+      const card = cardMap.get(instance.creditCardId);
+      if (!card) {
+        continue;
+      }
+
+      const current = totalsByCard.get(card.id) ?? [];
+      current.push(instance.amount);
+      totalsByCard.set(card.id, current);
+    }
+
     const cardsDue = cards
-      .map((card) => ({ cardId: card.id, cardName: card.name, total: sumMoney(totalsByCard.get(card.id) ?? []) }))
+      .map((card) => ({
+        cardId: card.id,
+        cardName: card.name,
+        dueDay: card.dueDay,
+        dueDate: toDueDateForMonth(input.dueMonth, card.dueDay),
+        total: sumMoney(totalsByCard.get(card.id) ?? []),
+      }))
       .filter((item) => item.total !== "0.00");
 
     return {

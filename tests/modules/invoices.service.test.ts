@@ -12,6 +12,7 @@ import { CategoriesService } from "../../src/modules/categories/categories.servi
 import { InvoiceCycleService } from "../../src/modules/invoices/invoice-cycle.service";
 import { InvoicesController } from "../../src/modules/invoices/invoices.controller";
 import { InvoicesService } from "../../src/modules/invoices/invoices.service";
+import { ScheduleRepository } from "../../src/modules/scheduling/schedule.repository";
 import { TransactionsController } from "../../src/modules/transactions/transactions.controller";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
 import { TransactionsService } from "../../src/modules/transactions/transactions.service";
@@ -22,6 +23,7 @@ const accountsRepo = new AccountsRepository();
 const cardsRepo = new CardsRepository();
 const categoriesRepo = new CategoriesRepository();
 const transactionsRepo = new TransactionsRepository();
+const scheduleRepo = new ScheduleRepository();
 
 const accounts = new AccountsController(new AccountsService(accountsRepo));
 const cards = new CardsController(new CardsService(cardsRepo));
@@ -30,7 +32,7 @@ const transactions = new TransactionsController(
   new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo),
 );
 const invoices = new InvoicesController(
-  new InvoicesService(transactionsRepo, cardsRepo, new InvoiceCycleService()),
+  new InvoicesService(transactionsRepo, cardsRepo, new InvoiceCycleService(), scheduleRepo),
 );
 
 describe("invoice services", () => {
@@ -39,6 +41,7 @@ describe("invoice services", () => {
     cardsRepo.clearAll();
     categoriesRepo.clearAll();
     transactionsRepo.clearAll();
+    scheduleRepo.clearAll();
   });
 
   it("assigns purchases to current and next invoice based on close day", () => {
@@ -217,6 +220,8 @@ describe("invoice services", () => {
     expect(due.total).toBe("400.00");
     expect(due.cards).toHaveLength(1);
     expect(due.cards[0]?.total).toBe("400.00");
+    expect(due.cards[0]?.dueDay).toBe(18);
+    expect(due.cards[0]?.dueDate).toBe("2026-03-18T00:00:00.000Z");
   });
 
   it("prioritizes persisted invoice cycle fields and keeps fallback for legacy data", () => {
@@ -256,5 +261,41 @@ describe("invoice services", () => {
 
     expect(juneDue.total).toBe("300.00");
     expect(aprilDue.total).toBe("200.00");
+  });
+
+  it("includes scheduled credit card instances due in month in consolidated invoice", () => {
+    const card = cards.createCard({ householdId, name: "C6", closeDay: 5, dueDay: 12 });
+    const category = categories.createCategory({ householdId, name: "Assinatura" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra avulsa",
+      amount: "100.00",
+      occurredAt: "2026-03-04T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    scheduleRepo.createInstanceIfMissing({
+      householdId,
+      sourceType: "RECURRING",
+      sourceId: "rule-1",
+      sequence: 1,
+      monthKey: "2026-03",
+      occurredAt: "2026-03-12T12:00:00.000Z",
+      kind: "EXPENSE",
+      description: "Streaming",
+      amount: "50.00",
+      categoryId: category.id,
+      accountId: null,
+      creditCardId: card.id,
+      instanceKey: "RECURRING:rule-1:1:2026-03",
+      locked: false,
+    });
+
+    const due = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-03" });
+    expect(due.total).toBe("150.00");
+    expect(due.cards[0]?.total).toBe("150.00");
   });
 });
