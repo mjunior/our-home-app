@@ -71,9 +71,9 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange, onL
         <Card className="h-full section-reveal">
           <CardHeader>
             <Badge variant="lime" className="w-fit">
-              Our Home
+              TREVO
             </Badge>
-            <CardTitle className="text-2xl">Money Finesse</CardTitle>
+            <CardTitle className="text-2xl">FINANÇAS &amp; FAMILIA</CardTitle>
             <CardDescription>Controle diario no mobile com saldo livre e risco explicavel.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -106,7 +106,7 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange, onL
             </SheetTrigger>
             <SheetContent>
               <SheetHeader>
-                <SheetTitle>Our Home</SheetTitle>
+                <SheetTitle>TREVO - FINANÇAS &amp; FAMILIA</SheetTitle>
                 <SheetDescription>Navegacao principal</SheetDescription>
               </SheetHeader>
               <div className="mt-4 space-y-2">

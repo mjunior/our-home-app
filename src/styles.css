@@ -121,6 +121,207 @@
   .dark .mobile-bottom-nav {
     @apply border-slate-800 bg-slate-950/90;
   }
+
+  .motivational-splash {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+    color: #f2f8ff;
+    background: radial-gradient(circle at 14% 18%, rgba(216, 240, 79, 0.16), transparent 28%),
+      radial-gradient(circle at 82% 72%, rgba(0, 186, 204, 0.15), transparent 34%),
+      linear-gradient(118deg, #03070f 6%, #061221 48%, #08182a 100%);
+    isolation: isolate;
+  }
+
+  .motivational-splash::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(3, 7, 15, 0) 0%, rgba(3, 7, 15, 0.62) 100%);
+    pointer-events: none;
+  }
+
+  .motivational-splash__bg,
+  .motivational-splash__content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .motivational-splash__bg {
+    position: absolute;
+    inset: -20%;
+    pointer-events: none;
+  }
+
+  .motivational-splash__halo {
+    position: absolute;
+    filter: blur(62px);
+    border-radius: 999px;
+    opacity: 0.68;
+    animation: splash-float 6.2s ease-in-out infinite;
+  }
+
+  .motivational-splash__halo--left {
+    width: 38vw;
+    height: 38vw;
+    min-width: 300px;
+    min-height: 300px;
+    left: -4%;
+    top: 8%;
+    background: radial-gradient(circle at 50% 50%, rgba(194, 234, 69, 0.6) 0%, rgba(194, 234, 69, 0.08) 66%, transparent 100%);
+  }
+
+  .motivational-splash__halo--right {
+    width: 44vw;
+    height: 44vw;
+    min-width: 340px;
+    min-height: 340px;
+    right: -8%;
+    bottom: -8%;
+    animation-delay: 1.2s;
+    background: radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.48) 0%, rgba(34, 211, 238, 0.04) 70%, transparent 100%);
+  }
+
+  .motivational-splash__grid {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(194, 234, 69, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(194, 234, 69, 0.1) 1px, transparent 1px);
+    background-size: 52px 52px;
+    opacity: 0.22;
+    mask-image: radial-gradient(circle at 50% 52%, black 40%, transparent 88%);
+    animation: splash-grid 9s linear infinite;
+  }
+
+  .motivational-splash__content {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 2rem 1.25rem 2.5rem;
+    text-align: center;
+  }
+
+  .motivational-splash__clover-wrap {
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 14px 32px rgba(125, 211, 19, 0.28)) drop-shadow(0 0 40px rgba(34, 211, 238, 0.22));
+  }
+
+  .motivational-splash__clover {
+    width: min(190px, 36vw);
+    height: auto;
+    animation: clover-entry 680ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+  }
+
+  .clover-orbit {
+    transform-origin: 110px 110px;
+    animation: clover-spin 9.5s linear infinite;
+  }
+
+  .clover-leaf {
+    transform-origin: 110px 110px;
+    animation: clover-beat 2.1s ease-in-out infinite;
+  }
+
+  .leaf-top {
+    animation-delay: 0s;
+  }
+
+  .leaf-right {
+    animation-delay: 0.22s;
+  }
+
+  .leaf-bottom {
+    animation-delay: 0.44s;
+  }
+
+  .leaf-left {
+    animation-delay: 0.66s;
+  }
+
+  .clover-stem {
+    animation: clover-stem-wave 2.6s ease-in-out infinite;
+    transform-origin: 110px 170px;
+  }
+
+  .clover-spark {
+    fill: #e6ff9f;
+    opacity: 0.72;
+    animation: clover-spark 2.4s ease-in-out infinite;
+  }
+
+  .spark-1 {
+    animation-delay: 0s;
+  }
+
+  .spark-2 {
+    animation-delay: 0.4s;
+  }
+
+  .spark-3 {
+    animation-delay: 0.8s;
+  }
+
+  .spark-4 {
+    animation-delay: 1.2s;
+  }
+
+  .motivational-splash__eyebrow {
+    margin: 0 0 0.9rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: rgba(205, 223, 244, 0.9);
+    text-shadow: 0 0 22px rgba(194, 234, 69, 0.32);
+  }
+
+  .motivational-splash__quote {
+    margin: 0;
+    max-width: 900px;
+    font-family: "Sora", "Manrope", sans-serif;
+    font-size: clamp(1.8rem, 5.2vw, 4.3rem);
+    line-height: 1.08;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+    color: #f7fbff;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5), 0 0 28px rgba(34, 211, 238, 0.25);
+    animation: splash-quote-in 520ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+  }
+
+  .motivational-splash__meter {
+    margin: 1.75rem auto 0;
+    width: min(420px, calc(100vw - 56px));
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(209, 223, 237, 0.24);
+    border: 1px solid rgba(194, 234, 69, 0.36);
+    overflow: hidden;
+    box-shadow: inset 0 0 12px rgba(3, 7, 15, 0.5), 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .motivational-splash__meter-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #c2ea45 0%, #22d3ee 52%, #6ee7b7 100%);
+    box-shadow: 0 0 20px rgba(194, 234, 69, 0.6);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .motivational-splash__meter-fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 24%, rgba(255, 255, 255, 0.62) 48%, transparent 72%);
+    transform: translateX(-140%);
+    animation: progress-sheen 1.25s linear infinite;
+  }
+
+  .motivational-splash.is-closing {
+    animation: splash-out 460ms cubic-bezier(0.4, 0.1, 0.4, 1) both;
+  }
 }
 
 @keyframes section-reveal {
@@ -156,6 +357,108 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes splash-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -18px, 0) scale(1.06);
+  }
+}
+
+@keyframes splash-grid {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 52px, 0);
+  }
+}
+
+@keyframes splash-quote-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes splash-out {
+  to {
+    opacity: 0;
+    transform: scale(1.02);
+    filter: blur(2px);
+  }
+}
+
+@keyframes clover-entry {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.88) rotate(-12deg);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+    filter: blur(0);
+  }
+}
+
+@keyframes clover-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes clover-beat {
+  0%,
+  100% {
+    opacity: 0.98;
+    filter: saturate(1);
+  }
+  50% {
+    opacity: 1;
+    filter: saturate(1.08);
+  }
+}
+
+@keyframes clover-stem-wave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes clover-spark {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes progress-sheen {
+  to {
+    transform: translateX(145%);
   }
 }
 

@@ -7,6 +7,7 @@ import LoginPage from "./app/auth/login-page";
 import RegisterPage from "./app/auth/register-page";
 import { fetchSessionUser, getSessionUser, logoutUser } from "./app/foundation/runtime";
 import { AppShell } from "./components/layout/app-shell";
+import { MotivationalSplash } from "./components/layout/motivational-splash";
 import { SnackbarProvider } from "./components/ui/snackbar";
 import "./styles.css";
 
@@ -56,6 +57,7 @@ function App() {
   const [darkMode, setDarkMode] = React.useState(true);
   const [loadingSession, setLoadingSession] = React.useState(true);
   const [authenticated, setAuthenticated] = React.useState(false);
+  const [showSplash, setShowSplash] = React.useState(false);
   const [pathname, setPathname] = React.useState(() => normalizePathname(window.location.pathname || "/"));
 
   React.useEffect(() => {
@@ -128,6 +130,12 @@ function App() {
     }
   }, [loadingSession, pathname]);
 
+  React.useEffect(() => {
+    if (!loadingSession && authenticated) {
+      setShowSplash(true);
+    }
+  }, [authenticated, loadingSession]);
+
   if (loadingSession) {
     return (
       <div className="mx-auto flex min-h-screen max-w-md items-center justify-center p-4 text-sm font-semibold text-slate-600 dark:text-slate-300">
@@ -142,6 +150,10 @@ function App() {
 
   if (!authenticated) {
     return <LoginPage onAuthenticated={handleAuthenticated} onGoToRegister={handleGoToRegister} />;
+  }
+
+  if (showSplash) {
+    return <MotivationalSplash onDone={() => setShowSplash(false)} />;
   }
 
   return (

@@ -83,12 +83,27 @@ function TypeOriginCell({ entry }: { entry: StatementEntry }) {
   return <KindPill kind={entry.kind} />;
 }
 
+function compactTypeLabel(entry: StatementEntry) {
+  if (entry.transferGroupId) return "Invest.";
+  if (entry.sourceType === "RECURRING") return entry.kind === "INCOME" ? "Entrada recorr." : "Saida recorr.";
+  if (entry.sourceType === "INSTALLMENT") return "Parcela";
+  if (entry.sourceType === "INVOICE") return "Fatura";
+  return entry.kind === "INCOME" ? "Entrada" : "Saida";
+}
+
+function compactTypeTone(entry: StatementEntry) {
+  if (entry.sourceType === "INVOICE") return "text-rose-400";
+  return entry.kind === "INCOME" ? "text-lime-300" : "text-rose-400";
+}
+
 function SettlementToggle({
   checked,
   onToggle,
+  compact = false,
 }: {
   checked: boolean;
   onToggle: () => void;
+  compact?: boolean;
 }) {
   return (
     <button
@@ -99,14 +114,18 @@ function SettlementToggle({
         event.stopPropagation();
         onToggle();
       }}
-      className={`group inline-flex h-7 w-7 items-center justify-center rounded-[10px] border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/40 ${
+      className={`group inline-flex items-center justify-center border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/40 ${
+        compact ? "h-6 w-6 rounded-[8px]" : "h-7 w-7 rounded-[10px]"
+      } ${
         checked
-          ? "border-brand-lime/70 bg-brand-lime/20 text-brand-lime shadow-[0_0_0_1px_rgba(194,234,69,0.35),0_8px_18px_rgba(194,234,69,0.25)]"
+          ? compact
+            ? "border-brand-lime/50 bg-brand-lime/14 text-brand-lime"
+            : "border-brand-lime/70 bg-brand-lime/20 text-brand-lime shadow-[0_0_0_1px_rgba(194,234,69,0.35),0_8px_18px_rgba(194,234,69,0.25)]"
           : "border-slate-300 bg-slate-100/70 text-slate-400 hover:border-slate-400 hover:bg-slate-200/70 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-500 dark:hover:border-slate-500"
       }`}
     >
       <Check
-        className={`h-4 w-4 transition-all duration-200 ${
+        className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} transition-all duration-200 ${
           checked ? "scale-100 opacity-100" : "scale-75 opacity-0 group-hover:scale-90 group-hover:opacity-60"
         }`}
       />
@@ -225,7 +244,7 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                 </table>
               </div>
             ) : (
-              <div className="space-y-2 p-2">
+              <div className="space-y-1.5 p-1.5">
                 {entries.map((entry, index) => {
                   const categoryLabel = categoryLabels[entry.categoryId] ?? "Sem categoria";
                   const destinationLabel = entry.sourceType === "INVESTMENT"
@@ -233,58 +252,52 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                     : entry.accountId
                       ? `Conta: ${accountLabels[entry.accountId] ?? "Nao encontrada"}`
                       : `Cartao: ${cardLabels[entry.creditCardId ?? ""] ?? "Nao encontrado"}`;
+                  const compactType = compactTypeLabel(entry);
+                  const dateAndCategory = `${formatDateShortBR(entry.occurredAt)} · ${categoryLabel}`;
 
                   return (
                     <article
                       key={entry.id}
-                      className={`row-animate rounded-xl px-3 py-2.5 ${index % 2 === 0 ? "bg-slate-900/20" : "bg-slate-900/35"} ${entry.sourceType === "INVOICE" && onEditEntry ? "cursor-pointer" : ""}`}
+                      className={`row-animate grid grid-cols-[auto,1fr,auto,auto] items-center gap-x-2 gap-y-0.5 rounded-lg border border-slate-800/60 px-2 py-1.5 ${index % 2 === 0 ? "bg-slate-900/16" : "bg-slate-900/28"} ${entry.sourceType === "INVOICE" && onEditEntry ? "cursor-pointer" : ""}`}
                       onClick={() => {
                         if (entry.sourceType === "INVOICE" && onEditEntry) {
                           onEditEntry(entry);
                         }
                       }}
                     >
-                      <div className="mb-1.5 flex items-start justify-between gap-2">
-                        <div className="min-w-0 space-y-1">
-                          <p className="truncate text-[1.02rem] font-semibold leading-tight">{entry.description}</p>
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs text-slate-400" title={formatDateBR(entry.occurredAt)}>
-                              {formatDateShortBR(entry.occurredAt)}
-                            </p>
-                            <TypeOriginCell entry={entry} />
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <strong className="whitespace-nowrap text-[1.12rem]">{formatCurrencyBR(entry.amount)}</strong>
-                          {onEditEntry && entry.sourceType !== "INVOICE" ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              aria-label="Editar lancamento"
-                              onClick={() => onEditEntry(entry)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          ) : null}
-                        </div>
+                      <div className="row-span-2">
+                        {canToggleSettlement(entry) ? (
+                          <SettlementToggle compact checked={entry.settlementStatus !== "UNPAID"} onToggle={() => onToggleSettlement(entry)} />
+                        ) : (
+                          <span className="inline-flex h-6 w-6 items-center justify-center text-xs text-slate-500">—</span>
+                        )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant="secondary" className="normal-case tracking-normal">
-                          {categoryLabel}
-                        </Badge>
-                        <Badge variant="outline" className="normal-case tracking-normal">
-                          {destinationLabel}
-                        </Badge>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-[0.95rem] font-semibold leading-tight">{entry.description}</p>
+                        <p className={`truncate text-[10px] font-semibold uppercase tracking-[0.08em] ${compactTypeTone(entry)}`}>{compactType}</p>
                       </div>
-                      {canToggleSettlement(entry) ? (
-                        <div className="mt-2">
-                          <div className="inline-flex items-center gap-2 text-sm">
-                            <SettlementToggle checked={entry.settlementStatus !== "UNPAID"} onToggle={() => onToggleSettlement(entry)} />
-                            <span className="text-slate-500 dark:text-slate-300">Pago</span>
-                          </div>
-                        </div>
+                      <strong className="whitespace-nowrap text-[1.02rem] leading-none">{formatCurrencyBR(entry.amount)}</strong>
+
+                      {onEditEntry && entry.sourceType !== "INVOICE" ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          aria-label="Editar lancamento"
+                          className="h-8 w-8 rounded-lg"
+                          onClick={() => onEditEntry(entry)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
                       ) : null}
+
+                      <p className="truncate text-[10px] uppercase tracking-[0.08em] text-slate-400" title={formatDateBR(entry.occurredAt)}>
+                        {dateAndCategory}
+                      </p>
+                      <p className="col-span-2 truncate text-[11px] text-slate-300/90" title={destinationLabel}>
+                        {destinationLabel}
+                      </p>
                     </article>
                   );
                 })}

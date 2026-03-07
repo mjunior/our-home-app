@@ -42,8 +42,8 @@ export default defineConfig({
       ],
       manifest: {
         id: "/",
-        name: "Our Home App",
-        short_name: "OurHome",
+        name: "TREVO - FINANÇAS & FAMILIA",
+        short_name: "TREVO",
         description: "Gestao financeira da casa com foco em rotina, previsao e controle.",
         lang: "pt-BR",
         start_url: "/",
