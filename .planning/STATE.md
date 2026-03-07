@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Faturas de Cartao no Fluxo de Caixa
 status: in_progress
-last_updated: "2026-03-06T23:59:00.000Z"
+last_updated: "2026-03-06T23:59:59.000Z"
 progress:
   total_phases: 3
   completed_phases: 0
@@ -24,8 +24,8 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 
 Phase: Not started (definindo execucao v1.4)
 Plan: —
-Status: Requirements e roadmap definidos para v1.4
-Last activity: 2026-03-06 — milestone v1.4 iniciado com foco em faturas de cartao no cashflow.
+Status: Contexto da fase 15 definido; pronto para planejar execucao
+Last activity: 2026-03-06 — contexto da fase 15 registrado com regras de fechamento/vencimento e persistencia de competencia.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -50,5 +50,5 @@ Progress: [░░░░░░░░░░] 0%
 ## Session Continuity
 
 Last session: 2026-03-06
-Stopped at: Milestone v1.4 initialized
-Resume file: .planning/ROADMAP.md
+Stopped at: Phase 15 context gathered
+Resume file: .planning/phases/15-motor-de-competencia-de-fatura-por-fechamento/15-CONTEXT.md
