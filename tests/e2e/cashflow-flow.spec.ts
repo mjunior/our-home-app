@@ -67,11 +67,18 @@ describe("cashflow flow", () => {
     await user.click(screen.getByRole("button", { name: "Adicionar lancamento" }));
 
     expect(screen.getByText("Salario")).toBeInTheDocument();
-    expect(screen.getByText("Supermercado cartao")).toBeInTheDocument();
+    expect(screen.queryByText("Supermercado cartao")).not.toBeInTheDocument();
+    expect(screen.getByText("Fatura Visa Casa")).toBeInTheDocument();
     expect(screen.getAllByText("Mercado").length).toBeGreaterThan(0);
     expect(screen.getByText("Entrada")).toBeInTheDocument();
     expect(screen.getByText("Saida")).toBeInTheDocument();
     expect(screen.getByText("Cartao: Visa Casa")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Filtro de origem"), "INVOICE");
+    expect(screen.getByText("Fatura Visa Casa")).toBeInTheDocument();
+    expect(screen.queryByText("Salario")).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Filtro de origem"), "ALL");
 
     await user.click(screen.getAllByRole("button", { name: "Editar lancamento" })[0]!);
     await user.clear(screen.getByLabelText("Editar descricao da transacao"));
