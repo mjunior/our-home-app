@@ -298,4 +298,50 @@ describe("invoice services", () => {
     expect(due.total).toBe("150.00");
     expect(due.cards[0]?.total).toBe("150.00");
   });
+
+  it("recomputes consolidated invoice total after card expense edits and deletes", () => {
+    const card = cards.createCard({ householdId, name: "Master Recalc", closeDay: 5, dueDay: 12 });
+    const category = categories.createCategory({ householdId, name: "Casa" });
+
+    const first = transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra 1",
+      amount: "100.00",
+      occurredAt: "2026-03-03T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    const second = transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra 2",
+      amount: "50.00",
+      occurredAt: "2026-03-03T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    let due = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-03" });
+    expect(due.total).toBe("150.00");
+
+    transactions.updateTransaction({
+      id: second.id,
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra 2 ajustada",
+      amount: "80.00",
+      occurredAt: "2026-03-03T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    due = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-03" });
+    expect(due.total).toBe("180.00");
+
+    transactions.deleteTransaction({ id: first.id, householdId });
+    due = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-03" });
+    expect(due.total).toBe("80.00");
+  });
 });

@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { AppShell } from "../../src/components/layout/app-shell";
-import { cardsController, categoriesController, transactionsController } from "../../src/app/foundation/runtime";
+import { accountsController, cardsController, categoriesController, transactionsController } from "../../src/app/foundation/runtime";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository";
 import { CardsRepository } from "../../src/modules/cards/cards.repository";
 import { CategoriesRepository } from "../../src/modules/categories/categories.repository";
@@ -121,5 +121,62 @@ describe("foundation flow", () => {
     });
 
     expect(transaction.invoiceDueDate).toBe("2026-05-20T00:00:00.000Z");
+  });
+
+  it("navigates from invoice row to cards with context", async () => {
+    const user = userEvent.setup();
+
+    const account = accountsController.createAccount({
+      householdId: "household-main",
+      name: "Conta Base",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const card = cardsController.createCard({
+      householdId: "household-main",
+      name: "Visa Navegacao",
+      closeDay: 5,
+      dueDay: 12,
+    });
+    const category = categoriesController.createCategory({ householdId: "household-main", name: "Lazer" });
+
+    function ShellHarness() {
+      const [route, setRoute] = React.useState<"cashflow" | "accounts" | "cards" | "categories" | "schedules">("cashflow");
+      const [darkMode, setDarkMode] = React.useState(true);
+
+      React.useEffect(() => {
+        document.documentElement.classList.toggle("dark", darkMode);
+      }, [darkMode]);
+
+      return React.createElement(AppShell, {
+        route,
+        onRouteChange: setRoute,
+        darkMode,
+        onDarkModeChange: setDarkMode,
+        onLogout: () => undefined,
+      });
+    }
+
+    render(React.createElement(ShellHarness));
+
+    await user.click(screen.getAllByRole("button", { name: "Novo lancamento" })[0]!);
+    await user.selectOptions(screen.getByLabelText("Tipo da transacao"), "EXPENSE");
+    await user.type(screen.getByLabelText("Descricao da transacao"), "Cinema");
+    await user.clear(screen.getByLabelText("Valor da transacao"));
+    await user.type(screen.getByLabelText("Valor da transacao"), "120.00");
+    await user.selectOptions(screen.getByLabelText("Destino da transacao"), "card");
+    await user.selectOptions(screen.getByLabelText("Opcao de destino"), card.id);
+    await user.selectOptions(screen.getByLabelText("Categoria da transacao"), category.id);
+    await user.clear(screen.getByLabelText("Data da transacao"));
+    await user.type(screen.getByLabelText("Data da transacao"), "2026-03-01");
+    await user.click(screen.getByRole("button", { name: "Adicionar lancamento" }));
+
+    expect(account.id).toBeDefined();
+    expect(screen.getByText("Fatura Visa Navegacao")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Fatura Visa Navegacao"));
+
+    expect(screen.getAllByText("Cartoes cadastrados").length).toBeGreaterThan(0);
+    expect(screen.getByText("Contexto da fatura: 2026-03")).toBeInTheDocument();
   });
 });
