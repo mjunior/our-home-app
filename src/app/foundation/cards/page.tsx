@@ -9,6 +9,23 @@ import { cardsController, getRuntimeHouseholdId } from "../runtime";
 export default function CardsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [navigationContext] = useState<{ cardId: string; dueMonth: string } | null>(() => {
+    const raw = sessionStorage.getItem("cards:navigation-context");
+    if (!raw) {
+      return null;
+    }
+
+    sessionStorage.removeItem("cards:navigation-context");
+    try {
+      const parsed = JSON.parse(raw) as { cardId?: string; dueMonth?: string };
+      if (!parsed.cardId || !parsed.dueMonth) {
+        return null;
+      }
+      return { cardId: parsed.cardId, dueMonth: parsed.dueMonth };
+    } catch {
+      return null;
+    }
+  });
   const { notify } = useSnackbar();
   const householdId = getRuntimeHouseholdId();
   const cards = useMemo(() => cardsController.listCards(householdId), [refreshKey, householdId]);
@@ -32,6 +49,14 @@ export default function CardsPage() {
         }}
       />
 
+      {navigationContext ? (
+        <Card className="section-reveal">
+          <CardContent className="pt-4 text-sm text-slate-600 dark:text-slate-300">
+            Contexto da fatura: {navigationContext.dueMonth}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card className="section-reveal">
         <CardHeader>
           <CardTitle>Cartoes cadastrados</CardTitle>
@@ -39,7 +64,14 @@ export default function CardsPage() {
         <CardContent>
           <ul className="space-y-2">
             {cards.map((card) => (
-              <li key={card.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950/70">
+              <li
+                key={card.id}
+                className={`rounded-xl border bg-slate-50 p-3 text-sm dark:bg-slate-950/70 ${
+                  navigationContext?.cardId === card.id
+                    ? "border-brand-lime ring-1 ring-brand-lime/40"
+                    : "border-slate-200 dark:border-slate-800"
+                }`}
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span>{card.name} - fecha {card.closeDay} vence {card.dueDay}</span>
                   <button type="button" onClick={() => setEditingCardId(card.id)}>Editar</button>

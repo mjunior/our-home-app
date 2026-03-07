@@ -43,6 +43,28 @@ function NavItems({ route, onRouteChange }: { route: RouteKey; onRouteChange: (n
 }
 
 export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange, onLogout }: AppShellProps) {
+  React.useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<{ route?: RouteKey; cardId?: string; dueMonth?: string }>;
+      const nextRoute = custom.detail?.route;
+      if (!nextRoute) {
+        return;
+      }
+
+      if (custom.detail?.cardId && custom.detail?.dueMonth) {
+        sessionStorage.setItem(
+          "cards:navigation-context",
+          JSON.stringify({ cardId: custom.detail.cardId, dueMonth: custom.detail.dueMonth }),
+        );
+      }
+
+      onRouteChange(nextRoute);
+    };
+
+    window.addEventListener("app:navigate-route", handler);
+    return () => window.removeEventListener("app:navigate-route", handler);
+  }, [onRouteChange]);
+
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[300px_1fr]">
       <aside className="hidden border-r border-slate-200/80 bg-white/80 p-4 backdrop-blur dark:border-slate-800 dark:bg-[#090f13]/80 lg:block">

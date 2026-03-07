@@ -132,7 +132,15 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                           : `Cartao: ${cardLabels[entry.creditCardId ?? ""] ?? "Nao encontrado"}`;
 
                       return (
-                        <tr key={entry.id} className={`row-animate ${index % 2 === 0 ? "bg-transparent" : "bg-slate-50/60 dark:bg-slate-900/40"}`}>
+                        <tr
+                          key={entry.id}
+                          className={`row-animate ${index % 2 === 0 ? "bg-transparent" : "bg-slate-50/60 dark:bg-slate-900/40"} ${entry.sourceType === "INVOICE" && onEditEntry ? "cursor-pointer" : ""}`}
+                          onClick={() => {
+                            if (entry.sourceType === "INVOICE" && onEditEntry) {
+                              onEditEntry(entry);
+                            }
+                          }}
+                        >
                           <td className="px-3 py-3 align-middle text-base" title={formatDateBR(entry.occurredAt)}>
                             {formatDateShortBR(entry.occurredAt)}
                           </td>
@@ -183,7 +191,12 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                   return (
                     <article
                       key={entry.id}
-                      className={`row-animate rounded-xl px-3 py-2.5 ${index % 2 === 0 ? "bg-slate-900/20" : "bg-slate-900/35"}`}
+                      className={`row-animate rounded-xl px-3 py-2.5 ${index % 2 === 0 ? "bg-slate-900/20" : "bg-slate-900/35"} ${entry.sourceType === "INVOICE" && onEditEntry ? "cursor-pointer" : ""}`}
+                      onClick={() => {
+                        if (entry.sourceType === "INVOICE" && onEditEntry) {
+                          onEditEntry(entry);
+                        }
+                      }}
                     >
                       <div className="mb-1.5 flex items-start justify-between gap-2">
                         <div className="min-w-0 space-y-1">

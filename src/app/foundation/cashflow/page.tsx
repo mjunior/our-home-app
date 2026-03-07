@@ -333,7 +333,15 @@ export default function CashflowPage() {
         categoryLabels={categoryLabelsWithInvoice}
         onEditEntry={(entry) => {
           if (entry.sourceType === "INVOICE") {
-            notify({ message: "Edite as compras no modulo de cartoes/faturas.", tone: "info" });
+            window.dispatchEvent(
+              new CustomEvent("app:navigate-route", {
+                detail: {
+                  route: "cards",
+                  cardId: entry.creditCardId ?? undefined,
+                  dueMonth: entry.occurredAt.slice(0, 7),
+                },
+              }),
+            );
             return;
           }
           const isInvestment = entry.sourceType === "INVESTMENT";
