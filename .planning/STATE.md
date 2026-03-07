@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: controle-de-pagamentos-e-saldo-atual
-status: in_progress
-last_updated: "2026-03-08T00:10:00.000Z"
+status: completed
+last_updated: "2026-03-07T00:40:00.000Z"
 progress:
   total_phases: 21
-  completed_phases: 20
+  completed_phases: 21
   total_plans: 61
-  completed_plans: 58
+  completed_plans: 61
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
-**Current focus:** iniciar fase 21 com card de mes atual e drill-down por conta.
+**Current focus:** milestone v1.6 concluido; pronto para proximo milestone.
 
 ## Current Position
 
 Phase: 21 - card mes atual com saldo real + drill-down por conta
-Plan: nao iniciado
-Status: Phase 20 concluida e verificada; pronta para avancar.
-Last activity: 2026-03-08 — fase 20 executada com quitacao consolidada de faturas e impacto no saldo atual por conta pagadora.
+Plan: concluido
+Status: Fase 21 concluida e verificada.
+Last activity: 2026-03-07 — fase 21 executada com saldo atual x previsto separado e detalhamento por conta.
 
-Progress: [█████████░] 95% do projeto ate aqui (milestone v1.6 em execucao)
+Progress: [██████████] 100% do milestone v1.6
 
 ## Accumulated Context
 
@@ -39,6 +39,7 @@ Progress: [█████████░] 95% do projeto ate aqui (milestone v1
 - Novo milestone adiciona semantica operacional de quitacao para separar saldo real de saldo previsto.
 - Transacoes de conta agora aceitam settlementStatus (`PAID`/`UNPAID`) com impacto direto no saldo operacional.
 - Faturas de cartao podem ser quitadas/desquitadas por (`cardId`, `dueMonth`) com conta pagadora e data de pagamento.
+- Card de mes atual passou a separar `Saldo` real de `Saldo previsto`, com drill-down por conta no clique.
 
 ### Roadmap Evolution
 
@@ -46,10 +47,12 @@ Progress: [█████████░] 95% do projeto ate aqui (milestone v1
 - Milestone v1.5 archived: `.planning/milestones/v1.5-ROADMAP.md`
 - Milestone v1.6 initialized: phases 19-21 em `.planning/ROADMAP.md`
 - Phase 19 completed: modelo de quitacao para lancamentos em conta
+- Phase 20 completed: quitacao de fatura consolidada por conta de pagamento
+- Phase 21 completed: saldo atual x previsto e composicao por conta
 
 ### Pending Todos
 
-- Executar `Phase 21` (saldo atual x saldo previsto no card do mes atual, com detalhamento por conta).
+- Definir novo milestone e fase inicial (`$gsd-new-milestone`).
 
 ### Blockers/Concerns
 
@@ -58,5 +61,5 @@ Progress: [█████████░] 95% do projeto ate aqui (milestone v1
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: phase 20 concluida e validada
-Resume file: .planning/phases/20-quitacao-de-fatura-consolidada-de-cartao/20-VERIFICATION.md
+Stopped at: phase 21 concluida e validada
+Resume file: .planning/phases/21-card-mes-atual-com-saldo-real-drill-down-por-conta/21-VERIFICATION.md

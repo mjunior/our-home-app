@@ -8,13 +8,13 @@
 - ✅ **v1.3 Autenticacao e Isolamento de Conta** — Phases 12-14 (shipped 2026-03-05)
 - ✅ **v1.4 Faturas de Cartao no Fluxo de Caixa** — Phases 15-17 (shipped 2026-03-07) — detalhes: `.planning/milestones/v1.4-ROADMAP.md`
 - ✅ **v1.5 UX de Faturas em Cartoes** — Phase 18 (shipped 2026-03-07) — detalhes: `.planning/milestones/v1.5-ROADMAP.md`
-- ◆ **v1.6 Controle de Pagamentos e Saldo Atual** — Phases 19-21 (planning)
+- ✅ **v1.6 Controle de Pagamentos e Saldo Atual** — Phases 19-21 (shipped 2026-03-07)
 
 ## Phases
 
 - [x] **Phase 19: Modelo de Quitacao para Lancamentos em Conta** - Introduzir status pago/nao pago para movimentos de conta e aplicar no calculo de saldo atual. (completed 2026-03-07)
 - [x] **Phase 20: Quitacao de Fatura Consolidada de Cartao** - Permitir pagamento de fatura por bloco com conta de pagamento e impacto no saldo atual. (completed 2026-03-08)
-- [ ] **Phase 21: Card Mes Atual com Saldo Real + Drill-down por Conta** - Exibir saldo atual e saldo previsto separados, com detalhamento por conta e acoes operacionais no fluxo. (planned)
+- [x] **Phase 21: Card Mes Atual com Saldo Real + Drill-down por Conta** - Exibir saldo atual e saldo previsto separados, com detalhamento por conta e acoes operacionais no fluxo. (completed 2026-03-07)
 
 ## Phase Details
 
@@ -65,4 +65,4 @@ Success criteria:
 | v1.3 Autenticacao e Isolamento de Conta | 12-14 | 9/9 | Complete | 2026-03-05 |
 | v1.4 Faturas de Cartao no Fluxo de Caixa | 15-17 | 9/9 | Complete | 2026-03-07 |
 | v1.5 UX de Faturas em Cartoes | 18 | 3/3 | Complete | 2026-03-07 |
-| v1.6 Controle de Pagamentos e Saldo Atual | 19-21 | 6/9 | In Progress | — |
+| v1.6 Controle de Pagamentos e Saldo Atual | 19-21 | 9/9 | Complete | 2026-03-07 |

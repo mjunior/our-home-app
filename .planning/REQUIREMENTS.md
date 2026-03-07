@@ -19,16 +19,16 @@
 
 ### Current Month Balance Card
 
-- [ ] **BAL-01**: Card `Mes atual` exibe `Saldo` real do momento com base em movimentos pagos/recebidos.
-- [ ] **BAL-02**: Card `Mes atual` mantem `Saldo previsto` separado, sem regressao no calculo atual de previsao.
-- [ ] **BAL-03**: Clique em `Saldo` abre detalhamento com saldo individual de cada conta incluida no total.
-- [ ] **BAL-04**: Card `Proximo mes` permanece exibindo apenas previsao.
+- [x] **BAL-01**: Card `Mes atual` exibe `Saldo` real do momento com base em movimentos pagos/recebidos.
+- [x] **BAL-02**: Card `Mes atual` mantem `Saldo previsto` separado, sem regressao no calculo atual de previsao.
+- [x] **BAL-03**: Clique em `Saldo` abre detalhamento com saldo individual de cada conta incluida no total.
+- [x] **BAL-04**: Card `Proximo mes` permanece exibindo apenas previsao.
 
 ### Cashflow Visibility and Actions
 
-- [ ] **CFP-01**: Extrato principal mostra claramente o status de quitacao (`PAGO`/`NAO_PAGO`) dos itens aplicaveis.
-- [ ] **CFP-02**: Usuario consegue quitar/desfazer quitacao de item elegivel direto no fluxo operacional.
-- [ ] **CFP-03**: Quitacao/desquitacao recalcula imediatamente saldo atual e composicao por conta.
+- [x] **CFP-01**: Extrato principal mostra claramente o status de quitacao (`PAGO`/`NAO_PAGO`) dos itens aplicaveis.
+- [x] **CFP-02**: Usuario consegue quitar/desfazer quitacao de item elegivel direto no fluxo operacional.
+- [x] **CFP-03**: Quitacao/desquitacao recalcula imediatamente saldo atual e composicao por conta.
 
 ## v2 Requirements
 
@@ -56,13 +56,13 @@
 | INVP-01 | Phase 20 | Complete |
 | INVP-02 | Phase 20 | Complete |
 | INVP-03 | Phase 20 | Complete |
-| BAL-01 | Phase 21 | Pending |
-| BAL-02 | Phase 21 | Pending |
-| BAL-03 | Phase 21 | Pending |
-| BAL-04 | Phase 21 | Pending |
-| CFP-01 | Phase 21 | Pending |
-| CFP-02 | Phase 21 | Pending |
-| CFP-03 | Phase 21 | Pending |
+| BAL-01 | Phase 21 | Complete |
+| BAL-02 | Phase 21 | Complete |
+| BAL-03 | Phase 21 | Complete |
+| BAL-04 | Phase 21 | Complete |
+| CFP-01 | Phase 21 | Complete |
+| CFP-02 | Phase 21 | Complete |
+| CFP-03 | Phase 21 | Complete |
 
 **Coverage:**
 - v1 requirements: 13 total
@@ -71,4 +71,4 @@
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-08 after Phase 20 execution*
+*Last updated: 2026-03-07 after Phase 21 execution*
