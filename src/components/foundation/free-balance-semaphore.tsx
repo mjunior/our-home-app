@@ -38,6 +38,7 @@ export function FreeBalanceSemaphore({
   onOpenNextDetails,
 }: FreeBalanceSemaphoreProps) {
   const style = stylesByRisk[risk];
+  const projectedIsNegative = Number(currentProjectedBalance) < 0;
 
   return (
     <section aria-label="Semaforo saldo livre" className="stagger-up space-y-3">
@@ -46,7 +47,7 @@ export function FreeBalanceSemaphore({
       </p>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <article className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 dark:border-slate-700/80 dark:bg-slate-950/60">
+        <article className="rounded-2xl border border-brand-teal/30 bg-brand-teal/5 p-3 dark:border-brand-lime/30 dark:bg-brand-lime/5">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Mes atual</p>
             <Button
@@ -60,14 +61,31 @@ export function FreeBalanceSemaphore({
               <CircleHelp className="h-4 w-4" />
             </Button>
           </div>
-          <p className="mt-1 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">Saldo</p>
-          <p data-testid="current-real-balance" className="text-lg font-bold">
-            {formatCurrencyBR(currentBalance)}
-          </p>
-          <p className="mt-1 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">
-            Saldo previsto
-          </p>
-          <p className="text-base font-semibold text-slate-700 dark:text-slate-200">{formatCurrencyBR(currentProjectedBalance)}</p>
+          <dl className="mt-2 space-y-1 text-sm">
+            <div>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-left transition hover:bg-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/40 dark:hover:bg-slate-900/40"
+                aria-label="Abrir composicao do saldo atual"
+                onClick={onOpenCurrentDetails}
+              >
+                <span className="text-slate-500 dark:text-slate-300">Saldo</span>
+                <span data-testid="current-real-balance" className="font-semibold">
+                  {formatCurrencyBR(currentBalance)}
+                </span>
+              </button>
+            </div>
+            <div className="flex items-center justify-between gap-2 border-t border-brand-teal/20 pt-1 dark:border-brand-lime/20">
+              <dt className="text-slate-700 dark:text-slate-200">Saldo previsto</dt>
+              <dd
+                className={`text-[1.08rem] font-black tracking-tight ${
+                  projectedIsNegative ? "text-red-600 dark:text-red-400" : "text-brand-teal dark:text-brand-lime"
+                }`}
+              >
+                {formatCurrencyBR(currentProjectedBalance)}
+              </dd>
+            </div>
+          </dl>
           <p data-testid="free-balance-current" className="sr-only">
             {formatCurrencyBR(currentProjectedBalance)}
           </p>

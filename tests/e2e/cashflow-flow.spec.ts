@@ -79,7 +79,7 @@ describe("cashflow flow", () => {
     await user.click(screen.getByRole("button", { name: "Marcar como nao pago" }));
     expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 1.000,00");
 
-    await user.click(screen.getByRole("button", { name: "Detalhar saldo livre do mes atual" }));
+    await user.click(screen.getByRole("button", { name: "Abrir composicao do saldo atual" }));
     expect(screen.getByText("Detalhamento do saldo atual - Mes atual")).toBeInTheDocument();
     expect(screen.getByText("Conta Casa")).toBeInTheDocument();
     expect(screen.getByText("Reserva Invest")).toBeInTheDocument();

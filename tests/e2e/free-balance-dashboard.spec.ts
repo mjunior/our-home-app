@@ -67,7 +67,7 @@ describe("free balance dashboard", () => {
     expect(screen.getByText("Total de saidas")).toBeInTheDocument();
     expect(screen.queryByText("Pode aumentar no cartao")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Detalhar saldo livre do mes atual" }));
+    await user.click(screen.getByRole("button", { name: "Abrir composicao do saldo atual" }));
     expect(screen.getByText("Detalhamento do saldo atual - Mes atual")).toBeInTheDocument();
   });
 
