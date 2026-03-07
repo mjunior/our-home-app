@@ -29,6 +29,16 @@ export class CardsRepository {
     return cardsStore.find((card) => card.id === id);
   }
 
+  update(id: string, patch: Partial<Omit<CreditCardRecord, "id" | "householdId">>): CreditCardRecord {
+    const card = this.findById(id);
+    if (!card) {
+      throw new Error("CARD_NOT_FOUND");
+    }
+
+    Object.assign(card, patch);
+    return card;
+  }
+
   clearAll(): void {
     cardsStore.length = 0;
   }

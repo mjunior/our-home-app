@@ -10,11 +10,19 @@ const cardInputSchema = z.object({
   dueDay: z.number().int(),
 });
 
+const cardUpdateSchema = cardInputSchema.extend({
+  id: z.string().min(1),
+});
+
 export interface CreateCardInput {
   householdId: string;
   name: string;
   closeDay: number;
   dueDay: number;
+}
+
+export interface UpdateCardInput extends CreateCardInput {
+  id: string;
 }
 
 export class CardsService {
@@ -34,6 +42,21 @@ export class CardsService {
 
   list(householdId: string) {
     return this.repository.listByHousehold(householdId);
+  }
+
+  update(input: UpdateCardInput) {
+    const parsed = cardUpdateSchema.parse(input);
+    const existing = this.repository.findById(parsed.id);
+    if (!existing || existing.householdId !== parsed.householdId) {
+      throw new Error("CARD_NOT_FOUND");
+    }
+
+    const card = new CreditCard(parsed);
+    return this.repository.update(parsed.id, {
+      name: card.name,
+      closeDay: card.closeDay,
+      dueDay: card.dueDay,
+    });
   }
 
   clearAll() {

@@ -109,6 +109,52 @@ describe("foundation api", () => {
     expect(cardsController.listCards(householdId)).toHaveLength(1);
   });
 
+  it("updates card close/due days without backfilling existing transactions", () => {
+    const card = cardsController.createCard({
+      householdId,
+      name: "Cartao Editavel",
+      closeDay: 5,
+      dueDay: 10,
+    });
+    const category = categoriesController.createCategory({ householdId, name: "Compras" });
+
+    const beforeEdit = transactionsController.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra antiga",
+      amount: "100.00",
+      occurredAt: "2026-04-04T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    const updatedCard = cardsController.updateCard({
+      id: card.id,
+      householdId,
+      name: "Cartao Editavel",
+      closeDay: 2,
+      dueDay: 20,
+    });
+
+    expect(updatedCard.closeDay).toBe(2);
+    expect(updatedCard.dueDay).toBe(20);
+
+    const afterEdit = transactionsController.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra nova",
+      amount: "100.00",
+      occurredAt: "2026-04-04T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    expect(beforeEdit.invoiceMonthKey).toBe("2026-04");
+    expect(beforeEdit.invoiceDueDate).toBe("2026-04-10T00:00:00.000Z");
+    expect(afterEdit.invoiceMonthKey).toBe("2026-05");
+    expect(afterEdit.invoiceDueDate).toBe("2026-05-20T00:00:00.000Z");
+  });
+
   it("prevents duplicate normalized categories", () => {
     categoriesController.createCategory({ householdId, name: "Mercado" });
 

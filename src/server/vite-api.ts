@@ -577,6 +577,27 @@ export function installViteApi(server: MiddlewareServer) {
         return;
       }
 
+      if (req.method === "POST" && path === "/api/cards/edit") {
+        const body = await readJsonBody(req);
+        const existing = await prisma.creditCard.findUnique({ where: { id: body.id } });
+        if (!existing || existing.householdId !== authHouseholdId) {
+          sendJson(res, 404, { message: "CARD_NOT_FOUND" });
+          return;
+        }
+
+        const updated = await prisma.creditCard.update({
+          where: { id: body.id },
+          data: {
+            name: body.name,
+            closeDay: body.closeDay,
+            dueDay: body.dueDay,
+          },
+        });
+
+        sendJson(res, 200, updated);
+        return;
+      }
+
       if (req.method === "GET" && path === "/api/categories") {
         const householdId = authHouseholdId;
         const rows = await prisma.category.findMany({ where: { householdId }, orderBy: { createdAt: "asc" } });
