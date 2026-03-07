@@ -4,24 +4,21 @@
 
 Aplicativo web de gestao financeira domestica, mobile-first, focado em decisao operacional de caixa com saldo livre explicavel, compromissos futuros previsiveis e separacao correta entre consumo e investimento.
 
-O produto agora possui fluxo completo de cartao de credito por fatura: regra de fechamento/vencimento, consolidacao no cashflow e manutencao de itens no modulo de cartoes.
+Agora o foco evolui para diferenciar compromisso planejado de compromisso quitado, mostrando no cashflow o saldo atual real das contas e mantendo o saldo previsto separado.
 
 ## Core Value
 
 Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
 
-## Current State
+## Current Milestone: v1.6 Controle de Pagamentos e Saldo Atual
 
-- Milestone entregue: **v1.5 UX de Faturas em Cartoes** (2026-03-07).
-- Cartao de credito tratado por competencia de fatura com `closeDay` e `dueDay` por cartao.
-- Cashflow principal exibe obrigacao consolidada de fatura, nao compras individuais de cartao.
-- Modulo de cartoes permite listar faturas por mes e editar/excluir itens no proprio contexto.
+**Goal:** Incluir controle pago/nao pago para contas e faturas, e exibir no card de mes atual o saldo real no momento com detalhamento por conta.
 
-## Next Milestone Goals
-
-- Evoluir ciclo de pagamento de fatura com suporte a pagamento parcial.
-- Introduzir modelagem de saldo remanescente e simulacao de juros/rotativo.
-- Definir canal de notificacao de vencimento (push/email) com estrategia de entrega.
+**Target features:**
+- Status `PAGO`/`NAO_PAGO` para compromissos que impactam conta corrente/investimento.
+- Fatura de cartao quitada como bloco unico (sem quitar compra individual no cashflow).
+- Card `Mes atual` com `Saldo` (real) + `Saldo previsto` (fim do mes) separados.
+- Drill-down do `Saldo` atual mostrando composicao por conta.
 
 ## Requirements
 
@@ -36,23 +33,41 @@ Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar fica
 
 ### Active
 
-- [ ] CCX-01: Pagamento parcial de fatura com saldo remanescente
-- [ ] CCX-02: Simulacao de juros/rotativo da fatura
-- [ ] CCX-03: Notificacoes de vencimento
+- [ ] PAY-01: Lancamento com destino em conta suporta status `PAGO`/`NAO_PAGO`.
+- [ ] PAY-02: Lancamento `NAO_PAGO` nao altera saldo atual da conta; altera apenas ao marcar `PAGO`.
+- [ ] INVP-01: Fatura de cartao e quitada como bloco (status unico da fatura no mes).
+- [ ] INVP-02: Quitacao de fatura desconta total consolidado da conta de pagamento informada.
+- [ ] BAL-01: Card `Mes atual` exibe `Saldo` real calculado a partir de itens pagos.
+- [ ] BAL-02: Card `Mes atual` exibe `Saldo previsto` separadamente sem perder comportamento atual.
+- [ ] BAL-03: Clique em `Saldo` abre composicao por conta (nome + saldo atual).
+- [ ] BAL-04: Card `Proximo mes` permanece orientado a previsto, sem mistura com status pago.
 
 ### Out of Scope
 
-- Integracao Open Finance para ingestao automatica de fatura
-- Multi-moeda para cartao
-- Split automatico de uma compra em multiplas faturas
+- Pagamento parcial de fatura com saldo remanescente e rateio automatico entre contas.
+- Juros de rotativo e parcelamento da propria fatura.
+- Notificacoes de vencimento por push/email.
+
+## Context
+
+- v1.5 concluiu ciclo de fatura por fechamento/vencimento e UX de cartoes.
+- O extrato principal hoje e fortemente previsto; falta leitura de posicao real (ja pago x ainda nao pago).
+- O usuario precisa enxergar rapidamente o saldo real do momento sem perder a projecao ate o fim do mes.
+
+## Constraints
+
+- **Financial Logic**: Item `NAO_PAGO` nao pode reduzir saldo atual da conta antes da quitacao.
+- **Credit Card**: Quitacao acontece por fatura consolidada, nao por compra individual no cashflow principal.
+- **UX**: Saldo atual e saldo previsto devem ser exibidos de forma explicita e sem ambiguidade.
+- **Compatibility**: Card de proximo mes continua representando previsao.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Competencia da compra usa fechamento inclusivo (`day >= closeDay` vai para proxima fatura) | Reproduz comportamento real de cartao informado pelo usuario | ✓ Good |
-| Cashflow operacional mostra fatura consolidada por cartao | Reduz ruido e melhora previsibilidade de caixa | ✓ Good |
-| Detalhamento por compra permanece no modulo de cartoes | Separa visao operacional (caixa) da visao analitica (cartao) | ✓ Good |
+| Introduzir semantica de pagamento (`PAGO`/`NAO_PAGO`) para compromissos em conta | Separar fluxo operacional realizado da projecao de compromissos | — Pending |
+| Quitacao de cartao no cashflow e por fatura consolidada | Coerencia com a modelagem ja adotada nas fases 15-18 | — Pending |
+| Card `Mes atual` deve separar `Saldo` real de `Saldo previsto` | Permitir leitura imediata de onde o usuario esta agora | — Pending |
 
 ## Milestone History
 
@@ -63,4 +78,4 @@ Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar fica
 - `v1.5` roadmap/requirements: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-REQUIREMENTS.md`
 
 ---
-*Last updated: 2026-03-07 after milestone v1.5 completion*
+*Last updated: 2026-03-07 after v1.6 milestone start*
