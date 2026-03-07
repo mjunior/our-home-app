@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: faturas-de-cartao-no-fluxo-de-caixa
-status: in_progress
-last_updated: "2026-03-07T22:30:00.000Z"
+status: complete
+last_updated: "2026-03-07T22:40:00.000Z"
 progress:
   total_phases: 17
-  completed_phases: 16
+  completed_phases: 17
   total_plans: 49
-  completed_plans: 46
+  completed_plans: 49
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
-**Current focus:** planejar e executar fase 17 (tela de cartao com lista de faturas e drill-down).
+**Current focus:** preparar proximo milestone (v2) apos fechamento completo do v1.4.
 
 ## Current Position
 
 Phase: 17 - tela de cartao com lista de faturas e drill-down
-Plan: planejada (3 planos prontos)
-Status: Fase 16 concluida e verificada; fase 17 estruturada para execucao.
-Last activity: 2026-03-07 — fase 17 formalizada com CONTEXT + PLANs para lista de faturas, drill-down e edicao.
+Plan: concluida (3/3)
+Status: Fase 17 concluida e verificada; milestone v1.4 finalizado.
+Last activity: 2026-03-07 — fase 17 executada com lista mensal de faturas, drill-down e edicao no contexto de cartoes.
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
@@ -42,10 +42,11 @@ Progress: [█████████░] 94%
 - Despesas de cartao materializam `invoiceMonthKey` e `invoiceDueDate` no write path.
 - Edicao de `closeDay`/`dueDay` disponivel no backend e UI, com efeito apenas para novos lancamentos (sem backfill).
 - Linha de fatura no cashflow navega para modulo de cartoes com contexto de cartao e competencia.
+- Modulo de cartoes exibe faturas por mes e detalhe de itens com manutencao no proprio contexto.
 
 ### Pending Todos
 
-- Executar fase 17 com `$gsd-execute-phase 17`.
+- Definir roadmap do proximo milestone (v2) a partir de `CCX-*`.
 
 ### Blockers/Concerns
 
@@ -54,5 +55,5 @@ Progress: [█████████░] 94%
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Phase 16 verified and closed
-Resume file: .planning/phases/16-fluxo-de-caixa-consolidado-por-fatura/16-VERIFICATION.md
+Stopped at: Phase 17 verified and closed
+Resume file: .planning/phases/17-tela-de-cartao-com-lista-de-faturas-e-drill-down/17-VERIFICATION.md

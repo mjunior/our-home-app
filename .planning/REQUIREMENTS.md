@@ -21,10 +21,10 @@
 
 ### Card Invoices View
 
-- [ ] **CIV-01**: Tela de cartao exibe lista simples de faturas por mes com total consolidado.
-- [ ] **CIV-02**: Usuario consegue abrir uma fatura e visualizar despesas individuais vinculadas.
-- [ ] **CIV-03**: A partir da fatura aberta, usuario consegue editar despesa individual com mesmo fluxo atual de edicao.
-- [ ] **CIV-04**: Alteracao em despesa individual atualiza imediatamente o total da fatura e a projecao consolidada do cashflow.
+- [x] **CIV-01**: Tela de cartao exibe lista simples de faturas por mes com total consolidado.
+- [x] **CIV-02**: Usuario consegue abrir uma fatura e visualizar despesas individuais vinculadas.
+- [x] **CIV-03**: A partir da fatura aberta, usuario consegue editar despesa individual com mesmo fluxo atual de edicao.
+- [x] **CIV-04**: Alteracao em despesa individual atualiza imediatamente o total da fatura e a projecao consolidada do cashflow.
 
 ## v2 Requirements
 
@@ -54,10 +54,10 @@
 | CFI-02 | Phase 16 | Complete |
 | CFI-03 | Phase 16 | Complete |
 | CFI-04 | Phase 16 | Complete |
-| CIV-01 | Phase 17 | Pending |
-| CIV-02 | Phase 17 | Pending |
-| CIV-03 | Phase 17 | Pending |
-| CIV-04 | Phase 17 | Pending |
+| CIV-01 | Phase 17 | Complete |
+| CIV-02 | Phase 17 | Complete |
+| CIV-03 | Phase 17 | Complete |
+| CIV-04 | Phase 17 | Complete |
 
 **Coverage:**
 - v1 requirements: 12 total
@@ -66,4 +66,4 @@
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-07 after phase 16 verification*
+*Last updated: 2026-03-07 after phase 17 verification*
