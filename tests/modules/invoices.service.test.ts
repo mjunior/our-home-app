@@ -91,6 +91,42 @@ describe("invoice services", () => {
     expect(summary.next.total).toBe("350.00");
   });
 
+  it("treats close day as inclusive in invoice aggregation", () => {
+    const card = cards.createCard({ householdId, name: "Visa Boundary", closeDay: 5, dueDay: 10 });
+    const category = categories.createCategory({ householdId, name: "Compras" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Antes do fechamento",
+      amount: "100.00",
+      occurredAt: "2026-04-04T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "No fechamento",
+      amount: "200.00",
+      occurredAt: "2026-04-05T10:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    const summary = invoices.getCardInvoices({
+      householdId,
+      cardId: card.id,
+      referenceDate: "2026-04-05T10:00:00.000Z",
+    });
+
+    expect(summary.current.monthKey).toBe("2026-05");
+    expect(summary.current.total).toBe("200.00");
+    expect(summary.next.monthKey).toBe("2026-06");
+    expect(summary.next.total).toBe("0.00");
+  });
+
   it("returns monthly cashflow summary with card obligations", () => {
     const account = accounts.createAccount({
       householdId,
