@@ -357,7 +357,7 @@ async function loadServices() {
   const cycleService = new InvoiceCycleService();
 
   return {
-    invoicesService: new InvoicesService(transactionRepo as any, cardRepo as any, cycleService),
+    invoicesService: new InvoicesService(transactionRepo as any, cardRepo as any, cycleService, scheduleRepo as any),
     freeBalanceService: new FreeBalanceService(
       accountRepo as any,
       cardRepo as any,

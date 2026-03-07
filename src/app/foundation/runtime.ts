@@ -125,7 +125,7 @@ function createLocalRuntime(): Runtime {
     new TransactionsService(transactionsRepository, accountsRepository, cardsRepository, categoriesRepository),
   );
   const invoicesController = new InvoicesController(
-    new InvoicesService(transactionsRepository, cardsRepository, new InvoiceCycleService()),
+    new InvoicesService(transactionsRepository, cardsRepository, new InvoiceCycleService(), scheduleRepository),
   );
   const freeBalanceController = new FreeBalanceController(
     new FreeBalanceService(
