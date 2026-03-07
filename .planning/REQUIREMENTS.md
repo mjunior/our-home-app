@@ -50,9 +50,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PAY-01 | Phase 19 | Pending |
-| PAY-02 | Phase 19 | Pending |
-| PAY-03 | Phase 19 | Pending |
+| PAY-01 | Phase 19 | Complete |
+| PAY-02 | Phase 19 | Complete |
+| PAY-03 | Phase 19 | Complete |
 | INVP-01 | Phase 20 | Pending |
 | INVP-02 | Phase 20 | Pending |
 | INVP-03 | Phase 20 | Pending |

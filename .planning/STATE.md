@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: controle-de-pagamentos-e-saldo-atual
-status: planning
-last_updated: "2026-03-07T23:50:00.000Z"
+status: in_progress
+last_updated: "2026-03-07T23:58:00.000Z"
 progress:
   total_phases: 21
-  completed_phases: 18
+  completed_phases: 19
   total_plans: 61
-  completed_plans: 52
+  completed_plans: 55
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
-**Current focus:** iniciar fase 19 com modelagem de quitacao pago/nao pago.
+**Current focus:** iniciar fase 20 com quitacao de fatura consolidada.
 
 ## Current Position
 
-Phase: 19 - modelo de quitacao para lancamentos em conta
+Phase: 20 - quitacao de fatura consolidada de cartao
 Plan: nao iniciado
-Status: Milestone v1.6 definido (requirements + roadmap prontos)
-Last activity: 2026-03-07 — novo milestone criado para saldo atual por pago/nao pago e quitacao de fatura.
+Status: Phase 19 concluida e verificada; pronta para avancar.
+Last activity: 2026-03-07 — fase 19 executada com status pago/nao pago e operacao de quitacao no cashflow.
 
-Progress: [████████░░] 85% do projeto ate aqui (milestone v1.6 ainda nao iniciado)
+Progress: [████████░░] 90% do projeto ate aqui (milestone v1.6 em execucao)
 
 ## Accumulated Context
 
@@ -37,16 +37,18 @@ Progress: [████████░░] 85% do projeto ate aqui (milestone v1
 - Fluxo de caixa principal mostra obrigacoes de fatura consolidadas por cartao no vencimento.
 - Modulo de cartoes e a fonte de verdade para itens individuais de cada fatura.
 - Novo milestone adiciona semantica operacional de quitacao para separar saldo real de saldo previsto.
+- Transacoes de conta agora aceitam settlementStatus (`PAID`/`UNPAID`) com impacto direto no saldo operacional.
 
 ### Roadmap Evolution
 
 - Milestone v1.4 archived: `.planning/milestones/v1.4-ROADMAP.md`
 - Milestone v1.5 archived: `.planning/milestones/v1.5-ROADMAP.md`
 - Milestone v1.6 initialized: phases 19-21 em `.planning/ROADMAP.md`
+- Phase 19 completed: modelo de quitacao para lancamentos em conta
 
 ### Pending Todos
 
-- Executar `Phase 19` (modelagem e fluxo de quitacao em conta).
+- Executar `Phase 20` (quitacao de fatura consolidada por conta de pagamento).
 
 ### Blockers/Concerns
 
@@ -55,5 +57,5 @@ Progress: [████████░░] 85% do projeto ate aqui (milestone v1
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: milestone v1.6 definido e pronto para planejamento detalhado
-Resume file: .planning/ROADMAP.md
+Stopped at: phase 19 concluida e validada
+Resume file: .planning/phases/19-modelo-de-quitacao-para-lancamentos-em-conta/19-VERIFICATION.md
