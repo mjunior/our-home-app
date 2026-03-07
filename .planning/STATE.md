@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: ux-de-faturas-em-cartoes
-status: in_progress
-last_updated: "2026-03-07T22:50:00.000Z"
+status: complete
+last_updated: "2026-03-07T22:55:00.000Z"
 progress:
   total_phases: 18
-  completed_phases: 17
+  completed_phases: 18
   total_plans: 52
-  completed_plans: 49
+  completed_plans: 52
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
-**Current focus:** planejar e executar fase 18 (polish de UX da tela de faturas em cartoes).
+**Current focus:** definir backlog e milestone v2 (CCX-01..03) apos fechamento da v1.5.
 
 ## Current Position
 
 Phase: 18 - ux polish da tela de faturas em cartoes
-Plan: planejada (3 planos prontos)
-Status: Fase 17 concluida e fase 18 aberta para refinamento visual e de interacao.
-Last activity: 2026-03-07 — fase 18 criada no roadmap com contexto e planos de execucao.
+Plan: concluida (3/3)
+Status: Fase 18 concluida e verificada; milestone v1.5 finalizado.
+Last activity: 2026-03-07 — fase 18 executada com melhorias visuais e de fluxo no modulo de cartoes.
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
@@ -43,14 +43,16 @@ Progress: [█████████░] 94%
 - Edicao de `closeDay`/`dueDay` disponivel no backend e UI, com efeito apenas para novos lancamentos (sem backfill).
 - Linha de fatura no cashflow navega para modulo de cartoes com contexto de cartao e competencia.
 - Modulo de cartoes exibe faturas por mes e detalhe de itens com manutencao no proprio contexto.
+- Experiencia de cartoes/faturas recebeu polish de UX com estados explicitos e hierarquia visual melhor.
 
 ### Roadmap Evolution
 
 - Phase 18 added: UX polish da tela de faturas em cartoes
+- Phase 18 completed: UX polish da tela de faturas em cartoes
 
 ### Pending Todos
 
-- Executar fase 18 com `$gsd-execute-phase 18`.
+- Planejar proximo milestone com requisitos `CCX-*`.
 
 ### Blockers/Concerns
 
@@ -59,5 +61,5 @@ Progress: [█████████░] 94%
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Phase 18 planned
-Resume file: .planning/phases/18-ux-polish-da-tela-de-faturas-em-cartoes/18-CONTEXT.md
+Stopped at: Phase 18 verified and closed
+Resume file: .planning/phases/18-ux-polish-da-tela-de-faturas-em-cartoes/18-VERIFICATION.md

@@ -28,10 +28,10 @@
 
 ### Invoice UX Polish
 
-- [ ] **UXP-01**: Lista de faturas em cartoes apresenta hierarquia visual clara para mes, cartao e total.
-- [ ] **UXP-02**: Detalhe dos itens da fatura melhora legibilidade e acao em mobile e desktop.
-- [ ] **UXP-03**: Estados de vazio/erro/carregamento no modulo de cartoes sao consistentes e explicitos.
-- [ ] **UXP-04**: Fluxo de edicao/exclusao de itens da fatura reduz friccao e ambiguidades visuais.
+- [x] **UXP-01**: Lista de faturas em cartoes apresenta hierarquia visual clara para mes, cartao e total.
+- [x] **UXP-02**: Detalhe dos itens da fatura melhora legibilidade e acao em mobile e desktop.
+- [x] **UXP-03**: Estados de vazio/erro/carregamento no modulo de cartoes sao consistentes e explicitos.
+- [x] **UXP-04**: Fluxo de edicao/exclusao de itens da fatura reduz friccao e ambiguidades visuais.
 
 ## v2 Requirements
 
@@ -65,10 +65,10 @@
 | CIV-02 | Phase 17 | Complete |
 | CIV-03 | Phase 17 | Complete |
 | CIV-04 | Phase 17 | Complete |
-| UXP-01 | Phase 18 | Pending |
-| UXP-02 | Phase 18 | Pending |
-| UXP-03 | Phase 18 | Pending |
-| UXP-04 | Phase 18 | Pending |
+| UXP-01 | Phase 18 | Complete |
+| UXP-02 | Phase 18 | Complete |
+| UXP-03 | Phase 18 | Complete |
+| UXP-04 | Phase 18 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total
@@ -77,4 +77,4 @@
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-07 after phase 18 planning setup*
+*Last updated: 2026-03-07 after phase 18 verification*

@@ -7,14 +7,14 @@
 - ✅ **v1.2 Ui improvements and Import** — Phases 10-11 (shipped 2026-03-03) — detalhes: `.planning/milestones/v1.2-ROADMAP.md`
 - ✅ **v1.3 Autenticacao e Isolamento de Conta** — Phases 12-14 (shipped 2026-03-05)
 - ✅ **v1.4 Faturas de Cartao no Fluxo de Caixa** — Phases 15-17 (shipped 2026-03-07)
-- ◆ **v1.5 UX de Faturas em Cartoes** — Phase 18 (in progress)
+- ✅ **v1.5 UX de Faturas em Cartoes** — Phase 18 (shipped 2026-03-07)
 
 ## Phases
 
 - [x] **Phase 15: Motor de Competencia de Fatura por Fechamento** - Aplicar regra de fechamento (`closeDay`) e vencimento (`dueDay`) por cartao para classificar compras na fatura correta. (completed 2026-03-07)
 - [x] **Phase 16: Fluxo de Caixa Consolidado por Fatura** - Substituir exibicao de compras individuais de cartao por lancamentos consolidados de fatura no extrato principal. (completed 2026-03-07)
 - [x] **Phase 17: Tela de Cartao com Lista de Faturas e Drill-down** - Exibir faturas por mes no modulo de cartoes e abrir detalhe para editar despesas individuais. (completed 2026-03-07)
-- [ ] **Phase 18: UX polish da tela de faturas em cartoes** - Refinar hierarquia visual, estados e responsividade do fluxo de faturas no modulo de cartoes.
+- [x] **Phase 18: UX polish da tela de faturas em cartoes** - Refinar hierarquia visual, estados e responsividade do fluxo de faturas no modulo de cartoes. (completed 2026-03-07)
 
 ## Phase Details
 
@@ -79,4 +79,4 @@ Success criteria:
 | v1.2 Ui improvements and Import | 10-11 | 6/6 | Complete | 2026-03-03 |
 | v1.3 Autenticacao e Isolamento de Conta | 12-14 | 9/9 | Complete | 2026-03-05 |
 | v1.4 Faturas de Cartao no Fluxo de Caixa | 15-17 | 9/9 | Complete | 2026-03-07 |
-| v1.5 UX de Faturas em Cartoes | 18 | 0/3 | In Progress | — |
+| v1.5 UX de Faturas em Cartoes | 18 | 3/3 | Complete | 2026-03-07 |
