@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Landmark, Pencil, Repeat2, TrendingDown, TrendingUp } from "lucide-react";
+import { Check, Landmark, Loader2, Pencil, Repeat2, TrendingDown, TrendingUp } from "lucide-react";
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -34,6 +34,7 @@ interface StatementTableProps {
   cardLabels: Record<string, string>;
   onEditEntry?: (entry: StatementEntry) => void;
   onToggleSettlement?: (entry: StatementEntry) => void;
+  loadingSettlementEntryId?: string | null;
 }
 
 function KindPill({ kind, isInvestment }: { kind: StatementEntry["kind"]; isInvestment?: boolean }) {
@@ -100,16 +101,19 @@ function SettlementToggle({
   checked,
   onToggle,
   compact = false,
+  loading = false,
 }: {
   checked: boolean;
   onToggle: () => void;
   compact?: boolean;
+  loading?: boolean;
 }) {
   return (
     <button
       type="button"
-      aria-label={checked ? "Marcar como nao pago" : "Marcar como pago"}
+      aria-label={loading ? "Atualizando quitacao" : checked ? "Marcar como nao pago" : "Marcar como pago"}
       aria-pressed={checked}
+      disabled={loading}
       onClick={(event) => {
         event.stopPropagation();
         onToggle();
@@ -124,16 +128,28 @@ function SettlementToggle({
           : "border-slate-300 bg-slate-100/70 text-slate-400 hover:border-slate-400 hover:bg-slate-200/70 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-500 dark:hover:border-slate-500"
       }`}
     >
-      <Check
-        className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} transition-all duration-200 ${
-          checked ? "scale-100 opacity-100" : "scale-75 opacity-0 group-hover:scale-90 group-hover:opacity-60"
-        }`}
-      />
+      {loading ? (
+        <Loader2 className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} animate-spin`} />
+      ) : (
+        <Check
+          className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} transition-all duration-200 ${
+            checked ? "scale-100 opacity-100" : "scale-75 opacity-0 group-hover:scale-90 group-hover:opacity-60"
+          }`}
+        />
+      )}
     </button>
   );
 }
 
-export function StatementTable({ entries, categoryLabels, accountLabels, cardLabels, onEditEntry, onToggleSettlement }: StatementTableProps) {
+export function StatementTable({
+  entries,
+  categoryLabels,
+  accountLabels,
+  cardLabels,
+  onEditEntry,
+  onToggleSettlement,
+  loadingSettlementEntryId = null,
+}: StatementTableProps) {
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       return true;
@@ -201,7 +217,11 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                         >
                           <td className="px-3 py-3 align-middle">
                             {canToggleSettlement(entry) ? (
-                              <SettlementToggle checked={entry.settlementStatus !== "UNPAID"} onToggle={() => onToggleSettlement(entry)} />
+                              <SettlementToggle
+                                loading={loadingSettlementEntryId === entry.id}
+                                checked={entry.settlementStatus !== "UNPAID"}
+                                onToggle={() => onToggleSettlement(entry)}
+                              />
                             ) : (
                               <span className="text-xs text-slate-400">—</span>
                             )}
@@ -267,7 +287,12 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                     >
                       <div className="row-span-2">
                         {canToggleSettlement(entry) ? (
-                          <SettlementToggle compact checked={entry.settlementStatus !== "UNPAID"} onToggle={() => onToggleSettlement(entry)} />
+                          <SettlementToggle
+                            compact
+                            loading={loadingSettlementEntryId === entry.id}
+                            checked={entry.settlementStatus !== "UNPAID"}
+                            onToggle={() => onToggleSettlement(entry)}
+                          />
                         ) : (
                           <span className="inline-flex h-6 w-6 items-center justify-center text-xs text-slate-500">—</span>
                         )}

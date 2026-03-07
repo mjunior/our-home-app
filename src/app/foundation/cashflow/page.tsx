@@ -68,6 +68,8 @@ export default function CashflowPage() {
   const [editInvestmentDestinationId, setEditInvestmentDestinationId] = useState("");
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editSettlementStatus, setEditSettlementStatus] = useState<"PAID" | "UNPAID">("PAID");
+  const [loadingSettlementEntryId, setLoadingSettlementEntryId] = useState<string | null>(null);
+  const [optimisticSettlementByEntryId, setOptimisticSettlementByEntryId] = useState<Record<string, "PAID" | "UNPAID">>({});
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteScope, setDeleteScope] = useState<"CURRENT_AND_FUTURE" | "ALL">("CURRENT_AND_FUTURE");
   const { notify } = useSnackbar();
@@ -240,8 +242,18 @@ export default function CashflowPage() {
       });
     }
 
-    return all.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
-  }, [cardDueDayMap, cardLabels, dueObligations.cards, month, scheduleInstances, transactions]);
+    const sorted = all.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+    return sorted.map((item) => {
+      const optimistic = optimisticSettlementByEntryId[item.id];
+      if (!optimistic) {
+        return item;
+      }
+      return {
+        ...item,
+        settlementStatus: optimistic,
+      };
+    });
+  }, [cardDueDayMap, cardLabels, dueObligations.cards, month, optimisticSettlementByEntryId, scheduleInstances, transactions]);
 
   const freeBalance = useMemo(
     () =>
@@ -354,6 +366,7 @@ export default function CashflowPage() {
         accountLabels={accountLabels}
         cardLabels={cardLabels}
         categoryLabels={categoryLabelsWithInvoice}
+        loadingSettlementEntryId={loadingSettlementEntryId}
         onEditEntry={(entry) => {
           if (entry.sourceType === "INVOICE") {
             window.dispatchEvent(
@@ -398,13 +411,27 @@ export default function CashflowPage() {
           setEditModalOpen(true);
         }}
         onToggleSettlement={(entry) => {
+          if (loadingSettlementEntryId) {
+            return;
+          }
+          const nextStatus: "PAID" | "UNPAID" = entry.settlementStatus === "UNPAID" ? "PAID" : "UNPAID";
+          setOptimisticSettlementByEntryId((prev) => ({ ...prev, [entry.id]: nextStatus }));
+          if (nextStatus === "PAID") {
+            if (entry.sourceType === "INVOICE") {
+              playCheerSound();
+              launchConfettiCanvas();
+            } else {
+              playCashRegisterSound();
+            }
+          }
+          setLoadingSettlementEntryId(entry.id);
+          const runToggle = () => {
           try {
             if (entry.sourceType === "INVOICE") {
               if (!entry.creditCardId) {
                 throw new Error("INVOICE_CARD_NOT_FOUND");
               }
               const dueMonth = entry.occurredAt.slice(0, 7);
-              const nextStatus = entry.settlementStatus === "UNPAID" ? "PAID" : "UNPAID";
               if (nextStatus === "PAID") {
                 const paymentAccountId = entry.paymentAccountId ?? accounts[0]?.id;
                 if (!paymentAccountId) {
@@ -418,8 +445,6 @@ export default function CashflowPage() {
                   paidAt: new Date().toISOString(),
                   paidAmount: entry.amount,
                 });
-                playCheerSound();
-                launchConfettiCanvas();
               } else {
                 invoicesController.unsettleInvoice({
                   householdId,
@@ -431,16 +456,11 @@ export default function CashflowPage() {
               if (!entry.scheduleInstanceId) {
                 throw new Error("SCHEDULE_INSTANCE_NOT_FOUND");
               }
-              const nextStatus = entry.settlementStatus === "UNPAID" ? "PAID" : "UNPAID";
               scheduleManagementController.updateInstanceSettlement({
                 instanceId: entry.scheduleInstanceId,
                 settlementStatus: nextStatus,
               });
-              if (nextStatus === "PAID") {
-                playCashRegisterSound();
-              }
             } else if (entry.accountId && !entry.transferGroupId) {
-              const nextStatus = entry.settlementStatus === "UNPAID" ? "PAID" : "UNPAID";
               transactionsController.updateTransaction({
                 id: entry.id,
                 householdId: householdId,
@@ -452,17 +472,28 @@ export default function CashflowPage() {
                 accountId: entry.accountId,
                 settlementStatus: nextStatus,
               });
-              if (nextStatus === "PAID") {
-                playCashRegisterSound();
-              }
             } else {
               return;
             }
+            setOptimisticSettlementByEntryId((prev) => {
+              const { [entry.id]: _removed, ...rest } = prev;
+              return rest;
+            });
             setRefreshKey((prev) => prev + 1);
             notify({ message: "Status de quitacao atualizado.", tone: "success" });
           } catch {
             notify({ message: "Nao foi possivel atualizar o status.", tone: "error" });
+          } finally {
+            setLoadingSettlementEntryId(null);
           }
+          };
+
+          if (import.meta.env.MODE === "test") {
+            runToggle();
+            return;
+          }
+
+          window.setTimeout(runToggle, 16);
         }}
       />
 
