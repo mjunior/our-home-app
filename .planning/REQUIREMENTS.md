@@ -21,7 +21,7 @@
 
 - [x] **BAL-01**: Card `Mes atual` exibe `Saldo` real do momento com base em movimentos pagos/recebidos.
 - [x] **BAL-02**: Card `Mes atual` mantem `Saldo previsto` separado, sem regressao no calculo atual de previsao.
-- [x] **BAL-03**: Clique em `Saldo` abre detalhamento com saldo individual de cada conta incluida no total.
+- [ ] **BAL-03**: Clique em `Saldo` abre detalhamento com saldo individual de cada conta incluida no total.
 - [x] **BAL-04**: Card `Proximo mes` permanece exibindo apenas previsao.
 
 ### Cashflow Visibility and Actions
@@ -58,7 +58,7 @@
 | INVP-03 | Phase 20 | Complete |
 | BAL-01 | Phase 21 | Complete |
 | BAL-02 | Phase 21 | Complete |
-| BAL-03 | Phase 21 | Complete |
+| BAL-03 | Phase 21.1 | Pending |
 | BAL-04 | Phase 21 | Complete |
 | CFP-01 | Phase 21 | Complete |
 | CFP-02 | Phase 21 | Complete |
@@ -71,4 +71,4 @@
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after Phase 21 execution*
+*Last updated: 2026-03-07 after milestone gap audit (BAL-03 reopened)*
