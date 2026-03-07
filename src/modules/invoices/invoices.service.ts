@@ -176,10 +176,22 @@ export class InvoicesService {
 
   getMonthlyInvoices(input: MonthlyInvoicesInput) {
     const due = this.getDueObligationsByMonth({ householdId: input.householdId, dueMonth: input.month });
+    const dueByCard = new Map(due.cards.map((item) => [item.cardId, item]));
+    const cards = this.cardsRepository.listByHousehold(input.householdId).map((card) => {
+      const dueForCard = dueByCard.get(card.id);
+      return {
+        cardId: card.id,
+        cardName: card.name,
+        dueDay: card.dueDay,
+        dueDate: toDueDateForMonth(input.month, card.dueDay),
+        total: dueForCard?.total ?? "0.00",
+      };
+    });
+
     return {
       month: input.month,
       total: due.total,
-      cards: due.cards,
+      cards,
     };
   }
 

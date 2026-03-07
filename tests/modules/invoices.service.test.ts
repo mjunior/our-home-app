@@ -401,6 +401,7 @@ describe("invoice services", () => {
 
   it("returns monthly invoices list by due month", () => {
     const card = cards.createCard({ householdId, name: "Lista Mensal", closeDay: 5, dueDay: 10 });
+    const emptyCard = cards.createCard({ householdId, name: "Sem Movimentacao", closeDay: 7, dueDay: 15 });
     const category = categories.createCategory({ householdId, name: "Compras" });
 
     transactions.createTransaction({
@@ -416,7 +417,8 @@ describe("invoice services", () => {
     const monthly = invoices.getMonthlyInvoices({ householdId, month: "2026-03" });
     expect(monthly.month).toBe("2026-03");
     expect(monthly.total).toBe("90.00");
-    expect(monthly.cards).toHaveLength(1);
-    expect(monthly.cards[0]?.cardId).toBe(card.id);
+    expect(monthly.cards).toHaveLength(2);
+    expect(monthly.cards.find((item) => item.cardId === card.id)?.total).toBe("90.00");
+    expect(monthly.cards.find((item) => item.cardId === emptyCard.id)?.total).toBe("0.00");
   });
 });

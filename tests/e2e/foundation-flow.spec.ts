@@ -45,6 +45,7 @@ describe("foundation flow", () => {
     render(React.createElement(ShellHarness));
 
     await user.click(screen.getAllByRole("tab", { name: "Contas" })[0]!);
+    await user.click(screen.getByRole("button", { name: "Nova conta" }));
 
     await user.clear(screen.getByLabelText("Nome da conta"));
     await user.type(screen.getByLabelText("Nome da conta"), "Conta Casa");
@@ -83,23 +84,25 @@ describe("foundation flow", () => {
     await user.click(screen.getAllByRole("button", { name: "Alternar tema" })[0]!);
     expect(document.documentElement.classList.contains("dark")).toBe(false);
 
+    await user.click(screen.getByRole("button", { name: "Novo cartao" }));
     await user.type(screen.getByLabelText("Nome do cartao"), "Visa Casa");
     await user.clear(screen.getByLabelText("Dia de fechamento"));
     await user.type(screen.getByLabelText("Dia de fechamento"), "7");
     await user.click(screen.getByRole("button", { name: "Adicionar cartao" }));
-    expect(screen.getByText(/Visa Casa/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Visa Casa/).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole("button", { name: "Editar" }));
-    const closeDayInput = screen.getAllByLabelText("Dia de fechamento")[1]!;
+    const closeDayInput = screen.getByLabelText("Dia de fechamento");
     await user.clear(closeDayInput);
     await user.type(closeDayInput, "2");
-    const dueDayInput = screen.getAllByLabelText("Dia de vencimento")[1]!;
+    const dueDayInput = screen.getByLabelText("Dia de vencimento");
     await user.clear(dueDayInput);
     await user.type(dueDayInput, "20");
     await user.click(screen.getByRole("button", { name: "Salvar cartao" }));
     expect(screen.getByText(/fecha 2 vence 20/)).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: /Categorias|Tags/ })[0]!);
+    await user.click(screen.getByRole("button", { name: "Nova categoria" }));
     await user.type(screen.getByLabelText("Nome da categoria"), "Mercado");
     await user.click(screen.getByRole("button", { name: "Adicionar categoria" }));
     expect(screen.getByText("Mercado")).toBeInTheDocument();
@@ -180,7 +183,7 @@ describe("foundation flow", () => {
     expect(screen.getAllByText("Faturas do mes 2026-03").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Cinema").length).toBeGreaterThan(0);
 
-    await user.click(screen.getAllByRole("button", { name: "Editar item da fatura" })[0]!);
+    await user.click(screen.getAllByText("Cinema")[0]!);
     await user.clear(screen.getByLabelText("Editar descricao da transacao"));
     await user.type(screen.getByLabelText("Editar descricao da transacao"), "Cinema VIP");
     await user.clear(screen.getByLabelText("Editar valor da transacao"));

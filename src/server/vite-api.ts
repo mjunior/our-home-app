@@ -2,6 +2,7 @@ import { InvoiceCycleService } from "../modules/invoices/invoice-cycle.service";
 import { InvoicesService } from "../modules/invoices/invoices.service";
 import { FreeBalancePolicy } from "../modules/free-balance/free-balance.policy";
 import { FreeBalanceService } from "../modules/free-balance/free-balance.service";
+import { HOUSEHOLD_FINANCE_CATEGORIES } from "../modules/categories/bootstrap-categories";
 import { AuthService } from "../modules/auth/auth.service";
 import { AuthError, isAuthError } from "../modules/auth/auth.errors";
 import { issueSessionToken, verifySessionToken } from "../modules/auth/session-token";
@@ -377,8 +378,7 @@ async function ensureBootstrap(householdId: string) {
     });
   }
 
-  const defaults = ["Moradia", "Alimentacao", "Transporte", "Saude", "Lazer"];
-  for (const category of defaults) {
+  for (const category of HOUSEHOLD_FINANCE_CATEGORIES) {
     const normalized = normalizeName(category);
     const exists = await prisma.category.findFirst({ where: { householdId, normalized } });
     if (!exists) {

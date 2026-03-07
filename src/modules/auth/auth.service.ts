@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { HOUSEHOLD_FINANCE_CATEGORIES } from "../categories/bootstrap-categories";
 import { prisma } from "../shared/persistence/prisma";
 import { AuthError } from "./auth.errors";
 import { hashPassword, verifyPassword } from "./password-hasher";
@@ -19,8 +20,6 @@ export interface AuthUserView {
   email: string;
   householdId: string;
 }
-
-const bootstrapCategories = ["Moradia", "Alimentacao", "Transporte", "Saude", "Lazer"];
 
 function normalizeName(value: string) {
   return value.trim().toLocaleLowerCase("pt-BR");
@@ -71,7 +70,7 @@ export class AuthService {
           },
         });
 
-        for (const category of bootstrapCategories) {
+        for (const category of HOUSEHOLD_FINANCE_CATEGORIES) {
           await tx.category.create({
             data: {
               householdId: household.id,

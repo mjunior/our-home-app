@@ -41,12 +41,19 @@ export function ConsolidatedBalanceCard({ amount, byType, accounts }: Consolidat
 
         <div className="grid gap-2 sm:grid-cols-2">
           {accounts.map((account) => (
-            <div key={account.id} className="rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-950/70">
-              <p className="truncate text-slate-500 dark:text-slate-300">{account.name}</p>
-              <p className={`mt-1 text-base font-bold ${account.type === "INVESTMENT" ? "text-brand-teal dark:text-brand-lime" : ""}`}>
+            <div
+              key={account.id}
+              className={`rounded-xl border p-4 text-sm shadow-sm ${
+                account.type === "INVESTMENT"
+                  ? "border-brand-teal/30 bg-brand-teal/5 dark:border-brand-lime/30 dark:bg-brand-lime/10"
+                  : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/70"
+              }`}
+            >
+              <p className="truncate text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">{account.name}</p>
+              <p className={`mt-1 text-3xl font-black tracking-tight ${account.type === "INVESTMENT" ? "text-brand-teal dark:text-brand-lime" : ""}`}>
                 R$ {account.balance}
               </p>
-              <p className="text-xs uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+              <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                 {account.type === "INVESTMENT" ? "Investimento" : "Corrente"}
               </p>
             </div>
