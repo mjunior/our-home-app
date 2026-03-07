@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: controle-de-pagamentos-e-saldo-atual
 status: in_progress
-last_updated: "2026-03-07T23:58:00.000Z"
+last_updated: "2026-03-08T00:10:00.000Z"
 progress:
   total_phases: 21
-  completed_phases: 19
+  completed_phases: 20
   total_plans: 61
-  completed_plans: 55
+  completed_plans: 58
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
-**Current focus:** iniciar fase 20 com quitacao de fatura consolidada.
+**Current focus:** iniciar fase 21 com card de mes atual e drill-down por conta.
 
 ## Current Position
 
-Phase: 20 - quitacao de fatura consolidada de cartao
+Phase: 21 - card mes atual com saldo real + drill-down por conta
 Plan: nao iniciado
-Status: Phase 19 concluida e verificada; pronta para avancar.
-Last activity: 2026-03-07 — fase 19 executada com status pago/nao pago e operacao de quitacao no cashflow.
+Status: Phase 20 concluida e verificada; pronta para avancar.
+Last activity: 2026-03-08 — fase 20 executada com quitacao consolidada de faturas e impacto no saldo atual por conta pagadora.
 
-Progress: [████████░░] 90% do projeto ate aqui (milestone v1.6 em execucao)
+Progress: [█████████░] 95% do projeto ate aqui (milestone v1.6 em execucao)
 
 ## Accumulated Context
 
@@ -38,6 +38,7 @@ Progress: [████████░░] 90% do projeto ate aqui (milestone v1
 - Modulo de cartoes e a fonte de verdade para itens individuais de cada fatura.
 - Novo milestone adiciona semantica operacional de quitacao para separar saldo real de saldo previsto.
 - Transacoes de conta agora aceitam settlementStatus (`PAID`/`UNPAID`) com impacto direto no saldo operacional.
+- Faturas de cartao podem ser quitadas/desquitadas por (`cardId`, `dueMonth`) com conta pagadora e data de pagamento.
 
 ### Roadmap Evolution
 
@@ -48,7 +49,7 @@ Progress: [████████░░] 90% do projeto ate aqui (milestone v1
 
 ### Pending Todos
 
-- Executar `Phase 20` (quitacao de fatura consolidada por conta de pagamento).
+- Executar `Phase 21` (saldo atual x saldo previsto no card do mes atual, com detalhamento por conta).
 
 ### Blockers/Concerns
 
@@ -57,5 +58,5 @@ Progress: [████████░░] 90% do projeto ate aqui (milestone v1
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: phase 19 concluida e validada
-Resume file: .planning/phases/19-modelo-de-quitacao-para-lancamentos-em-conta/19-VERIFICATION.md
+Stopped at: phase 20 concluida e validada
+Resume file: .planning/phases/20-quitacao-de-fatura-consolidada-de-cartao/20-VERIFICATION.md

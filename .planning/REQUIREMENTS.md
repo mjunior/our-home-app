@@ -13,9 +13,9 @@
 
 ### Credit Card Invoice Payment
 
-- [ ] **INVP-01**: Usuario pode marcar fatura mensal de cartao como paga/nao paga como bloco unico.
-- [ ] **INVP-02**: Ao pagar fatura, sistema registra data de quitacao e conta de pagamento.
-- [ ] **INVP-03**: Valor da fatura paga impacta saldo atual apenas no momento da quitacao.
+- [x] **INVP-01**: Usuario pode marcar fatura mensal de cartao como paga/nao paga como bloco unico.
+- [x] **INVP-02**: Ao pagar fatura, sistema registra data de quitacao e conta de pagamento.
+- [x] **INVP-03**: Valor da fatura paga impacta saldo atual apenas no momento da quitacao.
 
 ### Current Month Balance Card
 
@@ -53,9 +53,9 @@
 | PAY-01 | Phase 19 | Complete |
 | PAY-02 | Phase 19 | Complete |
 | PAY-03 | Phase 19 | Complete |
-| INVP-01 | Phase 20 | Pending |
-| INVP-02 | Phase 20 | Pending |
-| INVP-03 | Phase 20 | Pending |
+| INVP-01 | Phase 20 | Complete |
+| INVP-02 | Phase 20 | Complete |
+| INVP-03 | Phase 20 | Complete |
 | BAL-01 | Phase 21 | Pending |
 | BAL-02 | Phase 21 | Pending |
 | BAL-03 | Phase 21 | Pending |
@@ -71,4 +71,4 @@
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after v1.6 requirements definition*
+*Last updated: 2026-03-08 after Phase 20 execution*
