@@ -26,6 +26,13 @@
 - [x] **CIV-03**: A partir da fatura aberta, usuario consegue editar despesa individual com mesmo fluxo atual de edicao.
 - [x] **CIV-04**: Alteracao em despesa individual atualiza imediatamente o total da fatura e a projecao consolidada do cashflow.
 
+### Invoice UX Polish
+
+- [ ] **UXP-01**: Lista de faturas em cartoes apresenta hierarquia visual clara para mes, cartao e total.
+- [ ] **UXP-02**: Detalhe dos itens da fatura melhora legibilidade e acao em mobile e desktop.
+- [ ] **UXP-03**: Estados de vazio/erro/carregamento no modulo de cartoes sao consistentes e explicitos.
+- [ ] **UXP-04**: Fluxo de edicao/exclusao de itens da fatura reduz friccao e ambiguidades visuais.
+
 ## v2 Requirements
 
 ### Credit Card Enhancements
@@ -58,12 +65,16 @@
 | CIV-02 | Phase 17 | Complete |
 | CIV-03 | Phase 17 | Complete |
 | CIV-04 | Phase 17 | Complete |
+| UXP-01 | Phase 18 | Pending |
+| UXP-02 | Phase 18 | Pending |
+| UXP-03 | Phase 18 | Pending |
+| UXP-04 | Phase 18 | Pending |
 
 **Coverage:**
-- v1 requirements: 12 total
-- Mapped to phases: 12
+- v1 requirements: 16 total
+- Mapped to phases: 16
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-07 after phase 17 verification*
+*Last updated: 2026-03-07 after phase 18 planning setup*

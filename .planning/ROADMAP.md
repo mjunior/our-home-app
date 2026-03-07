@@ -7,12 +7,14 @@
 - ✅ **v1.2 Ui improvements and Import** — Phases 10-11 (shipped 2026-03-03) — detalhes: `.planning/milestones/v1.2-ROADMAP.md`
 - ✅ **v1.3 Autenticacao e Isolamento de Conta** — Phases 12-14 (shipped 2026-03-05)
 - ✅ **v1.4 Faturas de Cartao no Fluxo de Caixa** — Phases 15-17 (shipped 2026-03-07)
+- ◆ **v1.5 UX de Faturas em Cartoes** — Phase 18 (in progress)
 
 ## Phases
 
 - [x] **Phase 15: Motor de Competencia de Fatura por Fechamento** - Aplicar regra de fechamento (`closeDay`) e vencimento (`dueDay`) por cartao para classificar compras na fatura correta. (completed 2026-03-07)
 - [x] **Phase 16: Fluxo de Caixa Consolidado por Fatura** - Substituir exibicao de compras individuais de cartao por lancamentos consolidados de fatura no extrato principal. (completed 2026-03-07)
 - [x] **Phase 17: Tela de Cartao com Lista de Faturas e Drill-down** - Exibir faturas por mes no modulo de cartoes e abrir detalhe para editar despesas individuais. (completed 2026-03-07)
+- [ ] **Phase 18: UX polish da tela de faturas em cartoes** - Refinar hierarquia visual, estados e responsividade do fluxo de faturas no modulo de cartoes.
 
 ## Phase Details
 
@@ -55,6 +57,19 @@ Success criteria:
 3. Edicao de despesa individual e possivel sem sair do contexto de fatura.
 4. Recalculo de total de fatura e reflexo no cashflow acontecem imediatamente apos alteracao.
 
+### Phase 18: UX polish da tela de faturas em cartoes
+
+**Goal**: Melhorar legibilidade, consistencia visual e fluidez de uso da experiencia de faturas no modulo de cartoes, mantendo o comportamento funcional da fase 17.  
+**Depends on**: Phase 17  
+**Requirements**: UXP-01, UXP-02, UXP-03, UXP-04  
+**Plans**: 3 plans
+
+Success criteria:
+1. Lista de faturas possui hierarquia visual clara (mes, cartao, total, selecao ativa).
+2. Detalhe de itens tem leitura mais limpa em desktop e mobile, com acoes evidentes.
+3. Estados vazios/erro/carregamento ficam consistentes e informativos.
+4. Fluxo de edicao no contexto da fatura reduz ambiguidades e cliques desnecessarios.
+
 ## Progress
 
 | Milestone | Phases | Plans | Status | Shipped |
@@ -64,3 +79,4 @@ Success criteria:
 | v1.2 Ui improvements and Import | 10-11 | 6/6 | Complete | 2026-03-03 |
 | v1.3 Autenticacao e Isolamento de Conta | 12-14 | 9/9 | Complete | 2026-03-05 |
 | v1.4 Faturas de Cartao no Fluxo de Caixa | 15-17 | 9/9 | Complete | 2026-03-07 |
+| v1.5 UX de Faturas em Cartoes | 18 | 0/3 | In Progress | — |
