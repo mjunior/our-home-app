@@ -102,13 +102,13 @@ describe("free balance service", () => {
 
     const result = freeBalance.getFreeBalance({ householdId, month: "2026-03" });
 
-    expect(result.freeBalanceCurrent).toBe("3300.00");
+    expect(result.freeBalanceCurrent).toBe("3000.00");
     expect(result.freeBalanceNext).toBe("5500.00");
     expect(result.additionalCardSpendCapacity).toBe("5500.00");
-    expect(result.breakdown.current.gastosOperacionais).toBe("700.00");
+    expect(result.breakdown.current.gastosOperacionais).toBe("1000.00");
     expect(result.breakdown.current.investimentos).toBe("0.00");
-    expect(result.breakdown.current.totalSaidas).toBe("700.00");
-    expect(result.breakdown.next.components.cardInvoiceDue).toBe("300.00");
+    expect(result.breakdown.current.totalSaidas).toBe("1000.00");
+    expect(result.breakdown.current.components.cardInvoiceDue).toBe("300.00");
     expect(result.risk).toBe("GREEN");
   });
 
@@ -134,8 +134,8 @@ describe("free balance service", () => {
 
     const result = freeBalance.getFreeBalance({ householdId, month: "2026-03" });
 
-    expect(result.freeBalanceNext).toBe("-700.00");
-    expect(result.additionalCardSpendCapacity).toBe("-700.00");
+    expect(result.freeBalanceNext).toBe("-1400.00");
+    expect(result.additionalCardSpendCapacity).toBe("-1400.00");
     expect(result.risk).toBe("RED");
     expect(result.topDrivers[0]?.label).toBe("Fatura de cartao");
   });

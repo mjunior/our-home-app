@@ -33,10 +33,6 @@ function monthFromIso(value: string): string {
   return value.slice(0, 7);
 }
 
-function dueMonthFromInvoiceMonth(invoiceMonthKey: string): string {
-  return addMonths(invoiceMonthKey, 1);
-}
-
 function sumDecimals(values: Decimal[]): Decimal {
   return values.reduce((acc, current) => acc.plus(current), new Decimal(0));
 }
@@ -244,9 +240,11 @@ export class FreeBalanceService {
         continue;
       }
 
-      const invoiceMonth =
-        item.invoiceMonthKey ?? this.cycleService.resolveExpenseCycle(item.occurredAt, card.closeDay, card.dueDay).monthKey;
-      charges.push({ monthKey: dueMonthFromInvoiceMonth(invoiceMonth), amount: new Decimal(item.amount) });
+      const dueMonth =
+        item.invoiceDueDate !== null
+          ? monthFromIso(item.invoiceDueDate)
+          : monthFromIso(this.cycleService.resolveExpenseCycle(item.occurredAt, card.closeDay, card.dueDay).dueDate);
+      charges.push({ monthKey: dueMonth, amount: new Decimal(item.amount) });
     }
 
     for (const item of scheduleInstances) {
@@ -254,7 +252,7 @@ export class FreeBalanceService {
         continue;
       }
 
-      charges.push({ monthKey: dueMonthFromInvoiceMonth(item.monthKey), amount: new Decimal(item.amount) });
+      charges.push({ monthKey: item.monthKey, amount: new Decimal(item.amount) });
     }
 
     return charges;

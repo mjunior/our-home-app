@@ -202,7 +202,7 @@ describe("foundation api", () => {
     const result = freeBalanceService.getFreeBalance({ householdId, month: "2026-03" });
 
     expect(result.breakdown.current.month).toBe("2026-03");
-    expect(result.breakdown.next.components.cardInvoiceDue).toBe("250.00");
+    expect(result.breakdown.current.components.cardInvoiceDue).toBe("250.00");
     expect(result.topDrivers.length).toBeGreaterThan(0);
   });
 
