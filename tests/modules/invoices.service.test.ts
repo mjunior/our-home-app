@@ -212,10 +212,49 @@ describe("invoice services", () => {
       categoryId: category.id,
     });
 
-    const due = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-04" });
+    const due = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-03" });
 
     expect(due.total).toBe("400.00");
     expect(due.cards).toHaveLength(1);
     expect(due.cards[0]?.total).toBe("400.00");
+  });
+
+  it("prioritizes persisted invoice cycle fields and keeps fallback for legacy data", () => {
+    const card = cards.createCard({ householdId, name: "Persisted", closeDay: 5, dueDay: 10 });
+    const category = categories.createCategory({ householdId, name: "Tecnologia" });
+
+    transactionsRepo.create({
+      householdId,
+      kind: "EXPENSE",
+      description: "Persistido manualmente",
+      amount: "300.00",
+      occurredAt: "2026-04-04T10:00:00.000Z",
+      accountId: null,
+      creditCardId: card.id,
+      categoryId: category.id,
+      invoiceMonthKey: "2026-06",
+      invoiceDueDate: "2026-06-10T00:00:00.000Z",
+      transferGroupId: null,
+    });
+
+    transactionsRepo.create({
+      householdId,
+      kind: "EXPENSE",
+      description: "Legado sem materializacao",
+      amount: "200.00",
+      occurredAt: "2026-04-04T10:00:00.000Z",
+      accountId: null,
+      creditCardId: card.id,
+      categoryId: category.id,
+      invoiceMonthKey: null,
+      invoiceDueDate: null,
+      transferGroupId: null,
+    });
+
+    const juneDue = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-06" });
+    const aprilDue = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-04" });
+
+    expect(juneDue.total).toBe("300.00");
+    expect(aprilDue.total).toBe("200.00");
   });
 });

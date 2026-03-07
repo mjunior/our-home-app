@@ -3,12 +3,8 @@ import { CardsRepository } from "../cards/cards.repository";
 import { TransactionsRepository } from "../transactions/transactions.repository";
 import { InvoiceCycleService } from "./invoice-cycle.service";
 
-function addMonths(monthKey: string, count: number): string {
-  const [year, month] = monthKey.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1 + count, 1));
-  return `${date.getUTCFullYear().toString().padStart(4, "0")}-${(date.getUTCMonth() + 1)
-    .toString()
-    .padStart(2, "0")}`;
+function monthFromIsoDate(value: string): string {
+  return value.slice(0, 7);
 }
 
 export interface CardInvoicesInput {
@@ -50,10 +46,7 @@ export class InvoicesService {
     const nextAmounts: string[] = [];
 
     for (const expense of cardExpenses) {
-      const cycle =
-        expense.invoiceMonthKey === null
-          ? this.cycleService.resolveExpenseCycle(expense.occurredAt, card.closeDay, card.dueDay)
-          : { monthKey: expense.invoiceMonthKey, dueDate: expense.invoiceDueDate ?? cycles.current.dueDate };
+      const cycle = this.resolveStoredOrLegacyCycle(expense, card.closeDay, card.dueDay);
 
       if (cycle.monthKey === cycles.current.monthKey) {
         currentAmounts.push(expense.amount);
@@ -112,9 +105,8 @@ export class InvoicesService {
         continue;
       }
 
-      const invoiceMonth =
-        expense.invoiceMonthKey ?? this.cycleService.resolveExpenseCycle(expense.occurredAt, card.closeDay, card.dueDay).monthKey;
-      const dueMonth = addMonths(invoiceMonth, 1);
+      const cycle = this.resolveStoredOrLegacyCycle(expense, card.closeDay, card.dueDay);
+      const dueMonth = monthFromIsoDate(cycle.dueDate);
 
       if (dueMonth !== input.dueMonth) {
         continue;
@@ -134,5 +126,24 @@ export class InvoicesService {
       total: sumMoney(cardsDue.map((item) => item.total)),
       cards: cardsDue,
     };
+  }
+
+  private resolveStoredOrLegacyCycle(
+    expense: { occurredAt: string; invoiceMonthKey: string | null; invoiceDueDate: string | null },
+    closeDay: number,
+    dueDay: number,
+  ) {
+    if (expense.invoiceMonthKey && expense.invoiceDueDate) {
+      return { monthKey: expense.invoiceMonthKey, dueDate: expense.invoiceDueDate };
+    }
+
+    if (expense.invoiceMonthKey) {
+      return {
+        monthKey: expense.invoiceMonthKey,
+        dueDate: this.cycleService.resolveExpenseCycle(expense.occurredAt, closeDay, dueDay).dueDate,
+      };
+    }
+
+    return this.cycleService.resolveExpenseCycle(expense.occurredAt, closeDay, dueDay);
   }
 }
