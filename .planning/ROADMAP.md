@@ -10,7 +10,7 @@
 
 ## Phases
 
-- [ ] **Phase 15: Motor de Competencia de Fatura por Fechamento** - Aplicar regra de fechamento (`closeDay`) e vencimento (`dueDay`) por cartao para classificar compras na fatura correta.
+- [x] **Phase 15: Motor de Competencia de Fatura por Fechamento** - Aplicar regra de fechamento (`closeDay`) e vencimento (`dueDay`) por cartao para classificar compras na fatura correta. (completed 2026-03-07)
 - [ ] **Phase 16: Fluxo de Caixa Consolidado por Fatura** - Substituir exibicao de compras individuais de cartao por lancamentos consolidados de fatura no extrato principal.
 - [ ] **Phase 17: Tela de Cartao com Lista de Faturas e Drill-down** - Exibir faturas por mes no modulo de cartoes e abrir detalhe para editar despesas individuais.
 
@@ -63,4 +63,4 @@ Success criteria:
 | v1.1 Lancamentos Unificados e Investimento por Transferencia | 7-9 | 8/8 | Complete | 2026-03-03 |
 | v1.2 Ui improvements and Import | 10-11 | 6/6 | Complete | 2026-03-03 |
 | v1.3 Autenticacao e Isolamento de Conta | 12-14 | 9/9 | Complete | 2026-03-05 |
-| v1.4 Faturas de Cartao no Fluxo de Caixa | 15-17 | 0/9 | In Progress | — |
+| v1.4 Faturas de Cartao no Fluxo de Caixa | 15-17 | 3/9 | In Progress | — |

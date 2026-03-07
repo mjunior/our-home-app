@@ -7,10 +7,10 @@
 
 ### Credit Card Billing Rules
 
-- [ ] **CCB-01**: Compra no cartao com dia do mes menor que `closeDay` entra na fatura do mesmo mes de competencia.
-- [ ] **CCB-02**: Compra no cartao com dia do mes igual ou maior que `closeDay` entra na fatura do mes seguinte.
-- [ ] **CCB-03**: Regra de fechamento e aplicada com `closeDay` configuravel por cartao.
-- [ ] **CCB-04**: Dia de pagamento (`dueDay`) e configuravel por cartao e usado para data de vencimento da fatura no fluxo de caixa.
+- [x] **CCB-01**: Compra no cartao com dia do mes menor que `closeDay` entra na fatura do mesmo mes de competencia.
+- [x] **CCB-02**: Compra no cartao com dia do mes igual ou maior que `closeDay` entra na fatura do mes seguinte.
+- [x] **CCB-03**: Regra de fechamento e aplicada com `closeDay` configuravel por cartao.
+- [x] **CCB-04**: Dia de pagamento (`dueDay`) e configuravel por cartao e usado para data de vencimento da fatura no fluxo de caixa.
 
 ### Cashflow Invoice Projection
 
@@ -46,10 +46,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CCB-01 | Phase 15 | Pending |
-| CCB-02 | Phase 15 | Pending |
-| CCB-03 | Phase 15 | Pending |
-| CCB-04 | Phase 15 | Pending |
+| CCB-01 | Phase 15 | Complete |
+| CCB-02 | Phase 15 | Complete |
+| CCB-03 | Phase 15 | Complete |
+| CCB-04 | Phase 15 | Complete |
 | CFI-01 | Phase 16 | Pending |
 | CFI-02 | Phase 16 | Pending |
 | CFI-03 | Phase 16 | Pending |
@@ -66,4 +66,4 @@
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-06 after milestone v1.4 roadmap creation*
+*Last updated: 2026-03-07 after phase 15 verification*
