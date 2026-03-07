@@ -210,6 +210,7 @@ async function createRecurringInstances(input: {
           creditCardId: input.creditCardId ?? null,
           instanceKey,
           locked: false,
+          settlementStatus: input.accountId ? "UNPAID" : null,
         },
       });
     }
@@ -252,6 +253,7 @@ async function createInstallmentInstances(input: {
           creditCardId: input.creditCardId ?? null,
           instanceKey,
           locked: false,
+          settlementStatus: input.accountId ? "PAID" : null,
         },
       });
     }
@@ -384,6 +386,7 @@ async function loadServices() {
     creditCardId: item.creditCardId,
     instanceKey: item.instanceKey,
     locked: item.locked,
+    settlementStatus: item.settlementStatus ?? null,
   })));
   const invoiceSettlementRepo = new InvoiceSettlementReadRepository(invoiceSettlements.map((item) => ({
     id: item.id,
@@ -567,7 +570,12 @@ export function installViteApi(server: MiddlewareServer) {
         const invoiceSettlements = await prisma.invoiceSettlement.findMany({
           where: {
             householdId,
-            paidAt: { lte: new Date() },
+          },
+        });
+        const scheduledInstances = await prisma.scheduledInstance.findMany({
+          where: {
+            householdId,
+            accountId: { not: null },
           },
         });
 
@@ -583,6 +591,12 @@ export function installViteApi(server: MiddlewareServer) {
             settlement.paymentAccountId,
             (netByAccountId.get(settlement.paymentAccountId) ?? 0) - Number(settlement.paidAmount.toString()),
           );
+        }
+        for (const instance of scheduledInstances) {
+          if (!instance.accountId) continue;
+          if ((instance.settlementStatus ?? "PAID") !== "PAID") continue;
+          const signed = instance.kind === "INCOME" ? Number(instance.amount.toString()) : Number(instance.amount.toString()) * -1;
+          netByAccountId.set(instance.accountId, (netByAccountId.get(instance.accountId) ?? 0) + signed);
         }
 
         const accounts = rows.map((item) => {
@@ -1162,6 +1176,30 @@ export function installViteApi(server: MiddlewareServer) {
         return;
       }
 
+      if (req.method === "POST" && path === "/api/schedules/instances/settlement") {
+        const body = await readJsonBody(req);
+        const existing = await prisma.scheduledInstance.findUnique({ where: { id: body.instanceId } });
+        if (!existing || existing.householdId !== authHouseholdId) {
+          sendJson(res, 404, { message: "SCHEDULE_INSTANCE_NOT_FOUND" });
+          return;
+        }
+        if (!existing.accountId) {
+          sendJson(res, 400, { message: "SCHEDULE_INSTANCE_REQUIRES_ACCOUNT" });
+          return;
+        }
+        if (body.settlementStatus !== "PAID" && body.settlementStatus !== "UNPAID") {
+          sendJson(res, 400, { message: "INVALID_SETTLEMENT_STATUS" });
+          return;
+        }
+
+        const updated = await prisma.scheduledInstance.update({
+          where: { id: existing.id },
+          data: { settlementStatus: body.settlementStatus },
+        });
+        sendJson(res, 200, { ...updated, amount: updated.amount.toString(), occurredAt: updated.occurredAt.toISOString() });
+        return;
+      }
+
       if (req.method === "POST" && path === "/api/schedules/installment") {
         const body = await readJsonBody(req);
         const created = await prisma.installmentPlan.create({
@@ -1295,13 +1333,38 @@ export function installViteApi(server: MiddlewareServer) {
         }
 
         if (body.scope === "ALL") {
+          const householdRules = await prisma.recurringRule.findMany({
+            where: { householdId: authHouseholdId },
+            select: { id: true, revisionOfRuleId: true },
+          });
+          const lineage = new Set<string>([original.id]);
+          let changed = true;
+          while (changed) {
+            changed = false;
+            for (const currentId of Array.from(lineage)) {
+              const current = householdRules.find((item) => item.id === currentId);
+              if (current?.revisionOfRuleId && !lineage.has(current.revisionOfRuleId)) {
+                lineage.add(current.revisionOfRuleId);
+                changed = true;
+              }
+              for (const candidate of householdRules) {
+                if (candidate.revisionOfRuleId === currentId && !lineage.has(candidate.id)) {
+                  lineage.add(candidate.id);
+                  changed = true;
+                }
+              }
+            }
+          }
+          const recurringRuleIds = Array.from(lineage);
           await prisma.scheduledInstance.deleteMany({
             where: {
               sourceType: "RECURRING",
-              sourceId: original.id,
+              sourceId: { in: recurringRuleIds },
             },
           });
-          await prisma.recurringRule.delete({ where: { id: original.id } });
+          await prisma.recurringRule.deleteMany({
+            where: { id: { in: recurringRuleIds } },
+          });
           sendJson(res, 200, { deleted: true, scope: "ALL" });
           return;
         }

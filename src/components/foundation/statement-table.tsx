@@ -18,8 +18,10 @@ export interface StatementEntry {
   sourceLabel?: "Avulso" | "Recorrente" | "Parcela" | "Investimento" | "Fatura";
   sourceType?: "ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT" | "INVOICE";
   sourceId?: string;
+  scheduleInstanceId?: string;
   transferGroupId?: string | null;
   destinationAccountId?: string | null;
+  paymentAccountId?: string | null;
   monthKey?: string;
   sequence?: number;
   settlementStatus?: "PAID" | "UNPAID" | null;
@@ -93,7 +95,10 @@ function SettlementToggle({
       type="button"
       aria-label={checked ? "Marcar como nao pago" : "Marcar como pago"}
       aria-pressed={checked}
-      onClick={onToggle}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
       className={`group inline-flex h-7 w-7 items-center justify-center rounded-[10px] border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/40 ${
         checked
           ? "border-brand-lime/70 bg-brand-lime/20 text-brand-lime shadow-[0_0_0_1px_rgba(194,234,69,0.35),0_8px_18px_rgba(194,234,69,0.25)]"
@@ -129,6 +134,9 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
+
+  const canToggleSettlement = (entry: StatementEntry) =>
+    Boolean(onToggleSettlement) && (entry.sourceType === "INVOICE" || (!!entry.accountId && !entry.transferGroupId));
 
   return (
     <section className="section-reveal">
@@ -173,7 +181,7 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                           }}
                         >
                           <td className="px-3 py-3 align-middle">
-                            {onToggleSettlement && entry.accountId && !entry.transferGroupId ? (
+                            {canToggleSettlement(entry) ? (
                               <SettlementToggle checked={entry.settlementStatus !== "UNPAID"} onToggle={() => onToggleSettlement(entry)} />
                             ) : (
                               <span className="text-xs text-slate-400">—</span>
@@ -269,7 +277,7 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                           {destinationLabel}
                         </Badge>
                       </div>
-                      {onToggleSettlement && entry.accountId && !entry.transferGroupId ? (
+                      {canToggleSettlement(entry) ? (
                         <div className="mt-2">
                           <div className="inline-flex items-center gap-2 text-sm">
                             <SettlementToggle checked={entry.settlementStatus !== "UNPAID"} onToggle={() => onToggleSettlement(entry)} />

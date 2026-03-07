@@ -25,7 +25,7 @@ const categoriesRepo = new CategoriesRepository();
 const transactionsRepo = new TransactionsRepository();
 const scheduleRepo = new ScheduleRepository();
 
-const accountsController = new AccountsController(new AccountsService(accountsRepo, transactionsRepo));
+const accountsController = new AccountsController(new AccountsService(accountsRepo, transactionsRepo, undefined, scheduleRepo));
 const cardsController = new CardsController(new CardsService(cardsRepo));
 const categoriesController = new CategoriesController(new CategoriesService(categoriesRepo));
 const transactionsController = new TransactionsController(
@@ -267,6 +267,39 @@ describe("foundation api", () => {
     expect(consolidated.amount).toBe("1000.00");
     expect(consolidated.accounts).toEqual([
       { id: checking.id, name: "Conta Principal", type: "CHECKING", balance: "1000.00" },
+    ]);
+  });
+
+  it("includes future recurring movement once marked as paid", () => {
+    const checking = accountsController.createAccount({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+
+    scheduleRepo.createInstanceIfMissing({
+      householdId,
+      sourceType: "RECURRING",
+      sourceId: "rule-salary",
+      sequence: 1,
+      monthKey: "2026-04",
+      occurredAt: "2026-04-01T12:00:00.000Z",
+      kind: "INCOME",
+      description: "Adiantamento salario",
+      amount: "500.00",
+      categoryId: "cat-salary",
+      accountId: checking.id,
+      creditCardId: null,
+      instanceKey: "RECURRING:rule-salary:1:2026-04",
+      locked: false,
+      settlementStatus: "PAID",
+    });
+
+    const consolidated = accountsController.getConsolidatedBalance(householdId);
+    expect(consolidated.amount).toBe("1500.00");
+    expect(consolidated.accounts).toEqual([
+      { id: checking.id, name: "Conta Principal", type: "CHECKING", balance: "1500.00" },
     ]);
   });
 });

@@ -297,6 +297,7 @@ describe("invoice services", () => {
       creditCardId: card.id,
       instanceKey: "RECURRING:rule-1:1:2026-03",
       locked: false,
+      settlementStatus: null,
     });
 
     const due = invoices.getDueObligationsByMonth({ householdId, dueMonth: "2026-03" });
@@ -333,6 +334,7 @@ describe("invoice services", () => {
       creditCardId: card.id,
       instanceKey: "INSTALLMENT:installment-1:2:2026-03",
       locked: false,
+      settlementStatus: null,
     });
 
     const details = invoices.getCardInvoiceEntriesByDueMonth({ householdId, cardId: card.id, dueMonth: "2026-03" });

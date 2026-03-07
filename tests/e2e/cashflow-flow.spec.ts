@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -76,7 +76,17 @@ describe("cashflow flow", () => {
     expect(screen.getByText("Saldo previsto")).toBeInTheDocument();
     expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 6.000,00");
 
-    await user.click(screen.getByRole("button", { name: "Marcar como nao pago" }));
+    const invoiceRow = screen.getByText("Fatura Visa Casa").closest("tr");
+    const salaryRow = screen.getByText("Salario").closest("tr");
+    expect(invoiceRow).not.toBeNull();
+    expect(salaryRow).not.toBeNull();
+
+    await user.click(within(invoiceRow!).getByRole("button", { name: "Marcar como pago" }));
+    expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 5.800,00");
+    await user.click(within(invoiceRow!).getByRole("button", { name: "Marcar como nao pago" }));
+    expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 6.000,00");
+
+    await user.click(within(salaryRow!).getByRole("button", { name: "Marcar como nao pago" }));
     expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 1.000,00");
 
     await user.click(screen.getByRole("button", { name: "Abrir composicao do saldo atual" }));

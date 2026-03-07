@@ -155,6 +155,7 @@ model ScheduledInstance {
   creditCardId String?
   instanceKey  String   @unique
   locked       Boolean  @default(false)
+  settlementStatus SettlementStatus?
 
   category   Category    @relation(fields: [categoryId], references: [id])
   account    Account?    @relation(fields: [accountId], references: [id])

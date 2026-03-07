@@ -76,4 +76,8 @@ export class ScheduleManagementController {
   listMonthInstances(payload: { householdId: string; month: string }) {
     return this.service.listMonthInstances(payload.householdId, payload.month);
   }
+
+  updateInstanceSettlement(payload: { instanceId: string; settlementStatus: "PAID" | "UNPAID" }) {
+    return this.service.updateInstanceSettlement(payload);
+  }
 }

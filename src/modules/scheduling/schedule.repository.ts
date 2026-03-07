@@ -47,6 +47,7 @@ export interface ScheduledInstanceRecord {
   creditCardId: string | null;
   instanceKey: string;
   locked: boolean;
+  settlementStatus: "PAID" | "UNPAID" | null;
 }
 
 const installmentPlansStore: InstallmentPlanRecord[] = [];
@@ -125,6 +126,10 @@ export class ScheduleRepository {
 
     Object.assign(target, patch);
     return target;
+  }
+
+  findScheduledInstanceById(id: string): ScheduledInstanceRecord | undefined {
+    return scheduledInstancesStore.find((item) => item.id === id);
   }
 
   listInstancesByHousehold(householdId: string): ScheduledInstanceRecord[] {

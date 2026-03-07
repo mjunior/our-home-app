@@ -43,6 +43,11 @@ const deleteInstallmentSchema = z.object({
   scope: z.enum(["CURRENT_AND_FUTURE", "ALL"]),
 });
 
+const updateInstanceSettlementSchema = z.object({
+  instanceId: z.string().min(1),
+  settlementStatus: z.enum(["PAID", "UNPAID"]),
+});
+
 const unifiedLaunchSchema = z.discriminatedUnion("launchType", [
   z.object({
     launchType: z.literal("ONE_OFF"),
@@ -276,8 +281,11 @@ export class ScheduleManagementService {
     }
 
     if (parsed.scope === "ALL") {
-      this.repository.removeInstancesBySource("RECURRING", rule.id, true);
-      this.repository.removeRecurringRule(rule.id);
+      const relatedRuleIds = this.resolveRecurringLineageRuleIds(rule.id, rule.householdId);
+      for (const relatedRuleId of relatedRuleIds) {
+        this.repository.removeInstancesBySource("RECURRING", relatedRuleId, true);
+        this.repository.removeRecurringRule(relatedRuleId);
+      }
       return { deleted: true, scope: parsed.scope };
     }
 
@@ -319,5 +327,46 @@ export class ScheduleManagementService {
       .listInstancesByHousehold(householdId)
       .filter((item) => item.monthKey === month)
       .sort((a, b) => a.sequence - b.sequence);
+  }
+
+  updateInstanceSettlement(input: { instanceId: string; settlementStatus: "PAID" | "UNPAID" }) {
+    const parsed = updateInstanceSettlementSchema.parse(input);
+    const existing = this.repository.findScheduledInstanceById(parsed.instanceId);
+    if (!existing) {
+      throw new Error("SCHEDULE_INSTANCE_NOT_FOUND");
+    }
+    if (!existing.accountId) {
+      throw new Error("SCHEDULE_INSTANCE_REQUIRES_ACCOUNT");
+    }
+    const instance = this.repository.updateScheduledInstance(parsed.instanceId, {
+      settlementStatus: parsed.settlementStatus,
+    });
+    return instance;
+  }
+
+  private resolveRecurringLineageRuleIds(ruleId: string, householdId: string): string[] {
+    const rules = this.repository.listRecurringRules(householdId);
+    const byId = new Map(rules.map((item) => [item.id, item]));
+    const lineage = new Set<string>([ruleId]);
+
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const currentId of Array.from(lineage)) {
+        const current = byId.get(currentId);
+        if (current?.revisionOfRuleId && !lineage.has(current.revisionOfRuleId)) {
+          lineage.add(current.revisionOfRuleId);
+          changed = true;
+        }
+        for (const candidate of rules) {
+          if (candidate.revisionOfRuleId === currentId && !lineage.has(candidate.id)) {
+            lineage.add(candidate.id);
+            changed = true;
+          }
+        }
+      }
+    }
+
+    return Array.from(lineage);
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CardForm } from "../../../components/foundation/card-form";
 import { Badge } from "../../../components/ui/badge";
@@ -6,6 +6,7 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
+import { launchConfettiCanvas, playCheerSound } from "../../../lib/celebration";
 import { formatCurrencyBR, formatDateShortBR, formatMonthLabelBR } from "../../../lib/utils";
 import {
   accountsController,
@@ -59,6 +60,7 @@ export default function CardsPage() {
   const [editOccurredAt, setEditOccurredAt] = useState("2026-03-01");
   const [editCategoryId, setEditCategoryId] = useState("");
   const [deleteScope, setDeleteScope] = useState<"CURRENT_AND_FUTURE" | "ALL">("CURRENT_AND_FUTURE");
+  const settleDebounceTimers = useRef<Record<string, number>>({});
 
   const { notify } = useSnackbar();
   const householdId = getRuntimeHouseholdId();
@@ -82,6 +84,15 @@ export default function CardsPage() {
       setSelectedInvoiceCardId(monthlyInvoices.cards[0]!.cardId);
     }
   }, [monthlyInvoices.cards, selectedInvoiceCardId]);
+
+  useEffect(() => {
+    return () => {
+      for (const timer of Object.values(settleDebounceTimers.current)) {
+        window.clearTimeout(timer);
+      }
+      settleDebounceTimers.current = {};
+    };
+  }, []);
 
   const invoiceDetails = useMemo(() => {
     if (!selectedInvoiceCardId) {
@@ -216,20 +227,32 @@ export default function CardsPage() {
                                       notify({ message: "Selecione uma conta para pagar a fatura.", tone: "error" });
                                       return;
                                     }
-                                    try {
-                                      invoicesController.settleInvoice({
-                                        householdId,
-                                        cardId: invoice.cardId,
-                                        dueMonth: selectedDueMonth,
-                                        paymentAccountId,
-                                        paidAt: new Date().toISOString(),
-                                        paidAmount: invoice.total,
-                                      });
-                                      setRefreshKey((prev) => prev + 1);
-                                      notify({ message: "Fatura marcada como paga.", tone: "success" });
-                                    } catch {
-                                      notify({ message: "Nao foi possivel pagar a fatura.", tone: "error" });
+                                    playCheerSound();
+                                    launchConfettiCanvas();
+
+                                    const settleKey = `${invoice.cardId}:${selectedDueMonth}`;
+                                    const activeTimer = settleDebounceTimers.current[settleKey];
+                                    if (activeTimer) {
+                                      window.clearTimeout(activeTimer);
                                     }
+                                    settleDebounceTimers.current[settleKey] = window.setTimeout(() => {
+                                      try {
+                                        invoicesController.settleInvoice({
+                                          householdId,
+                                          cardId: invoice.cardId,
+                                          dueMonth: selectedDueMonth,
+                                          paymentAccountId,
+                                          paidAt: new Date().toISOString(),
+                                          paidAmount: invoice.total,
+                                        });
+                                        setRefreshKey((prev) => prev + 1);
+                                        notify({ message: "Fatura marcada como paga.", tone: "success" });
+                                      } catch {
+                                        notify({ message: "Nao foi possivel pagar a fatura.", tone: "error" });
+                                      } finally {
+                                        delete settleDebounceTimers.current[settleKey];
+                                      }
+                                    }, 260);
                                   }}
                                 >
                                   Marcar paga

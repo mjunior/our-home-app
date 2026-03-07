@@ -90,6 +90,7 @@ export class RecurrenceService {
         creditCardId: rule.creditCardId,
         instanceKey,
         locked: false,
+        settlementStatus: rule.accountId ? "UNPAID" : null,
       });
     }
   }

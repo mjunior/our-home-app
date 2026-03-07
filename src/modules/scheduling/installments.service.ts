@@ -84,6 +84,7 @@ export class InstallmentsService {
         creditCardId: plan.creditCardId,
         instanceKey,
         locked: false,
+        settlementStatus: plan.accountId ? "PAID" : null,
       });
     }
   }

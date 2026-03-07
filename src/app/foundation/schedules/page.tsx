@@ -61,6 +61,15 @@ export default function SchedulesPage() {
             notify({ message: "Nao foi possivel encerrar a recorrencia.", tone: "error" });
           }
         }}
+        onDeleteRecurring={(payload) => {
+          try {
+            scheduleManagementController.deleteRecurringSchedule(payload);
+            setRefreshKey((prev) => prev + 1);
+            notify({ message: "Recorrencia excluida com sucesso.", tone: "success" });
+          } catch {
+            notify({ message: "Nao foi possivel excluir a recorrencia.", tone: "error" });
+          }
+        }}
       />
     </main>
   );

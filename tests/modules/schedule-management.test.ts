@@ -80,6 +80,38 @@ describe("schedule management", () => {
     expect(stoppedRule.active).toBe(false);
   });
 
+  it("updates settlement status for account recurring instance", () => {
+    const repository = new ScheduleRepository();
+    repository.clearAll();
+
+    const engine = new ScheduleEngineService();
+    const management = new ScheduleManagementService(
+      repository,
+      new InstallmentsService(repository, engine),
+      new RecurrenceService(repository, engine),
+      engine,
+    );
+
+    const rule = management.createRecurringSchedule({
+      householdId,
+      kind: "INCOME",
+      description: "Salario",
+      amount: "1000.00",
+      startMonth: "2026-03",
+      categoryId: "cat-1",
+      accountId: "acc-1",
+    });
+
+    const instance = repository.listInstancesBySource("RECURRING", rule.id)[0]!;
+    expect(instance.settlementStatus).toBe("UNPAID");
+
+    const updated = management.updateInstanceSettlement({
+      instanceId: instance.id,
+      settlementStatus: "PAID",
+    });
+    expect(updated.settlementStatus).toBe("PAID");
+  });
+
   it("creates one-off launch via unified contract", () => {
     const accountsRepo = new AccountsRepository();
     const cardsRepo = new CardsRepository();
@@ -247,6 +279,41 @@ describe("schedule management", () => {
 
     expect(repository.findRecurringRuleById(rule.id)).toBeUndefined();
     expect(repository.listInstancesBySource("RECURRING", rule.id)).toHaveLength(0);
+  });
+
+  it("deletes entire recurring revision chain when scope is ALL", () => {
+    const repository = new ScheduleRepository();
+    repository.clearAll();
+
+    const engine = new ScheduleEngineService();
+    const installments = new InstallmentsService(repository, engine);
+    const recurrence = new RecurrenceService(repository, engine);
+    const management = new ScheduleManagementService(repository, installments, recurrence, engine);
+
+    const original = management.createRecurringSchedule({
+      householdId,
+      kind: "EXPENSE",
+      description: "Condominio",
+      amount: "300.00",
+      startMonth: "2026-03",
+      categoryId: "cat-1",
+      accountId: "acc-1",
+    });
+
+    const revised = management.editRecurringSchedule({
+      ruleId: original.id,
+      effectiveMonth: "2026-05",
+      amount: "350.00",
+    });
+
+    management.deleteRecurringSchedule({
+      ruleId: revised.id,
+      fromMonth: "2026-05",
+      scope: "ALL",
+    });
+
+    expect(repository.listRecurringRules(householdId)).toHaveLength(0);
+    expect(repository.listInstancesByHousehold(householdId)).toHaveLength(0);
   });
 
   it("deletes current and future recurring even when future instances are locked", () => {

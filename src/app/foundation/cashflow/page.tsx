@@ -9,7 +9,7 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
-import { playCashRegisterSound } from "../../../lib/celebration";
+import { launchConfettiCanvas, playCashRegisterSound, playCheerSound } from "../../../lib/celebration";
 import { formatCurrencyBR, formatMonthLabelBR } from "../../../lib/utils";
 import {
   accountsController,
@@ -135,6 +135,8 @@ export default function CashflowPage() {
         categoryId: "__invoice__",
         accountId: null,
         creditCardId: item.cardId,
+        settlementStatus: item.paid ? ("PAID" as const) : ("UNPAID" as const),
+        paymentAccountId: item.paymentAccountId ?? null,
         sourceLabel: "Fatura" as const,
         sourceType: "INVOICE" as const,
       };
@@ -221,6 +223,8 @@ export default function CashflowPage() {
         categoryId: "__invoice__",
         accountId: null,
         creditCardId: cardId,
+        settlementStatus: "UNPAID",
+        paymentAccountId: null,
         sourceLabel: "Fatura",
         sourceType: "INVOICE",
       });
@@ -384,11 +388,36 @@ export default function CashflowPage() {
           setEditModalOpen(true);
         }}
         onToggleSettlement={(entry) => {
-          if (!entry.accountId || entry.transferGroupId) {
-            return;
-          }
           try {
-            if (entry.sourceType === "RECURRING" || entry.sourceType === "INSTALLMENT") {
+            if (entry.sourceType === "INVOICE") {
+              if (!entry.creditCardId) {
+                throw new Error("INVOICE_CARD_NOT_FOUND");
+              }
+              const dueMonth = entry.occurredAt.slice(0, 7);
+              const nextStatus = entry.settlementStatus === "UNPAID" ? "PAID" : "UNPAID";
+              if (nextStatus === "PAID") {
+                const paymentAccountId = entry.paymentAccountId ?? accounts[0]?.id;
+                if (!paymentAccountId) {
+                  throw new Error("PAYMENT_ACCOUNT_REQUIRED");
+                }
+                invoicesController.settleInvoice({
+                  householdId,
+                  cardId: entry.creditCardId,
+                  dueMonth,
+                  paymentAccountId,
+                  paidAt: new Date().toISOString(),
+                  paidAmount: entry.amount,
+                });
+                playCheerSound();
+                launchConfettiCanvas();
+              } else {
+                invoicesController.unsettleInvoice({
+                  householdId,
+                  cardId: entry.creditCardId,
+                  dueMonth,
+                });
+              }
+            } else if ((entry.sourceType === "RECURRING" || entry.sourceType === "INSTALLMENT") && entry.accountId && !entry.transferGroupId) {
               if (!entry.scheduleInstanceId) {
                 throw new Error("SCHEDULE_INSTANCE_NOT_FOUND");
               }
@@ -400,7 +429,7 @@ export default function CashflowPage() {
               if (nextStatus === "PAID") {
                 playCashRegisterSound();
               }
-            } else {
+            } else if (entry.accountId && !entry.transferGroupId) {
               const nextStatus = entry.settlementStatus === "UNPAID" ? "PAID" : "UNPAID";
               transactionsController.updateTransaction({
                 id: entry.id,
@@ -416,6 +445,8 @@ export default function CashflowPage() {
               if (nextStatus === "PAID") {
                 playCashRegisterSound();
               }
+            } else {
+              return;
             }
             setRefreshKey((prev) => prev + 1);
             notify({ message: "Status de quitacao atualizado.", tone: "success" });

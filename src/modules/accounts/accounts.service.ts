@@ -14,6 +14,16 @@ interface InvoiceSettlementLike {
 interface InvoiceSettlementReadRepositoryLike {
   listByHousehold(householdId: string): InvoiceSettlementLike[];
 }
+interface ScheduledInstanceLike {
+  accountId: string | null;
+  kind: "INCOME" | "EXPENSE";
+  amount: string;
+  occurredAt: string;
+  settlementStatus: "PAID" | "UNPAID" | null;
+}
+interface ScheduledInstanceReadRepositoryLike {
+  listInstancesByHousehold(householdId: string): ScheduledInstanceLike[];
+}
 
 const accountInputSchema = z.object({
   householdId: z.string().min(1),
@@ -34,6 +44,7 @@ export class AccountsService {
     private readonly repository: AccountsRepository,
     private readonly transactionsRepository?: TransactionsRepository,
     private readonly invoiceSettlementRepository?: InvoiceSettlementReadRepositoryLike,
+    private readonly scheduledInstanceRepository?: ScheduledInstanceReadRepositoryLike,
   ) {}
 
   create(input: CreateAccountInput) {
@@ -68,14 +79,20 @@ export class AccountsService {
       netByAccountId.set(item.accountId, (netByAccountId.get(item.accountId) ?? 0) + signed);
     }
 
-    const nowIso = new Date().toISOString();
     const settlements = this.invoiceSettlementRepository?.listByHousehold(householdId) ?? [];
     for (const settlement of settlements) {
-      if (settlement.paidAt > nowIso) continue;
       netByAccountId.set(
         settlement.paymentAccountId,
         (netByAccountId.get(settlement.paymentAccountId) ?? 0) - Number(settlement.paidAmount),
       );
+    }
+
+    const scheduledInstances = this.scheduledInstanceRepository?.listInstancesByHousehold(householdId) ?? [];
+    for (const instance of scheduledInstances) {
+      if (!instance.accountId) continue;
+      if ((instance.settlementStatus ?? "PAID") !== "PAID") continue;
+      const signed = instance.kind === "INCOME" ? Number(instance.amount) : Number(instance.amount) * -1;
+      netByAccountId.set(instance.accountId, (netByAccountId.get(instance.accountId) ?? 0) + signed);
     }
 
     const accountRows = accounts.map((item) => {

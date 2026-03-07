@@ -100,5 +100,8 @@ describe("schedules flow", () => {
     await user.click(screen.getByRole("button", { name: "Encerrar recorrencia" }));
 
     expect(screen.getAllByText(/inativa/).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: /Excluir recorrencia \(tudo\)/i }));
+    expect(screen.queryAllByText(/Academia/i)).toHaveLength(0);
   });
 });

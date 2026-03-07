@@ -35,16 +35,16 @@ interface ScheduleListProps {
   instances: InstanceListItem[];
   onEditRecurring: (payload: { ruleId: string; effectiveMonth: string; amount?: string; description?: string }) => void;
   onStopRecurring: (payload: { ruleId: string; stopFromMonth: string }) => void;
+  onDeleteRecurring: (payload: { ruleId: string; fromMonth: string; scope: "CURRENT_AND_FUTURE" | "ALL" }) => void;
 }
 
-export function ScheduleList({ installments, recurrences, instances, onEditRecurring, onStopRecurring }: ScheduleListProps) {
-  const activeRules = recurrences.filter((item) => item.active);
-  const [selectedRuleId, setSelectedRuleId] = useState<string>(activeRules[0]?.id ?? "");
+export function ScheduleList({ installments, recurrences, instances, onEditRecurring, onStopRecurring, onDeleteRecurring }: ScheduleListProps) {
+  const [selectedRuleId, setSelectedRuleId] = useState<string>(recurrences[0]?.id ?? "");
   const [editDescription, setEditDescription] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [effectiveMonth, setEffectiveMonth] = useState("2026-03");
   const [stopFromMonth, setStopFromMonth] = useState("2026-03");
-  const selectedRule = activeRules.find((item) => item.id === selectedRuleId) ?? activeRules[0];
+  const selectedRule = recurrences.find((item) => item.id === selectedRuleId) ?? recurrences[0];
 
   useEffect(() => {
     if (!selectedRule) return;
@@ -90,7 +90,7 @@ export function ScheduleList({ installments, recurrences, instances, onEditRecur
               <label>
                 Regra ativa
                 <select value={selectedRuleId} onChange={(event) => setSelectedRuleId(event.target.value)}>
-                  {activeRules.map((rule) => (
+                  {recurrences.map((rule) => (
                     <option key={rule.id} value={rule.id}>
                       {rule.description}
                     </option>
@@ -140,6 +140,21 @@ export function ScheduleList({ installments, recurrences, instances, onEditRecur
                 }
               >
                 Encerrar recorrencia
+              </Button>
+            </div>
+            <div className="mt-2">
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() =>
+                  onDeleteRecurring({
+                    ruleId: selectedRule.id,
+                    fromMonth: selectedRule.startMonth,
+                    scope: "ALL",
+                  })
+                }
+              >
+                Excluir recorrencia (tudo)
               </Button>
             </div>
           </div>

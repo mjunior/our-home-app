@@ -58,6 +58,7 @@ type ScheduleManagementControllerContract = Pick<
   | "createLaunchBatch"
   | "listSchedules"
   | "listMonthInstances"
+  | "updateInstanceSettlement"
   | "editRecurringSchedule"
   | "editInstallmentSchedule"
   | "deleteRecurringSchedule"
@@ -130,7 +131,7 @@ function createLocalRuntime(): Runtime {
   const scheduleEngine = new ScheduleEngineService();
 
   const accountsController = new AccountsController(
-    new AccountsService(accountsRepository, transactionsRepository, invoiceSettlementRepository),
+    new AccountsService(accountsRepository, transactionsRepository, invoiceSettlementRepository, scheduleRepository),
   );
   const cardsController = new CardsController(new CardsService(cardsRepository));
   const categoriesController = new CategoriesController(new CategoriesService(categoriesRepository));
@@ -235,6 +236,8 @@ function createApiRuntime(): Runtime {
   type SchedulesListOutput = MethodReturn<Runtime["scheduleManagementController"]["listSchedules"]>;
   type SchedulesMonthInstancesInput = MethodArgs<Runtime["scheduleManagementController"]["listMonthInstances"]>[0];
   type SchedulesMonthInstancesOutput = MethodReturn<Runtime["scheduleManagementController"]["listMonthInstances"]>;
+  type SchedulesInstanceSettlementInput = MethodArgs<Runtime["scheduleManagementController"]["updateInstanceSettlement"]>[0];
+  type SchedulesInstanceSettlementOutput = MethodReturn<Runtime["scheduleManagementController"]["updateInstanceSettlement"]>;
   type RecurringEditInput = MethodArgs<Runtime["scheduleManagementController"]["editRecurringSchedule"]>[0];
   type RecurringEditOutput = MethodReturn<Runtime["scheduleManagementController"]["editRecurringSchedule"]>;
   type InstallmentEditInput = MethodArgs<Runtime["scheduleManagementController"]["editInstallmentSchedule"]>[0];
@@ -397,6 +400,8 @@ function createApiRuntime(): Runtime {
         requestSync<SchedulesListOutput>("GET", "/api/schedules"),
       listMonthInstances: (input: SchedulesMonthInstancesInput): SchedulesMonthInstancesOutput =>
         requestSync<SchedulesMonthInstancesOutput>("GET", `/api/schedules/instances?month=${encodeURIComponent(input.month)}`),
+      updateInstanceSettlement: (input: SchedulesInstanceSettlementInput): SchedulesInstanceSettlementOutput =>
+        requestSync<SchedulesInstanceSettlementOutput>("POST", "/api/schedules/instances/settlement", input),
       editRecurringSchedule: (input: RecurringEditInput): RecurringEditOutput =>
         requestSync<RecurringEditOutput>("POST", "/api/schedules/recurring/edit", input),
       editInstallmentSchedule: (input: InstallmentEditInput): InstallmentEditOutput =>
