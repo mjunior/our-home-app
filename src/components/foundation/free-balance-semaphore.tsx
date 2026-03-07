@@ -6,7 +6,8 @@ import { formatCurrencyBR } from "../../lib/utils";
 import type { FreeBalanceRiskLevel } from "../../modules/free-balance/free-balance.types";
 
 interface FreeBalanceSemaphoreProps {
-  freeBalanceCurrent: string;
+  currentBalance: string;
+  currentProjectedBalance: string;
   freeBalanceNext: string;
   gastosOperacionais: string;
   investimentos: string;
@@ -26,7 +27,8 @@ const stylesByRisk: Record<
 };
 
 export function FreeBalanceSemaphore({
-  freeBalanceCurrent,
+  currentBalance,
+  currentProjectedBalance,
   freeBalanceNext,
   gastosOperacionais,
   investimentos,
@@ -58,9 +60,16 @@ export function FreeBalanceSemaphore({
               <CircleHelp className="h-4 w-4" />
             </Button>
           </div>
-          <p className="mt-1 text-lg font-bold">{formatCurrencyBR(freeBalanceCurrent)}</p>
+          <p className="mt-1 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">Saldo</p>
+          <p data-testid="current-real-balance" className="text-lg font-bold">
+            {formatCurrencyBR(currentBalance)}
+          </p>
+          <p className="mt-1 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">
+            Saldo previsto
+          </p>
+          <p className="text-base font-semibold text-slate-700 dark:text-slate-200">{formatCurrencyBR(currentProjectedBalance)}</p>
           <p data-testid="free-balance-current" className="sr-only">
-            {formatCurrencyBR(freeBalanceCurrent)}
+            {formatCurrencyBR(currentProjectedBalance)}
           </p>
         </article>
 

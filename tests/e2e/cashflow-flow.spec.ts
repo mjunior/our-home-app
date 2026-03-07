@@ -73,6 +73,17 @@ describe("cashflow flow", () => {
     expect(screen.getByText("Entrada")).toBeInTheDocument();
     expect(screen.getByText("Saida")).toBeInTheDocument();
     expect(screen.getByText("Cartao: Visa Casa")).toBeInTheDocument();
+    expect(screen.getByText("Saldo previsto")).toBeInTheDocument();
+    expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 6.000,00");
+
+    await user.click(screen.getByRole("button", { name: "Marcar como nao pago" }));
+    expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 1.000,00");
+
+    await user.click(screen.getByRole("button", { name: "Detalhar saldo livre do mes atual" }));
+    expect(screen.getByText("Detalhamento do saldo atual - Mes atual")).toBeInTheDocument();
+    expect(screen.getByText("Conta Casa")).toBeInTheDocument();
+    expect(screen.getByText("Reserva Invest")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     await user.selectOptions(screen.getByLabelText("Filtro de origem"), "INVOICE");
     expect(screen.getByText("Fatura Visa Casa")).toBeInTheDocument();

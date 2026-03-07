@@ -9,6 +9,7 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
+import { playCashRegisterSound } from "../../../lib/celebration";
 import { formatCurrencyBR, formatMonthLabelBR } from "../../../lib/utils";
 import {
   accountsController,
@@ -67,6 +68,10 @@ export default function CashflowPage() {
   const householdId = getRuntimeHouseholdId();
 
   const accounts = useMemo(() => accountsController.listAccounts(householdId), [refreshKey, householdId]);
+  const consolidatedBalance = useMemo(
+    () => accountsController.getConsolidatedBalance(householdId),
+    [refreshKey, householdId],
+  );
   const cards = useMemo(() => cardsController.listCards(householdId), [refreshKey, householdId]);
   const categories = useMemo(() => categoriesController.listCategories(householdId), [refreshKey, householdId]);
 
@@ -170,19 +175,21 @@ export default function CashflowPage() {
     const scheduled = scheduleInstances
       .filter((item) => item.creditCardId === null)
       .map((item) => ({
-      id: `schedule:${item.id}`,
-      kind: item.kind,
-      description: item.sourceType === "INSTALLMENT" ? `${item.description} (${item.sequence})` : item.description,
-      amount: item.amount,
-      occurredAt: item.occurredAt,
-      monthKey: item.monthKey,
-      sourceId: item.sourceId,
-      sequence: item.sequence,
-      categoryId: item.categoryId,
-      accountId: item.accountId,
-      creditCardId: item.creditCardId,
-      sourceLabel: item.sourceType === "INSTALLMENT" ? ("Parcela" as const) : ("Recorrente" as const),
-      sourceType: item.sourceType,
+        id: `schedule:${item.id}`,
+        scheduleInstanceId: item.id,
+        kind: item.kind,
+        description: item.sourceType === "INSTALLMENT" ? `${item.description} (${item.sequence})` : item.description,
+        amount: item.amount,
+        occurredAt: item.occurredAt,
+        monthKey: item.monthKey,
+        sourceId: item.sourceId,
+        sequence: item.sequence,
+        categoryId: item.categoryId,
+        accountId: item.accountId,
+        creditCardId: item.creditCardId,
+        settlementStatus: item.settlementStatus ?? (item.accountId ? "PAID" : null),
+        sourceLabel: item.sourceType === "INSTALLMENT" ? ("Parcela" as const) : ("Recorrente" as const),
+        sourceType: item.sourceType,
       }));
 
     const scheduledCardDueByCard = new Map<string, number>();
@@ -311,7 +318,8 @@ export default function CashflowPage() {
       </Card>
 
       <FreeBalanceSemaphore
-        freeBalanceCurrent={freeBalance.freeBalanceCurrent}
+        currentBalance={consolidatedBalance.amount}
+        currentProjectedBalance={freeBalance.freeBalanceCurrent}
         freeBalanceNext={freeBalance.freeBalanceNext}
         gastosOperacionais={freeBalance.breakdown.current.gastosOperacionais}
         investimentos={freeBalance.breakdown.current.investimentos}
@@ -376,21 +384,39 @@ export default function CashflowPage() {
           setEditModalOpen(true);
         }}
         onToggleSettlement={(entry) => {
-          if (!entry.accountId || entry.sourceType !== "ONE_OFF") {
+          if (!entry.accountId || entry.transferGroupId) {
             return;
           }
           try {
-            transactionsController.updateTransaction({
-              id: entry.id,
-              householdId: householdId,
-              kind: entry.kind,
-              description: entry.description,
-              amount: entry.amount,
-              occurredAt: entry.occurredAt,
-              categoryId: entry.categoryId,
-              accountId: entry.accountId,
-              settlementStatus: entry.settlementStatus === "UNPAID" ? "PAID" : "UNPAID",
-            });
+            if (entry.sourceType === "RECURRING" || entry.sourceType === "INSTALLMENT") {
+              if (!entry.scheduleInstanceId) {
+                throw new Error("SCHEDULE_INSTANCE_NOT_FOUND");
+              }
+              const nextStatus = entry.settlementStatus === "UNPAID" ? "PAID" : "UNPAID";
+              scheduleManagementController.updateInstanceSettlement({
+                instanceId: entry.scheduleInstanceId,
+                settlementStatus: nextStatus,
+              });
+              if (nextStatus === "PAID") {
+                playCashRegisterSound();
+              }
+            } else {
+              const nextStatus = entry.settlementStatus === "UNPAID" ? "PAID" : "UNPAID";
+              transactionsController.updateTransaction({
+                id: entry.id,
+                householdId: householdId,
+                kind: entry.kind,
+                description: entry.description,
+                amount: entry.amount,
+                occurredAt: entry.occurredAt,
+                categoryId: entry.categoryId,
+                accountId: entry.accountId,
+                settlementStatus: nextStatus,
+              });
+              if (nextStatus === "PAID") {
+                playCashRegisterSound();
+              }
+            }
             setRefreshKey((prev) => prev + 1);
             notify({ message: "Status de quitacao atualizado.", tone: "success" });
           } catch {
@@ -460,9 +486,13 @@ export default function CashflowPage() {
         <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[85vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
           <SheetHeader>
             <SheetTitle>
-              Detalhamento do saldo livre - {detailMonthKey === "current" ? "Mes atual" : "Proximo mes"}
+              {detailMonthKey === "current" ? "Detalhamento do saldo atual - Mes atual" : "Detalhamento do saldo livre - Proximo mes"}
             </SheetTitle>
-            <SheetDescription>Transparencia completa dos componentes usados no calculo.</SheetDescription>
+            <SheetDescription>
+              {detailMonthKey === "current"
+                ? "Composicao do saldo real por conta no momento atual."
+                : "Transparencia completa dos componentes usados no calculo da projecao."}
+            </SheetDescription>
           </SheetHeader>
 
           <Card className="mt-4">
@@ -474,24 +504,33 @@ export default function CashflowPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {Object.entries(
-                detailMonthKey === "current"
-                  ? freeBalance.breakdown.current.components
-                  : freeBalance.breakdown.next.components,
-              ).map(([label, value]) => (
-                <div key={label} className="row-animate flex items-center justify-between rounded-xl px-2 py-1.5 text-sm">
-                  <span className="text-slate-500 dark:text-slate-300">{breakdownLabels[label] ?? label}</span>
-                  <strong>{formatCurrencyBR(value)}</strong>
-                </div>
-              ))}
+              {detailMonthKey === "current"
+                ? consolidatedBalance.accounts.map((account) => (
+                  <div key={account.id} className="row-animate flex items-center justify-between rounded-xl px-2 py-1.5 text-sm">
+                    <span className="text-slate-500 dark:text-slate-300">{account.name}</span>
+                    <strong>{formatCurrencyBR(account.balance)}</strong>
+                  </div>
+                ))
+                : Object.entries(freeBalance.breakdown.next.components).map(([label, value]) => (
+                  <div key={label} className="row-animate flex items-center justify-between rounded-xl px-2 py-1.5 text-sm">
+                    <span className="text-slate-500 dark:text-slate-300">{breakdownLabels[label] ?? label}</span>
+                    <strong>{formatCurrencyBR(value)}</strong>
+                  </div>
+                ))}
               <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-sm dark:border-slate-700">
-                <span>Saldo livre final</span>
+                <span>{detailMonthKey === "current" ? "Saldo atual consolidado" : "Saldo livre final"}</span>
                 <strong>
                   {formatCurrencyBR(
-                    detailMonthKey === "current" ? freeBalance.breakdown.current.freeBalance : freeBalance.breakdown.next.freeBalance,
+                    detailMonthKey === "current" ? consolidatedBalance.amount : freeBalance.breakdown.next.freeBalance,
                   )}
                 </strong>
               </div>
+              {detailMonthKey === "current" ? (
+                <div className="mt-2 flex items-center justify-between rounded-xl border border-slate-200 px-2 py-1.5 text-xs dark:border-slate-700">
+                  <span className="text-slate-500 dark:text-slate-300">Saldo previsto do mes atual</span>
+                  <strong>{formatCurrencyBR(freeBalance.freeBalanceCurrent)}</strong>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </SheetContent>

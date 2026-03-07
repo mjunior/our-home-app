@@ -68,7 +68,7 @@ describe("free balance dashboard", () => {
     expect(screen.queryByText("Pode aumentar no cartao")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Detalhar saldo livre do mes atual" }));
-    expect(screen.getByText("Detalhamento do saldo livre - Mes atual")).toBeInTheDocument();
+    expect(screen.getByText("Detalhamento do saldo atual - Mes atual")).toBeInTheDocument();
   });
 
   it("renders red risk when next month projection becomes negative", async () => {
