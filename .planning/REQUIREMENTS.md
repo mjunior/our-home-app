@@ -1,67 +1,63 @@
 # Requirements: Nosso Lar Financeiro
 
-**Defined:** 2026-03-05
+**Defined:** 2026-03-06
 **Core Value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
 
 ## v1 Requirements
 
-### Authentication
+### Credit Card Billing Rules
 
-- [x] **AUTH-01**: Usuario pode criar conta com email e senha na rota `/n-account`.
-- [x] **AUTH-02**: Usuario pode autenticar com email e senha validos.
-- [x] **AUTH-03**: Sessao autenticada persiste entre refresh e reinicio da aba.
-- [x] **AUTH-04**: Credenciais invalidas retornam erro claro sem expor detalhes sensiveis.
+- [ ] **CCB-01**: Compra no cartao com dia do mes menor que `closeDay` entra na fatura do mesmo mes de competencia.
+- [ ] **CCB-02**: Compra no cartao com dia do mes igual ou maior que `closeDay` entra na fatura do mes seguinte.
+- [ ] **CCB-03**: Regra de fechamento e aplicada com `closeDay` configuravel por cartao.
+- [ ] **CCB-04**: Dia de pagamento (`dueDay`) e configuravel por cartao e usado para data de vencimento da fatura no fluxo de caixa.
 
-### Access Control and Data Isolation
+### Cashflow Invoice Projection
 
-- [x] **SECU-01**: Toda rota da aplicacao, exceto `/login` e `/n-account`, exige autenticacao.
-- [x] **SECU-02**: Usuario autenticado so consegue consultar transacoes, contas, cartoes e categorias do proprio `userId`.
-- [x] **SECU-03**: Usuario autenticado so consegue criar/editar/excluir dados financeiros vinculados ao proprio `userId`.
-- [x] **SECU-04**: Tentativas de acesso cruzado entre contas retornam erro de autorizacao sem vazar existencia de dados.
+- [ ] **CFI-01**: Extrato principal do cashflow nao exibe despesas individuais de cartao de credito.
+- [ ] **CFI-02**: Extrato principal exibe lancamento consolidado `Fatura [Cartao]` por cartao e competencia.
+- [ ] **CFI-03**: Lancamento de fatura no cashflow ocorre no dia de pagamento (`dueDay`) do cartao para o mes correspondente.
+- [ ] **CFI-04**: Total da fatura consolidada considera todas as despesas de cartao daquela competencia, respeitando edicoes/exclusoes.
 
-### Login Experience
+### Card Invoices View
 
-- [x] **UX-01**: Rota raiz `/` exibe pagina de login como entrada principal do produto.
-- [x] **UX-02**: Pagina `/login` e a unica rota nao autenticada com link de navegacao visivel para usuarios finais.
-- [x] **UX-03**: Paginas `/` e `/login` usam `noindex` para nao indexacao em buscadores.
-- [x] **UX-04**: Nao existe link publico entre `/login` e `/n-account` no frontend.
+- [ ] **CIV-01**: Tela de cartao exibe lista simples de faturas por mes com total consolidado.
+- [ ] **CIV-02**: Usuario consegue abrir uma fatura e visualizar despesas individuais vinculadas.
+- [ ] **CIV-03**: A partir da fatura aberta, usuario consegue editar despesa individual com mesmo fluxo atual de edicao.
+- [ ] **CIV-04**: Alteracao em despesa individual atualiza imediatamente o total da fatura e a projecao consolidada do cashflow.
 
 ## v2 Requirements
 
-### Account Management
+### Credit Card Enhancements
 
-- **AUTH-05**: Usuario pode recuperar senha por email com token de expiracao.
-- **AUTH-06**: Usuario pode alterar senha dentro da area autenticada.
-
-### Governance
-
-- **SECU-05**: Usuario pode convidar outro membro da familia com permissao limitada.
-- **SECU-06**: Sistema registra trilha de auditoria para acessos e mudancas criticas.
+- **CCX-01**: Registrar pagamento parcial de fatura com saldo remanescente.
+- **CCX-02**: Simular juros de rotativo e parcelamento da fatura.
+- **CCX-03**: Notificar vencimento de fatura por push/email.
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Login social (Google/Apple) | Aumenta complexidade de integracao sem necessidade imediata |
-| Cadastro publico descobrivel em navegacao principal | Requisito atual pede rota isolada para testes controlados |
-| Controle de papeis (admin/colaborador/leitor) | Primeiro corte exige apenas isolamento por conta |
+| Importacao automatica de extrato da operadora do cartao | Exige integracoes externas e credenciais, fora do foco de logica interna |
+| Split de uma mesma compra entre faturas | Regra complexa sem demanda atual validada |
+| Multi-moeda em cartao | Dominio atual opera em BRL |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 12 | Complete (2026-03-05) |
-| AUTH-02 | Phase 12 | Complete (2026-03-05) |
-| AUTH-03 | Phase 12 | Complete (2026-03-05) |
-| AUTH-04 | Phase 12 | Complete (2026-03-05) |
-| SECU-01 | Phase 13 | Complete (2026-03-05) |
-| SECU-02 | Phase 13 | Complete (2026-03-05) |
-| SECU-03 | Phase 13 | Complete (2026-03-05) |
-| SECU-04 | Phase 13 | Complete (2026-03-05) |
-| UX-01 | Phase 14 | Complete (2026-03-05) |
-| UX-02 | Phase 14 | Complete (2026-03-05) |
-| UX-03 | Phase 14 | Complete (2026-03-05) |
-| UX-04 | Phase 14 | Complete (2026-03-05) |
+| CCB-01 | Phase 15 | Pending |
+| CCB-02 | Phase 15 | Pending |
+| CCB-03 | Phase 15 | Pending |
+| CCB-04 | Phase 15 | Pending |
+| CFI-01 | Phase 16 | Pending |
+| CFI-02 | Phase 16 | Pending |
+| CFI-03 | Phase 16 | Pending |
+| CFI-04 | Phase 16 | Pending |
+| CIV-01 | Phase 17 | Pending |
+| CIV-02 | Phase 17 | Pending |
+| CIV-03 | Phase 17 | Pending |
+| CIV-04 | Phase 17 | Pending |
 
 **Coverage:**
 - v1 requirements: 12 total
@@ -69,5 +65,5 @@
 - Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after milestone v1.3 roadmap creation*
+*Requirements defined: 2026-03-06*
+*Last updated: 2026-03-06 after milestone v1.4 roadmap creation*

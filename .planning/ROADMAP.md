@@ -5,55 +5,55 @@
 - ✅ **v1.0 MVP Finance Core** — Phases 1-4.2 (shipped 2026-03-03) — detalhes: `.planning/milestones/v1.0-ROADMAP.md`
 - ✅ **v1.1 Lancamentos Unificados e Investimento por Transferencia** — Phases 7-9 (shipped 2026-03-03) — detalhes: `.planning/milestones/v1.1-ROADMAP.md`
 - ✅ **v1.2 Ui improvements and Import** — Phases 10-11 (shipped 2026-03-03) — detalhes: `.planning/milestones/v1.2-ROADMAP.md`
-- ◆ **v1.3 Autenticacao e Isolamento de Conta** — Phases 12-14 (in progress)
+- ✅ **v1.3 Autenticacao e Isolamento de Conta** — Phases 12-14 (shipped 2026-03-05)
+- ◆ **v1.4 Faturas de Cartao no Fluxo de Caixa** — Phases 15-17 (in progress)
 
 ## Phases
 
-- [x] **Phase 12: Fundacao de Autenticacao (email/senha)** - Introduzir modelo de usuario, credenciais seguras e sessao autenticada para login. (completed 2026-03-05)
-- [x] **Phase 13: Isolamento de Dados e Guardas de Acesso** - Aplicar escopo obrigatorio por `userId` no backend e bloquear rotas privadas para anonimos. (completed 2026-03-05)
-- [x] **Phase 14: UX de Login e Cadastro Isolado** - Entregar pagina de login premium non-index na raiz e rota `/n-account` sem navegacao publica. (completed 2026-03-05)
+- [ ] **Phase 15: Motor de Competencia de Fatura por Fechamento** - Aplicar regra de fechamento (`closeDay`) e vencimento (`dueDay`) por cartao para classificar compras na fatura correta.
+- [ ] **Phase 16: Fluxo de Caixa Consolidado por Fatura** - Substituir exibicao de compras individuais de cartao por lancamentos consolidados de fatura no extrato principal.
+- [ ] **Phase 17: Tela de Cartao com Lista de Faturas e Drill-down** - Exibir faturas por mes no modulo de cartoes e abrir detalhe para editar despesas individuais.
 
 ## Phase Details
 
-### Phase 12: Fundacao de Autenticacao (email/senha)
+### Phase 15: Motor de Competencia de Fatura por Fechamento
 
-**Goal**: Criar base tecnica de autenticacao com cadastro email/senha e sessao persistente.  
-**Depends on**: Phase 11  
-**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04  
+**Goal**: Garantir classificacao correta de compras de cartao em faturas por mes de competencia com regra de fechamento inclusiva e vencimento configuravel.  
+**Depends on**: Phase 14  
+**Requirements**: CCB-01, CCB-02, CCB-03, CCB-04  
 **Plans**: 3 plans
 
 Success criteria:
-1. Usuario consegue criar conta com email e senha validos sem duplicidade de email.
-2. Login com credenciais corretas cria sessao reutilizavel apos refresh.
-3. Senha e armazenada em hash forte e nunca retorna em respostas de API.
-4. Erros de login/cadastro sao padronizados sem revelar informacoes sensiveis.
+1. Compra realizada antes do `closeDay` entra na fatura da competencia corrente.
+2. Compra realizada no `closeDay` entra na fatura da competencia seguinte.
+3. Compra realizada depois do `closeDay` entra na fatura da competencia seguinte.
+4. Cada cartao respeita seu proprio `closeDay` e `dueDay` configurados.
 
-### Phase 13: Isolamento de Dados e Guardas de Acesso
+### Phase 16: Fluxo de Caixa Consolidado por Fatura
 
-**Goal**: Garantir segregacao total entre contas e controle de acesso em todas as rotas privadas.  
-**Depends on**: Phase 12  
-**Requirements**: SECU-01, SECU-02, SECU-03, SECU-04  
+**Goal**: Tornar o extrato do cashflow operacional, exibindo obrigacao de pagamento por cartao (fatura) em vez de cada compra individual.  
+**Depends on**: Phase 15  
+**Requirements**: CFI-01, CFI-02, CFI-03, CFI-04  
 **Plans**: 3 plans
 
 Success criteria:
-1. Rotas privadas retornam `401` quando nao autenticado.
-2. Todas as operacoes financeiras leem e escrevem apenas dados do `userId` da sessao.
-3. Tentativas de acesso a dados de outra conta falham com `403/404` sem vazamento.
-4. Testes cobrem casos positivos e negativos de isolamento multi-conta.
+1. Extrato principal nao mostra compras individuais de cartao.
+2. Extrato principal mostra `Fatura [Cartao]` consolidada por competencia.
+3. Data de exibicao da fatura no extrato usa `dueDay` do cartao.
+4. Total da fatura reflete inclusoes, edicoes e exclusoes de compras vinculadas.
 
-### Phase 14: UX de Login e Cadastro Isolado
+### Phase 17: Tela de Cartao com Lista de Faturas e Drill-down
 
-**Goal**: Ajustar navegacao e apresentacao para fluxo de entrada seguro e alinhado ao contexto familiar.  
-**Depends on**: Phase 13  
-**Requirements**: UX-01, UX-02, UX-03, UX-04  
+**Goal**: Entregar visao dedicada de cartao com lista de faturas e acesso ao detalhe de despesas para manutencao individual.  
+**Depends on**: Phase 16  
+**Requirements**: CIV-01, CIV-02, CIV-03, CIV-04  
 **Plans**: 3 plans
-**Gap Closure**: Fecha os gaps da auditoria `v1.3-MILESTONE-AUDIT.md` (requirements + integration + flows).
 
 Success criteria:
-1. `/` abre login como landing principal com visual polido e identidade de controle familiar.
-2. Metadados de `/` e `/login` configurados com noindex.
-3. Rota `/n-account` funciona para criacao de conta, mas nao aparece em links da UI.
-4. Usuario autenticado e redirecionado para area principal sem acessar telas anonimas.
+1. Modulo de cartoes lista faturas mensais com total consolidado.
+2. Clique na fatura abre detalhe com despesas individuais.
+3. Edicao de despesa individual e possivel sem sair do contexto de fatura.
+4. Recalculo de total de fatura e reflexo no cashflow acontecem imediatamente apos alteracao.
 
 ## Progress
 
@@ -63,3 +63,4 @@ Success criteria:
 | v1.1 Lancamentos Unificados e Investimento por Transferencia | 7-9 | 8/8 | Complete | 2026-03-03 |
 | v1.2 Ui improvements and Import | 10-11 | 6/6 | Complete | 2026-03-03 |
 | v1.3 Autenticacao e Isolamento de Conta | 12-14 | 9/9 | Complete | 2026-03-05 |
+| v1.4 Faturas de Cartao no Fluxo de Caixa | 15-17 | 0/9 | In Progress | — |

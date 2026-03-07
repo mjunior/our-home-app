@@ -1,33 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Autenticacao e Isolamento de Conta
+milestone: v1.4
+milestone_name: Faturas de Cartao no Fluxo de Caixa
 status: in_progress
-last_updated: "2026-03-05T23:50:00.000Z"
+last_updated: "2026-03-06T23:59:00.000Z"
 progress:
   total_phases: 3
-  completed_phases: 3
+  completed_phases: 0
   total_plans: 9
-  completed_plans: 9
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-05)
+See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
-**Current focus:** fase 14 concluida; pronto para re-auditar milestone v1.3.
+**Current focus:** planejamento da fase 15 (motor de competencia de fatura por fechamento).
 
 ## Current Position
 
-Phase: Milestone closeout (v1.3)
+Phase: Not started (definindo execucao v1.4)
 Plan: —
-Status: Ready for milestone re-audit
-Last activity: 2026-03-05 — fase 14 concluida com root login-first, noindex e hardening de navegacao publica.
+Status: Requirements e roadmap definidos para v1.4
+Last activity: 2026-03-06 — milestone v1.4 iniciado com foco em faturas de cartao no cashflow.
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
@@ -37,17 +37,18 @@ Progress: [██████████] 100%
 - Investimentos permanecem modelados como transferencia interna atomica.
 - Importacao textual adota parser deterministico e persistencia parcial com relatorio de erros.
 - Autenticacao email/senha e isolamento por `userId` sao pre-condicao para evolucao multi-conta.
+- Fatura de cartao substitui compras individuais no extrato principal do cashflow.
 
 ### Pending Todos
 
-- Rodar re-audit da milestone (`$gsd-audit-milestone`).
+- Planejar fase 15 com `$gsd-plan-phase 15`.
 
 ### Blockers/Concerns
 
-- Sem blockers ativos para fechamento da milestone.
+- Assuncao aplicada em v1.4: exibicao da fatura no cashflow usa `dueDay` (pagamento/vencimento), enquanto `closeDay` define apenas competencia.
 
 ## Session Continuity
 
-Last session: 2026-03-05
-Stopped at: Phase 14 completed
+Last session: 2026-03-06
+Stopped at: Milestone v1.4 initialized
 Resume file: .planning/ROADMAP.md

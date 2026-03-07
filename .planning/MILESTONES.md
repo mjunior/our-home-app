@@ -1,5 +1,17 @@
 # Milestones
 
+## v1.3 Autenticacao e Isolamento de Conta (Shipped: 2026-03-05)
+
+**Phases completed:** 3 phases, 9 plans
+
+**Key accomplishments:**
+- Cadastro e login com email/senha e sessao persistente.
+- Isolamento estrito de dados financeiros por `userId` em leitura e escrita.
+- Guardas de acesso para bloquear rotas privadas sem autenticacao.
+- Login-first na raiz e rota de cadastro isolada.
+
+---
+
 ## v1.2 Ui improvements and Import (Shipped: 2026-03-03)
 
 **Phases completed:** 2 phases, 6 plans, 12 tasks
