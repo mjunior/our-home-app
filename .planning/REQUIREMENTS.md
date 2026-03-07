@@ -14,10 +14,10 @@
 
 ### Cashflow Invoice Projection
 
-- [ ] **CFI-01**: Extrato principal do cashflow nao exibe despesas individuais de cartao de credito.
-- [ ] **CFI-02**: Extrato principal exibe lancamento consolidado `Fatura [Cartao]` por cartao e competencia.
-- [ ] **CFI-03**: Lancamento de fatura no cashflow ocorre no dia de pagamento (`dueDay`) do cartao para o mes correspondente.
-- [ ] **CFI-04**: Total da fatura consolidada considera todas as despesas de cartao daquela competencia, respeitando edicoes/exclusoes.
+- [x] **CFI-01**: Extrato principal do cashflow nao exibe despesas individuais de cartao de credito.
+- [x] **CFI-02**: Extrato principal exibe lancamento consolidado `Fatura [Cartao]` por cartao e competencia.
+- [x] **CFI-03**: Lancamento de fatura no cashflow ocorre no dia de pagamento (`dueDay`) do cartao para o mes correspondente.
+- [x] **CFI-04**: Total da fatura consolidada considera todas as despesas de cartao daquela competencia, respeitando edicoes/exclusoes.
 
 ### Card Invoices View
 
@@ -50,10 +50,10 @@
 | CCB-02 | Phase 15 | Complete |
 | CCB-03 | Phase 15 | Complete |
 | CCB-04 | Phase 15 | Complete |
-| CFI-01 | Phase 16 | Pending |
-| CFI-02 | Phase 16 | Pending |
-| CFI-03 | Phase 16 | Pending |
-| CFI-04 | Phase 16 | Pending |
+| CFI-01 | Phase 16 | Complete |
+| CFI-02 | Phase 16 | Complete |
+| CFI-03 | Phase 16 | Complete |
+| CFI-04 | Phase 16 | Complete |
 | CIV-01 | Phase 17 | Pending |
 | CIV-02 | Phase 17 | Pending |
 | CIV-03 | Phase 17 | Pending |
@@ -66,4 +66,4 @@
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-07 after phase 15 verification*
+*Last updated: 2026-03-07 after phase 16 verification*
