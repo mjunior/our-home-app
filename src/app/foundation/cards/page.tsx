@@ -95,10 +95,15 @@ export default function CardsPage() {
     }
   }, [householdId, refreshKey, selectedDueMonth, selectedInvoiceCardId]);
 
+  const selectedInvoiceSummary = monthlyInvoices.cards.find((item) => item.cardId === selectedInvoiceCardId) ?? null;
+
   return (
     <main className="space-y-4">
       <section className="section-reveal flex items-center justify-between gap-3">
-        <h1>Cartoes</h1>
+        <div className="space-y-1">
+          <h1>Cartoes</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-300">Faturas mensais com detalhe operacional das despesas.</p>
+        </div>
         <Badge variant="secondary">Foundation</Badge>
       </section>
 
@@ -118,8 +123,8 @@ export default function CardsPage() {
         <CardHeader>
           <CardTitle>Faturas do mes {selectedDueMonth}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-2">
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" onClick={() => setSelectedDueMonth((prev) => addMonths(prev, -1))}>
               Mes anterior
             </Button>
@@ -129,99 +134,122 @@ export default function CardsPage() {
             </Button>
           </div>
 
-          {monthlyInvoices.cards.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-300">Nenhuma fatura encontrada para o mes selecionado.</p>
-          ) : (
-            <ul className="space-y-2">
-              {monthlyInvoices.cards.map((invoice) => (
-                <li key={`${invoice.cardId}:${selectedDueMonth}`}>
-                  <button
-                    type="button"
-                    className={`w-full rounded-xl border p-3 text-left ${
-                      selectedInvoiceCardId === invoice.cardId
-                        ? "border-brand-lime ring-1 ring-brand-lime/40"
-                        : "border-slate-200 dark:border-slate-800"
-                    }`}
-                    onClick={() => setSelectedInvoiceCardId(invoice.cardId)}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-medium">Fatura {invoice.cardName}</span>
-                      <strong>{formatCurrencyBR(invoice.total)}</strong>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="grid gap-3 lg:grid-cols-[360px_1fr]">
+            <Card className="border-slate-200/70 dark:border-slate-700/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Lista de faturas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {monthlyInvoices.cards.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-300">
+                    Nenhuma fatura encontrada para o mes selecionado.
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {monthlyInvoices.cards.map((invoice) => (
+                      <li key={`${invoice.cardId}:${selectedDueMonth}`}>
+                        <button
+                          type="button"
+                          className={`w-full rounded-xl border p-3 text-left transition ${
+                            selectedInvoiceCardId === invoice.cardId
+                              ? "border-brand-lime bg-brand-lime/10 ring-1 ring-brand-lime/40"
+                              : "border-slate-200 bg-slate-50/70 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950/70 dark:hover:border-slate-700"
+                          }`}
+                          onClick={() => setSelectedInvoiceCardId(invoice.cardId)}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-medium">Fatura {invoice.cardName}</span>
+                            <strong>{formatCurrencyBR(invoice.total)}</strong>
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Vencimento: dia {invoice.dueDay}</p>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200/70 dark:border-slate-700/70">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-base">
+                    {selectedInvoiceSummary
+                      ? `Detalhe da fatura: ${selectedInvoiceSummary.cardName}`
+                      : "Detalhe da fatura"}
+                  </CardTitle>
+                  {selectedInvoiceSummary ? <Badge variant="outline">{formatCurrencyBR(selectedInvoiceSummary.total)}</Badge> : null}
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0 text-sm text-slate-600 dark:text-slate-300">
+                {!selectedInvoiceCardId ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-300">
+                    Selecione uma fatura na lista para visualizar os itens.
+                  </div>
+                ) : !invoiceDetails ? (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                    Nao foi possivel carregar os itens desta fatura. Tente atualizar a pagina.
+                  </div>
+                ) : invoiceDetails.entries.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-300">
+                    Esta fatura nao possui transacoes no periodo.
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {invoiceDetails.entries.map((entry) => (
+                      <li
+                        key={entry.id}
+                        className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/70"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 space-y-1">
+                            <p className="truncate font-medium text-slate-900 dark:text-slate-100">{entry.description}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {formatDateShortBR(entry.occurredAt)} - {categoryLabels[entry.categoryId] ?? "Sem categoria"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-slate-900 dark:text-slate-100">{formatCurrencyBR(entry.amount)}</p>
+                            <Badge variant="outline" className="mt-1 normal-case tracking-normal">
+                              {entry.sourceType === "ONE_OFF"
+                                ? "Avulso"
+                                : entry.sourceType === "RECURRING"
+                                  ? "Recorrente"
+                                  : "Parcela"}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            aria-label="Editar item da fatura"
+                            onClick={() => {
+                              setEditMode(entry.sourceType);
+                              setEditingEntryId(entry.sourceType === "ONE_OFF" ? entry.id : null);
+                              setEditingSourceId(entry.sourceType !== "ONE_OFF" ? entry.sourceId : null);
+                              setEditingSourceMonth(entry.monthKey ?? selectedDueMonth);
+                              setEditDescription(entry.description);
+                              setEditAmount(entry.amount);
+                              setEditOccurredAt(entry.occurredAt.slice(0, 10));
+                              setEditCategoryId(entry.categoryId);
+                              setDeleteScope("CURRENT_AND_FUTURE");
+                              setEditModalOpen(true);
+                            }}
+                          >
+                            Editar
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </CardContent>
       </Card>
-
-      {invoiceDetails ? (
-        <Card className="section-reveal">
-          <CardHeader>
-            <CardTitle>
-              Detalhe da fatura: {invoiceDetails.cardName} ({selectedDueMonth})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-0 text-sm text-slate-600 dark:text-slate-300">
-            <p className="font-medium text-slate-700 dark:text-slate-200">Total: {formatCurrencyBR(invoiceDetails.total)}</p>
-
-            {invoiceDetails.entries.length === 0 ? (
-              <p>Nenhuma transacao encontrada para esta fatura.</p>
-            ) : (
-              <ul className="space-y-2">
-                {invoiceDetails.entries.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/70"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1">
-                        <p className="font-medium text-slate-900 dark:text-slate-100">{entry.description}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {formatDateShortBR(entry.occurredAt)} - {categoryLabels[entry.categoryId] ?? "Sem categoria"}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-slate-900 dark:text-slate-100">{formatCurrencyBR(entry.amount)}</p>
-                        <Badge variant="outline" className="mt-1 normal-case tracking-normal">
-                          {entry.sourceType === "ONE_OFF"
-                            ? "Avulso"
-                            : entry.sourceType === "RECURRING"
-                              ? "Recorrente"
-                              : "Parcela"}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        aria-label="Editar item da fatura"
-                        onClick={() => {
-                          setEditMode(entry.sourceType);
-                          setEditingEntryId(entry.sourceType === "ONE_OFF" ? entry.id : null);
-                          setEditingSourceId(entry.sourceType !== "ONE_OFF" ? entry.sourceId : null);
-                          setEditingSourceMonth(entry.monthKey ?? selectedDueMonth);
-                          setEditDescription(entry.description);
-                          setEditAmount(entry.amount);
-                          setEditOccurredAt(entry.occurredAt.slice(0, 10));
-                          setEditCategoryId(entry.categoryId);
-                          setDeleteScope("CURRENT_AND_FUTURE");
-                          setEditModalOpen(true);
-                        }}
-                      >
-                        Editar
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      ) : null}
 
       <Card className="section-reveal">
         <CardHeader>
@@ -268,10 +296,14 @@ export default function CardsPage() {
       </Card>
 
       <Sheet open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[85vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
+        <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[88vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
           <SheetHeader>
             <SheetTitle>Editar item da fatura</SheetTitle>
-            <SheetDescription>Atualize os dados e salve para recalcular os totais da fatura.</SheetDescription>
+            <SheetDescription>
+              {selectedInvoiceSummary
+                ? `${selectedInvoiceSummary.cardName} - ${formatMonthLabelBR(selectedDueMonth)}`
+                : "Atualize os dados e salve para recalcular os totais."}
+            </SheetDescription>
           </SheetHeader>
 
           <form
@@ -361,17 +393,21 @@ export default function CardsPage() {
             ) : (
               <label>
                 Escopo de exclusao
-                <select aria-label="Escopo de exclusao" value={deleteScope} onChange={(event) => setDeleteScope(event.target.value as "CURRENT_AND_FUTURE" | "ALL")}>
+                <select
+                  aria-label="Escopo de exclusao"
+                  value={deleteScope}
+                  onChange={(event) => setDeleteScope(event.target.value as "CURRENT_AND_FUTURE" | "ALL")}
+                >
                   <option value="CURRENT_AND_FUTURE">Excluir atual + futuras</option>
                   <option value="ALL">Excluir todas (inclui antigas)</option>
                 </select>
               </label>
             )}
 
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="rounded-xl bg-slate-100/80 p-2 text-xs text-slate-600 dark:bg-slate-900/70 dark:text-slate-300">
               {editMode === "ONE_OFF"
                 ? "Esta edicao altera apenas o item selecionado."
-                : "Esta edicao altera o mes atual selecionado e todas as ocorrencias futuras."}
+                : "Esta edicao altera o mes selecionado e todas as ocorrencias futuras."}
             </p>
 
             <div className="grid grid-cols-2 gap-3">
