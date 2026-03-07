@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: controle-de-pagamentos-e-saldo-atual
-status: completed
-last_updated: "2026-03-07T00:40:00.000Z"
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-07T03:57:57.261Z"
 progress:
-  total_phases: 21
-  completed_phases: 21
-  total_plans: 61
-  completed_plans: 61
+  total_phases: 22
+  completed_phases: 22
+  total_plans: 62
+  completed_plans: 62
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
-**Current focus:** milestone v1.6 concluido; pronto para proximo milestone.
+**Current focus:** milestone v1.6 concluido apos gap closure 21.1; pronto para proximo milestone.
 
 ## Current Position
 
-Phase: 21 - card mes atual com saldo real + drill-down por conta
+Phase: 21.1 - gap closure do clique no saldo para drill-down
 Plan: concluido
-Status: Fase 21 concluida e verificada.
-Last activity: 2026-03-07 — fase 21 executada com saldo atual x previsto separado e detalhamento por conta.
+Status: Fase 21.1 concluida e verificada.
+Last activity: 2026-03-07 — gap BAL-03 fechado com clique no proprio saldo abrindo detalhamento por conta.
 
 Progress: [██████████] 100% do milestone v1.6
 
@@ -40,6 +40,7 @@ Progress: [██████████] 100% do milestone v1.6
 - Transacoes de conta agora aceitam settlementStatus (`PAID`/`UNPAID`) com impacto direto no saldo operacional.
 - Faturas de cartao podem ser quitadas/desquitadas por (`cardId`, `dueMonth`) com conta pagadora e data de pagamento.
 - Card de mes atual passou a separar `Saldo` real de `Saldo previsto`, com drill-down por conta no clique.
+- Gap closure 21.1 reforcou entrada principal pelo clique no proprio `Saldo` (mantendo atalho auxiliar).
 
 ### Roadmap Evolution
 
@@ -49,6 +50,7 @@ Progress: [██████████] 100% do milestone v1.6
 - Phase 19 completed: modelo de quitacao para lancamentos em conta
 - Phase 20 completed: quitacao de fatura consolidada por conta de pagamento
 - Phase 21 completed: saldo atual x previsto e composicao por conta
+- Phase 21.1 completed: fechamento do gap BAL-03 (gatilho de drill-down no saldo)
 
 ### Pending Todos
 
@@ -61,5 +63,5 @@ Progress: [██████████] 100% do milestone v1.6
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: phase 21 concluida e validada
-Resume file: .planning/phases/21-card-mes-atual-com-saldo-real-drill-down-por-conta/21-VERIFICATION.md
+Stopped at: phase 21.1 concluida e validada
+Resume file: .planning/phases/21.1-gap-closure-do-clique-no-saldo-para-drill-down/21.1-VERIFICATION.md
