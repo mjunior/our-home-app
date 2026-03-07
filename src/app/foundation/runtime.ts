@@ -26,7 +26,7 @@ import { TransactionsService } from "../../modules/transactions/transactions.ser
 type MethodArgs<T> = T extends (...args: infer A) => unknown ? A : never;
 type MethodReturn<T> = T extends (...args: any[]) => infer R ? R : never;
 type AccountsControllerContract = Pick<AccountsController, "createAccount" | "listAccounts" | "getConsolidatedBalance">;
-type CardsControllerContract = Pick<CardsController, "createCard" | "listCards">;
+type CardsControllerContract = Pick<CardsController, "createCard" | "listCards" | "updateCard">;
 type CategoriesControllerContract = Pick<CategoriesController, "createCategory" | "listCategories">;
 type TransactionsControllerContract = Pick<
   TransactionsController,
@@ -166,6 +166,8 @@ function createApiRuntime(): Runtime {
 
   type CardsCreateInput = MethodArgs<Runtime["cardsController"]["createCard"]>[0];
   type CardsCreateOutput = MethodReturn<Runtime["cardsController"]["createCard"]>;
+  type CardsUpdateInput = MethodArgs<Runtime["cardsController"]["updateCard"]>[0];
+  type CardsUpdateOutput = MethodReturn<Runtime["cardsController"]["updateCard"]>;
   type CardsListOutput = MethodReturn<Runtime["cardsController"]["listCards"]>;
 
   type CategoriesCreateInput = MethodArgs<Runtime["categoriesController"]["createCategory"]>[0];
@@ -231,6 +233,13 @@ function createApiRuntime(): Runtime {
     cardsController: {
       createCard: (input: CardsCreateInput): CardsCreateOutput =>
         requestSync<CardsCreateOutput>("POST", "/api/cards", {
+          name: input.name,
+          closeDay: input.closeDay,
+          dueDay: input.dueDay,
+        }),
+      updateCard: (input: CardsUpdateInput): CardsUpdateOutput =>
+        requestSync<CardsUpdateOutput>("POST", "/api/cards/edit", {
+          id: input.id,
           name: input.name,
           closeDay: input.closeDay,
           dueDay: input.dueDay,

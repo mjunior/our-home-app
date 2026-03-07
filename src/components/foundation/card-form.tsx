@@ -8,19 +8,26 @@ export interface CardFormValues {
 
 interface CardFormProps {
   onSubmit: (values: CardFormValues) => void;
+  initialValues?: CardFormValues;
+  submitLabel?: string;
+  onCancel?: () => void;
 }
 
-export function CardForm({ onSubmit }: CardFormProps) {
-  const [name, setName] = useState("");
-  const [closeDay, setCloseDay] = useState(5);
-  const [dueDay, setDueDay] = useState(12);
+export function CardForm({ onSubmit, initialValues, submitLabel = "Adicionar cartao", onCancel }: CardFormProps) {
+  const [name, setName] = useState(initialValues?.name ?? "");
+  const [closeDay, setCloseDay] = useState(initialValues?.closeDay ?? 5);
+  const [dueDay, setDueDay] = useState(initialValues?.dueDay ?? 12);
 
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit({ name, closeDay, dueDay });
-        setName("");
+        if (!initialValues) {
+          setName("");
+          setCloseDay(5);
+          setDueDay(12);
+        }
       }}
     >
       <label>
@@ -45,7 +52,8 @@ export function CardForm({ onSubmit }: CardFormProps) {
           onChange={(event) => setDueDay(Number(event.target.value))}
         />
       </label>
-      <button type="submit">Adicionar cartao</button>
+      <button type="submit">{submitLabel}</button>
+      {onCancel ? <button type="button" onClick={onCancel}>Cancelar</button> : null}
     </form>
   );
 }
