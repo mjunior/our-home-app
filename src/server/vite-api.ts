@@ -244,6 +244,7 @@ function toTransactionDto(row: any) {
     categoryId: row.categoryId,
     invoiceMonthKey: row.invoiceMonthKey,
     invoiceDueDate: row.invoiceDueDate ? row.invoiceDueDate.toISOString() : null,
+    settlementStatus: row.settlementStatus ?? null,
     transferGroupId: row.transferGroupId ?? null,
   };
 }
@@ -291,6 +292,7 @@ async function createInvestmentTransfer(body: any, authHouseholdId: string) {
         categoryId: body.categoryId,
         invoiceMonthKey: null,
         invoiceDueDate: null,
+        settlementStatus: "PAID",
         transferGroupId,
       },
     }),
@@ -306,6 +308,7 @@ async function createInvestmentTransfer(body: any, authHouseholdId: string) {
         categoryId: body.categoryId,
         invoiceMonthKey: null,
         invoiceDueDate: null,
+        settlementStatus: "PAID",
         transferGroupId,
       },
     }),
@@ -522,6 +525,7 @@ export function installViteApi(server: MiddlewareServer) {
         const netByAccountId = new Map<string, number>();
         for (const item of transactions) {
           if (!item.accountId) continue;
+          if ((item.settlementStatus ?? "PAID") !== "PAID") continue;
           const signed = item.kind === "INCOME" ? Number(item.amount.toString()) : Number(item.amount.toString()) * -1;
           netByAccountId.set(item.accountId, (netByAccountId.get(item.accountId) ?? 0) + signed);
         }
@@ -659,6 +663,7 @@ export function installViteApi(server: MiddlewareServer) {
             categoryId: body.categoryId,
             invoiceMonthKey: invoiceFields.invoiceMonthKey,
             invoiceDueDate: invoiceFields.invoiceDueDate,
+            settlementStatus: body.accountId ? body.settlementStatus ?? "PAID" : null,
             transferGroupId: null,
           },
         });
@@ -696,6 +701,7 @@ export function installViteApi(server: MiddlewareServer) {
             categoryId: body.categoryId,
             invoiceMonthKey: invoiceFields.invoiceMonthKey,
             invoiceDueDate: invoiceFields.invoiceDueDate,
+            settlementStatus: body.accountId ? body.settlementStatus ?? "PAID" : null,
           },
         });
 
@@ -789,6 +795,7 @@ export function installViteApi(server: MiddlewareServer) {
               categoryId: body.categoryId,
               invoiceMonthKey: null,
               invoiceDueDate: null,
+              settlementStatus: "PAID",
             },
           }),
           prisma.transaction.update({
@@ -803,6 +810,7 @@ export function installViteApi(server: MiddlewareServer) {
               categoryId: body.categoryId,
               invoiceMonthKey: null,
               invoiceDueDate: null,
+              settlementStatus: "PAID",
             },
           }),
         ]);
@@ -854,6 +862,7 @@ export function installViteApi(server: MiddlewareServer) {
               categoryId: transaction.categoryId,
               invoiceMonthKey: invoiceFields.invoiceMonthKey,
               invoiceDueDate: invoiceFields.invoiceDueDate,
+              settlementStatus: transaction.accountId ? transaction.settlementStatus ?? "PAID" : null,
               transferGroupId: null,
             },
           });

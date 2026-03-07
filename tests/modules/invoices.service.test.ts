@@ -239,6 +239,7 @@ describe("invoice services", () => {
       categoryId: category.id,
       invoiceMonthKey: "2026-06",
       invoiceDueDate: "2026-06-10T00:00:00.000Z",
+      settlementStatus: null,
       transferGroupId: null,
     });
 
@@ -253,6 +254,7 @@ describe("invoice services", () => {
       categoryId: category.id,
       invoiceMonthKey: null,
       invoiceDueDate: null,
+      settlementStatus: null,
       transferGroupId: null,
     });
 

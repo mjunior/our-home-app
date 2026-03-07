@@ -1,6 +1,7 @@
 import { createId } from "../../domain/shared/id";
 
 export type TransactionKind = "INCOME" | "EXPENSE";
+export type SettlementStatus = "PAID" | "UNPAID";
 
 export interface TransactionRecord {
   id: string;
@@ -14,6 +15,7 @@ export interface TransactionRecord {
   categoryId: string;
   invoiceMonthKey: string | null;
   invoiceDueDate: string | null;
+  settlementStatus: SettlementStatus | null;
   transferGroupId: string | null;
 }
 

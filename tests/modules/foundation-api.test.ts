@@ -242,4 +242,31 @@ describe("foundation api", () => {
       { id: investment.id, name: "Reserva", type: "INVESTMENT", balance: "250.00" },
     ]);
   });
+
+  it("ignores unpaid account movements in consolidated balance", () => {
+    const checking = accountsController.createAccount({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const category = categoriesController.createCategory({ householdId, name: "Casa" });
+
+    transactionsController.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Conta de luz",
+      amount: "120.00",
+      occurredAt: "2026-03-10T12:00:00.000Z",
+      accountId: checking.id,
+      categoryId: category.id,
+      settlementStatus: "UNPAID",
+    });
+
+    const consolidated = accountsController.getConsolidatedBalance(householdId);
+    expect(consolidated.amount).toBe("1000.00");
+    expect(consolidated.accounts).toEqual([
+      { id: checking.id, name: "Conta Principal", type: "CHECKING", balance: "1000.00" },
+    ]);
+  });
 });

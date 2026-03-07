@@ -28,6 +28,7 @@ export type UnifiedLaunchPayload =
         categoryId: string;
         accountId?: string;
         creditCardId?: string;
+        settlementStatus?: "PAID" | "UNPAID";
       };
     }
   | {
@@ -98,6 +99,7 @@ export function UnifiedLaunchForm({
   const [startMonth, setStartMonth] = useState("2026-03");
   const [installmentsCount, setInstallmentsCount] = useState(2);
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  const [settlementStatus, setSettlementStatus] = useState<"PAID" | "UNPAID">("PAID");
   const checkingAccounts = useMemo(() => accounts.filter((item) => item.type === "CHECKING"), [accounts]);
   const investmentAccounts = useMemo(() => accounts.filter((item) => item.type === "INVESTMENT"), [accounts]);
   const [investmentSourceId, setInvestmentSourceId] = useState(checkingAccounts[0]?.id ?? "");
@@ -166,6 +168,7 @@ export function UnifiedLaunchForm({
                   categoryId: resolvedCategoryId,
                   accountId,
                   creditCardId,
+                  settlementStatus: accountId ? settlementStatus : undefined,
                 },
               });
             } else if (launchType === "RECURRING") {
@@ -329,6 +332,20 @@ export function UnifiedLaunchForm({
               </label>
             </div>
           )}
+
+          {launchType === "ONE_OFF" && target === "account" ? (
+            <label>
+              Status de quitacao
+              <select
+                aria-label="Status da transacao"
+                value={settlementStatus}
+                onChange={(event) => setSettlementStatus(event.target.value as "PAID" | "UNPAID")}
+              >
+                <option value="PAID">Pago/Recebido</option>
+                <option value="UNPAID">Nao pago/nao recebido</option>
+              </select>
+            </label>
+          ) : null}
 
           <label>
             Categoria da transacao

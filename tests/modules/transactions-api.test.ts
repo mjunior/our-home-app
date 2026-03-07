@@ -77,8 +77,47 @@ describe("transactions api", () => {
     expect(march).toHaveLength(2);
     expect(income.invoiceMonthKey).toBeNull();
     expect(income.invoiceDueDate).toBeNull();
+    expect(income.settlementStatus).toBe("PAID");
     expect(expense.invoiceMonthKey).toBe("2026-03");
     expect(expense.invoiceDueDate).toBe("2026-03-12T00:00:00.000Z");
+    expect(expense.settlementStatus).toBeNull();
+  });
+
+  it("does not apply account movement while transaction is unpaid", () => {
+    const account = accountsController.createAccount({
+      householdId,
+      name: "Conta Casa",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const category = categoriesController.createCategory({ householdId, name: "Casa" });
+
+    const expense = transactionsController.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Boleto",
+      amount: "200.00",
+      occurredAt: "2026-03-02T10:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+      settlementStatus: "UNPAID",
+    });
+
+    expect(expense.settlementStatus).toBe("UNPAID");
+
+    const paid = transactionsController.updateTransaction({
+      id: expense.id,
+      householdId,
+      kind: "EXPENSE",
+      description: "Boleto",
+      amount: "200.00",
+      occurredAt: "2026-03-02T10:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+      settlementStatus: "PAID",
+    });
+
+    expect(paid.settlementStatus).toBe("PAID");
   });
 
   it("recalculates invoice cycle when card expense is edited", () => {

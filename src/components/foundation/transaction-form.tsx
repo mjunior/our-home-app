@@ -17,6 +17,7 @@ export interface TransactionFormValues {
   accountId?: string;
   creditCardId?: string;
   categoryId: string;
+  settlementStatus?: "PAID" | "UNPAID";
 }
 
 interface TransactionFormProps {
@@ -43,6 +44,7 @@ export function TransactionForm({
   const [amount, setAmount] = useState("0,00");
   const [occurredDate, setOccurredDate] = useState("2026-03-01");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  const [settlementStatus, setSettlementStatus] = useState<"PAID" | "UNPAID">("PAID");
 
   const options = target === "account" ? accounts : cards;
 
@@ -83,6 +85,7 @@ export function TransactionForm({
               categoryId,
               accountId: target === "account" ? targetId : undefined,
               creditCardId: target === "card" ? targetId : undefined,
+              settlementStatus: target === "account" ? settlementStatus : undefined,
             });
 
             setDescription("");
@@ -168,6 +171,20 @@ export function TransactionForm({
               ))}
             </select>
           </label>
+
+          {target === "account" ? (
+            <label>
+              Status de quitacao
+              <select
+                aria-label="Status da transacao"
+                value={settlementStatus}
+                onChange={(event) => setSettlementStatus(event.target.value as "PAID" | "UNPAID")}
+              >
+                <option value="PAID">Pago/Recebido</option>
+                <option value="UNPAID">Nao pago/nao recebido</option>
+              </select>
+            </label>
+          ) : null}
 
           {showSubmit ? (
             <Button type="submit" className="w-full">

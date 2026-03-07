@@ -55,6 +55,7 @@ const unifiedLaunchSchema = z.discriminatedUnion("launchType", [
       categoryId: z.string().min(1),
       accountId: z.string().min(1).optional(),
       creditCardId: z.string().min(1).optional(),
+      settlementStatus: z.enum(["PAID", "UNPAID"]).optional(),
     }),
   }),
   z.object({

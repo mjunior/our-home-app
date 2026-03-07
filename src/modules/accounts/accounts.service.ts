@@ -52,6 +52,7 @@ export class AccountsService {
     const netByAccountId = new Map<string, number>();
     for (const item of transactions) {
       if (!item.accountId) continue;
+      if ((item.settlementStatus ?? "PAID") !== "PAID") continue;
       const signed = item.kind === "INCOME" ? Number(item.amount) : Number(item.amount) * -1;
       netByAccountId.set(item.accountId, (netByAccountId.get(item.accountId) ?? 0) + signed);
     }

@@ -60,6 +60,7 @@ export default function CashflowPage() {
   const [editInvestmentSourceId, setEditInvestmentSourceId] = useState("");
   const [editInvestmentDestinationId, setEditInvestmentDestinationId] = useState("");
   const [editCategoryId, setEditCategoryId] = useState("");
+  const [editSettlementStatus, setEditSettlementStatus] = useState<"PAID" | "UNPAID">("PAID");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteScope, setDeleteScope] = useState<"CURRENT_AND_FUTURE" | "ALL">("CURRENT_AND_FUTURE");
   const { notify } = useSnackbar();
@@ -371,7 +372,30 @@ export default function CashflowPage() {
             setEditTargetId(entry.creditCardId ?? "");
           }
           setEditCategoryId(entry.categoryId);
+          setEditSettlementStatus(entry.settlementStatus === "UNPAID" ? "UNPAID" : "PAID");
           setEditModalOpen(true);
+        }}
+        onToggleSettlement={(entry) => {
+          if (!entry.accountId || entry.sourceType !== "ONE_OFF") {
+            return;
+          }
+          try {
+            transactionsController.updateTransaction({
+              id: entry.id,
+              householdId: householdId,
+              kind: entry.kind,
+              description: entry.description,
+              amount: entry.amount,
+              occurredAt: entry.occurredAt,
+              categoryId: entry.categoryId,
+              accountId: entry.accountId,
+              settlementStatus: entry.settlementStatus === "UNPAID" ? "PAID" : "UNPAID",
+            });
+            setRefreshKey((prev) => prev + 1);
+            notify({ message: "Status de quitacao atualizado.", tone: "success" });
+          } catch {
+            notify({ message: "Nao foi possivel atualizar o status.", tone: "error" });
+          }
         }}
       />
 
@@ -498,6 +522,7 @@ export default function CashflowPage() {
                     categoryId: editCategoryId || categories[0]?.id || "",
                     accountId: editTarget === "account" ? editTargetId : undefined,
                     creditCardId: editTarget === "card" ? editTargetId : undefined,
+                    settlementStatus: editTarget === "account" ? editSettlementStatus : undefined,
                   });
                 } else if (editMode === "INVESTMENT") {
                   if (!editingTransferGroupId) {
@@ -630,6 +655,19 @@ export default function CashflowPage() {
                     ))}
                   </select>
                 </label>
+                {editTarget === "account" ? (
+                  <label>
+                    Status da transacao
+                    <select
+                      aria-label="Editar status da transacao"
+                      value={editSettlementStatus}
+                      onChange={(event) => setEditSettlementStatus(event.target.value as "PAID" | "UNPAID")}
+                    >
+                      <option value="PAID">Pago/Recebido</option>
+                      <option value="UNPAID">Nao pago/nao recebido</option>
+                    </select>
+                  </label>
+                ) : null}
               </>
             ) : null}
 

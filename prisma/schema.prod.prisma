@@ -17,6 +17,11 @@ enum TransactionKind {
   EXPENSE
 }
 
+enum SettlementStatus {
+  PAID
+  UNPAID
+}
+
 enum ScheduleSourceType {
   INSTALLMENT
   RECURRING
@@ -78,6 +83,7 @@ model Transaction {
   occurredAt   DateTime
   invoiceMonthKey String?
   invoiceDueDate  DateTime?
+  settlementStatus SettlementStatus?
   accountId    String?
   creditCardId String?
   categoryId   String

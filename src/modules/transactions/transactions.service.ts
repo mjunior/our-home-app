@@ -6,6 +6,7 @@ import { CardsRepository } from "../cards/cards.repository";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { InvoiceCycleService } from "../invoices/invoice-cycle.service";
 import {
+  type SettlementStatus,
   TransactionsRepository,
   type TransactionKind,
   type TransactionMonthFilter,
@@ -21,6 +22,7 @@ const transactionInputSchema = z.object({
   accountId: z.string().min(1).optional(),
   creditCardId: z.string().min(1).optional(),
   categoryId: z.string().min(1),
+  settlementStatus: z.enum(["PAID", "UNPAID"]).optional(),
 });
 
 const listInputSchema = z.object({
@@ -68,6 +70,7 @@ export interface CreateTransactionInput {
   accountId?: string;
   creditCardId?: string;
   categoryId: string;
+  settlementStatus?: SettlementStatus;
 }
 
 export interface ListTransactionsInput extends TransactionMonthFilter {
@@ -196,6 +199,13 @@ export class TransactionsService {
     };
   }
 
+  private resolveSettlementStatus(parsed: CreateTransactionInput | UpdateTransactionInput): SettlementStatus | null {
+    if (!parsed.accountId) {
+      return null;
+    }
+    return parsed.settlementStatus ?? "PAID";
+  }
+
   create(input: CreateTransactionInput): TransactionRecord {
     const parsed = transactionInputSchema.parse(input);
     this.validateCoreBinding(parsed);
@@ -212,6 +222,7 @@ export class TransactionsService {
       categoryId: parsed.categoryId,
       invoiceMonthKey: invoiceFields.invoiceMonthKey,
       invoiceDueDate: invoiceFields.invoiceDueDate,
+      settlementStatus: this.resolveSettlementStatus(parsed),
       transferGroupId: null,
     });
   }
@@ -249,6 +260,7 @@ export class TransactionsService {
       categoryId: parsed.categoryId,
       invoiceMonthKey: null,
       invoiceDueDate: null,
+      settlementStatus: "PAID",
       transferGroupId,
     });
 
@@ -263,6 +275,7 @@ export class TransactionsService {
       categoryId: parsed.categoryId,
       invoiceMonthKey: null,
       invoiceDueDate: null,
+      settlementStatus: "PAID",
       transferGroupId,
     });
 
@@ -295,6 +308,7 @@ export class TransactionsService {
       categoryId: parsed.categoryId,
       invoiceMonthKey: invoiceFields.invoiceMonthKey,
       invoiceDueDate: invoiceFields.invoiceDueDate,
+      settlementStatus: this.resolveSettlementStatus(parsed),
     });
   }
 
@@ -335,6 +349,7 @@ export class TransactionsService {
       categoryId: parsed.categoryId,
       invoiceMonthKey: null,
       invoiceDueDate: null,
+      settlementStatus: "PAID",
     });
 
     const updatedCredit = this.transactionsRepository.update(credit.id, {
@@ -347,6 +362,7 @@ export class TransactionsService {
       categoryId: parsed.categoryId,
       invoiceMonthKey: null,
       invoiceDueDate: null,
+      settlementStatus: "PAID",
     });
 
     return {

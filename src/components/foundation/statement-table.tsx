@@ -22,6 +22,7 @@ export interface StatementEntry {
   destinationAccountId?: string | null;
   monthKey?: string;
   sequence?: number;
+  settlementStatus?: "PAID" | "UNPAID" | null;
 }
 
 interface StatementTableProps {
@@ -30,6 +31,7 @@ interface StatementTableProps {
   accountLabels: Record<string, string>;
   cardLabels: Record<string, string>;
   onEditEntry?: (entry: StatementEntry) => void;
+  onToggleSettlement?: (entry: StatementEntry) => void;
 }
 
 function KindPill({ kind, isInvestment }: { kind: StatementEntry["kind"]; isInvestment?: boolean }) {
@@ -79,7 +81,7 @@ function TypeOriginCell({ entry }: { entry: StatementEntry }) {
   return <KindPill kind={entry.kind} />;
 }
 
-export function StatementTable({ entries, categoryLabels, accountLabels, cardLabels, onEditEntry }: StatementTableProps) {
+export function StatementTable({ entries, categoryLabels, accountLabels, cardLabels, onEditEntry, onToggleSettlement }: StatementTableProps) {
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       return true;
@@ -119,6 +121,7 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                       <th className="px-3 py-3 text-left">Tipo/Origem</th>
                       <th className="px-3 py-3 text-left">Categoria</th>
                       <th className="px-3 py-3 text-left">Destino</th>
+                      <th className="px-3 py-3 text-left">Status</th>
                       <th className="px-3 py-3 text-left">Acoes</th>
                     </tr>
                   </thead>
@@ -160,6 +163,24 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                             </Badge>
                           </td>
                           <td className="px-3 py-3 align-middle">
+                            {entry.accountId && !entry.transferGroupId ? (
+                              <Badge variant={entry.settlementStatus === "UNPAID" ? "secondary" : "lime"}>
+                                {entry.settlementStatus === "UNPAID" ? "Nao pago" : "Pago"}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 align-middle">
+                            {onToggleSettlement && entry.accountId && !entry.transferGroupId ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => onToggleSettlement(entry)}
+                              >
+                                {entry.settlementStatus === "UNPAID" ? "Marcar pago" : "Marcar nao pago"}
+                              </Button>
+                            ) : null}
                             {onEditEntry && entry.sourceType !== "INVOICE" ? (
                               <Button
                                 type="button"
@@ -230,7 +251,19 @@ export function StatementTable({ entries, categoryLabels, accountLabels, cardLab
                         <Badge variant="outline" className="normal-case tracking-normal">
                           {destinationLabel}
                         </Badge>
+                        {entry.accountId && !entry.transferGroupId ? (
+                          <Badge variant={entry.settlementStatus === "UNPAID" ? "secondary" : "lime"}>
+                            {entry.settlementStatus === "UNPAID" ? "Nao pago" : "Pago"}
+                          </Badge>
+                        ) : null}
                       </div>
+                      {onToggleSettlement && entry.accountId && !entry.transferGroupId ? (
+                        <div className="mt-2">
+                          <Button type="button" variant="outline" onClick={() => onToggleSettlement(entry)}>
+                            {entry.settlementStatus === "UNPAID" ? "Marcar pago" : "Marcar nao pago"}
+                          </Button>
+                        </div>
+                      ) : null}
                     </article>
                   );
                 })}

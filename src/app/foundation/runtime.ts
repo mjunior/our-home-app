@@ -272,6 +272,7 @@ function createApiRuntime(): Runtime {
           accountId: input.accountId,
           creditCardId: input.creditCardId,
           categoryId: input.categoryId,
+          settlementStatus: input.settlementStatus,
         }),
       createInvestmentTransfer: (input: TransactionsInvestmentCreateInput): TransactionsInvestmentCreateOutput =>
         requestSync<TransactionsInvestmentCreateOutput>("POST", "/api/transactions/investments", {
@@ -292,6 +293,7 @@ function createApiRuntime(): Runtime {
           accountId: input.accountId,
           creditCardId: input.creditCardId,
           categoryId: input.categoryId,
+          settlementStatus: input.settlementStatus,
         }),
       updateInvestmentTransfer: (input: TransactionsInvestmentUpdateInput): TransactionsInvestmentUpdateOutput =>
         requestSync<TransactionsInvestmentUpdateOutput>("POST", "/api/transactions/investments/edit", {
