@@ -1,74 +1,73 @@
 # Requirements: Nosso Lar Financeiro
 
-**Defined:** 2026-03-07
+**Defined:** 2026-03-09
 **Core Value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
 
 ## v1 Requirements
 
-### Payment Status Control
+### Investment Goals
 
-- [ ] **PAY-01**: Usuario pode marcar lancamento em conta como `PAGO` ou `NAO_PAGO`.
-- [ ] **PAY-02**: Despesa `NAO_PAGA` nao reduz saldo atual da conta ate ser quitada.
-- [ ] **PAY-03**: Receita `NAO_PAGA` nao aumenta saldo atual da conta ate ser recebida.
+- [ ] **INVG-01**: Usuario pode informar uma meta financeira opcional ao criar conta do tipo `INVESTMENT`.
+- [ ] **INVG-02**: Usuario pode editar a meta de uma conta de investimento existente.
+- [ ] **INVG-03**: Sistema persiste a meta separadamente do saldo inicial e do saldo calculado da conta.
+- [ ] **INVG-04**: Card/listagem de conta investimento exibe meta, saldo atual e quanto falta para atingir o objetivo.
+- [ ] **INVG-05**: Sistema mostra progresso percentual da meta sem exibir valor faltante negativo quando o objetivo ja foi atingido.
 
-### Credit Card Invoice Payment
+### Cashflow Month Navigation
 
-- [x] **INVP-01**: Usuario pode marcar fatura mensal de cartao como paga/nao paga como bloco unico.
-- [x] **INVP-02**: Ao pagar fatura, sistema registra data de quitacao e conta de pagamento.
-- [x] **INVP-03**: Valor da fatura paga impacta saldo atual apenas no momento da quitacao.
+- [ ] **NAV-01**: Usuario consegue avancar e voltar meses no cashflow por controles explicitos de navegacao.
+- [ ] **NAV-02**: Mes ativo no seletor mensal fica visualmente destacado de forma inequívoca.
+- [ ] **NAV-03**: Itens e controles de navegacao mensal possuem estados visuais de hover, foco e pressed/coleta de clique.
 
-### Current Month Balance Card
+### Transaction Submission Feedback
 
-- [x] **BAL-01**: Card `Mes atual` exibe `Saldo` real do momento com base em movimentos pagos/recebidos.
-- [x] **BAL-02**: Card `Mes atual` mantem `Saldo previsto` separado, sem regressao no calculo atual de previsao.
-- [x] **BAL-03**: Clique em `Saldo` abre detalhamento com saldo individual de cada conta incluida no total.
-- [x] **BAL-04**: Card `Proximo mes` permanece exibindo apenas previsao.
-
-### Cashflow Visibility and Actions
-
-- [x] **CFP-01**: Extrato principal mostra claramente o status de quitacao (`PAGO`/`NAO_PAGO`) dos itens aplicaveis.
-- [x] **CFP-02**: Usuario consegue quitar/desfazer quitacao de item elegivel direto no fluxo operacional.
-- [x] **CFP-03**: Quitacao/desquitacao recalcula imediatamente saldo atual e composicao por conta.
+- [ ] **TXF-01**: Ao enviar novo lancamento, formulario mostra estado visual de processamento ate a conclusao.
+- [ ] **TXF-02**: Acao primaria de cadastro de lancamento evita duplo clique/submissao duplicada enquanto processa.
+- [ ] **TXF-03**: Botoes e CTAs do fluxo de lancamento comunicam clicabilidade com estados coerentes de hover, foco e clique.
 
 ## v2 Requirements
 
-### Credit Card Enhancements
+### Investment Goal Extensions
 
-- **CCX-01**: Registrar pagamento parcial de fatura com saldo remanescente.
-- **CCX-02**: Simular juros de rotativo e parcelamento da fatura.
-- **CCX-03**: Notificar vencimento de fatura por push/email.
+- **IGX-01**: Definir aporte mensal recomendado para atingir a meta em uma data alvo.
+- **IGX-02**: Mostrar historico/evolucao temporal do progresso da meta.
+- **IGX-03**: Permitir mais de uma meta por conta de investimento.
+
+### Interaction Hardening
+
+- **UXH-01**: Padronizar loading/sucesso/erro para todos os formularios da fundacao.
+- **UXH-02**: Adicionar feedback visual consistente para acoes operacionais fora do cashflow (cartoes, categorias, contas).
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Quitacao parcial de uma unica fatura no v1.6 | Aumenta muito a complexidade de conciliacao e rateio |
-| Conciliacao bancaria automatica | Exige integracao externa/Open Finance |
-| Motor de cobranca de juros | Escopo financeiro avancado para milestone posterior |
+| Meta por transacao individual de investimento | O pedido e por conta de investimento, nao por aporte |
+| Recomendacao automatica de quanto investir por mes | Exige modelagem adicional de prazo e simulacao |
+| Redesign geral do cashflow | Escopo deste milestone e feedback/interacao, nao reestruturacao total da tela |
+| Notificacoes de meta atingida | Valor adicional menor que a base de meta + progresso neste ciclo |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PAY-01 | Phase 19 | Complete |
-| PAY-02 | Phase 19 | Complete |
-| PAY-03 | Phase 19 | Complete |
-| INVP-01 | Phase 20 | Complete |
-| INVP-02 | Phase 20 | Complete |
-| INVP-03 | Phase 20 | Complete |
-| BAL-01 | Phase 21 | Complete |
-| BAL-02 | Phase 21 | Complete |
-| BAL-03 | Phase 21.1 | Complete |
-| BAL-04 | Phase 21 | Complete |
-| CFP-01 | Phase 21 | Complete |
-| CFP-02 | Phase 21 | Complete |
-| CFP-03 | Phase 21 | Complete |
+| INVG-01 | Phase 22 | Pending |
+| INVG-02 | Phase 22 | Pending |
+| INVG-03 | Phase 22 | Pending |
+| INVG-04 | Phase 22 | Pending |
+| INVG-05 | Phase 22 | Pending |
+| NAV-01 | Phase 23 | Pending |
+| NAV-02 | Phase 23 | Pending |
+| NAV-03 | Phase 23 | Pending |
+| TXF-01 | Phase 23 | Pending |
+| TXF-02 | Phase 23 | Pending |
+| TXF-03 | Phase 23 | Pending |
 
 **Coverage:**
-- v1 requirements: 13 total
-- Mapped to phases: 13
+- v1 requirements: 11 total
+- Mapped to phases: 11
 - Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after Phase 21.1 gap closure execution*
+*Requirements defined: 2026-03-09*
+*Last updated: 2026-03-09 after v1.7 milestone definition*
