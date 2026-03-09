@@ -41,7 +41,7 @@ describe("cashflow flow", () => {
     const categories = new CategoriesController(new CategoriesService(categoriesRepo));
 
     accounts.createAccount({ householdId, name: "Conta Casa", type: "CHECKING", openingBalance: "1000.00" });
-    accounts.createAccount({ householdId, name: "Reserva Invest", type: "INVESTMENT", openingBalance: "0.00" });
+    accounts.createAccount({ householdId, name: "Reserva Invest", type: "INVESTMENT", openingBalance: "0.00", goalAmount: "1000.00" });
     cards.createCard({ householdId, name: "Visa Casa", closeDay: 5, dueDay: 12 });
     categories.createCategory({ householdId, name: "Mercado" });
   });

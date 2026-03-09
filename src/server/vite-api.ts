@@ -51,7 +51,16 @@ async function resolveSessionUser(req: any, auth: AuthService) {
 }
 
 class AccountsReadRepository {
-  constructor(private readonly rows: Array<{ id: string; householdId: string; name: string; type: "CHECKING" | "INVESTMENT"; openingBalance: string }>) {}
+  constructor(
+    private readonly rows: Array<{
+      id: string;
+      householdId: string;
+      name: string;
+      type: "CHECKING" | "INVESTMENT";
+      openingBalance: string;
+      goalAmount: string | null;
+    }>,
+  ) {}
   listByHousehold(householdId: string) { return this.rows.filter((item) => item.householdId === householdId); }
   findById(id: string) { return this.rows.find((item) => item.id === id); }
 }
@@ -136,6 +145,23 @@ function toOccurredAt(monthKey: string) {
 
 function buildInstanceKey(sourceType: "RECURRING" | "INSTALLMENT", sourceId: string, sequence: number, monthKey: string) {
   return `${sourceType}:${sourceId}:${sequence}:${monthKey}`;
+}
+
+function normalizeAccountGoalAmount(raw: unknown, type: "CHECKING" | "INVESTMENT") {
+  if (raw == null || raw === "") {
+    return null;
+  }
+
+  if (type !== "INVESTMENT") {
+    throw new Error("ACCOUNT_GOAL_ONLY_FOR_INVESTMENT");
+  }
+
+  const goalAmount = Number(raw);
+  if (Number.isNaN(goalAmount) || goalAmount <= 0) {
+    throw new Error("ACCOUNT_GOAL_INVALID");
+  }
+
+  return String(raw);
 }
 
 function splitInstallments(totalAmount: string, count: number): string[] {
@@ -359,6 +385,7 @@ async function loadServices() {
     name: item.name,
     type: item.type,
     openingBalance: item.openingBalance.toString(),
+    goalAmount: item.goalAmount?.toString() ?? null,
   })));
 
   const cardRepo = new CardsReadRepository(cards.map((item) => ({
@@ -539,22 +566,66 @@ export function installViteApi(server: MiddlewareServer) {
       if (req.method === "GET" && path === "/api/accounts") {
         const householdId = authHouseholdId;
         const rows = await prisma.account.findMany({ where: { householdId }, orderBy: { createdAt: "asc" } });
-        sendJson(res, 200, rows.map((item) => ({ ...item, openingBalance: item.openingBalance.toString() })));
+        sendJson(
+          res,
+          200,
+          rows.map((item) => ({
+            ...item,
+            openingBalance: item.openingBalance.toString(),
+            goalAmount: item.goalAmount?.toString() ?? null,
+          })),
+        );
         return;
       }
 
       if (req.method === "POST" && path === "/api/accounts") {
         const body = await readJsonBody(req);
+        const goalAmount = normalizeAccountGoalAmount(body.goalAmount, body.type);
         const created = await prisma.account.create({
           data: {
             householdId: authHouseholdId,
             name: body.name,
             type: body.type,
             openingBalance: body.openingBalance,
+            goalAmount,
           },
         });
         await ensureBootstrap(authHouseholdId);
-        sendJson(res, 200, { ...created, openingBalance: created.openingBalance.toString() });
+        sendJson(res, 200, {
+          ...created,
+          openingBalance: created.openingBalance.toString(),
+          goalAmount: created.goalAmount?.toString() ?? null,
+        });
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/accounts/edit") {
+        const body = await readJsonBody(req);
+        const existing = await prisma.account.findUnique({ where: { id: body.id } });
+        if (!existing || existing.householdId !== authHouseholdId) {
+          sendJson(res, 404, { message: "ACCOUNT_NOT_FOUND" });
+          return;
+        }
+
+        if (existing.type !== "INVESTMENT") {
+          sendJson(res, 400, { message: "ACCOUNT_GOAL_ONLY_FOR_INVESTMENT" });
+          return;
+        }
+
+        const goalAmount = normalizeAccountGoalAmount(body.goalAmount, existing.type);
+
+        const updated = await prisma.account.update({
+          where: { id: body.id },
+          data: {
+            goalAmount,
+          },
+        });
+
+        sendJson(res, 200, {
+          ...updated,
+          openingBalance: updated.openingBalance.toString(),
+          goalAmount: updated.goalAmount?.toString() ?? null,
+        });
         return;
       }
 
@@ -602,11 +673,19 @@ export function installViteApi(server: MiddlewareServer) {
         const accounts = rows.map((item) => {
           const opening = Number(item.openingBalance.toString());
           const movement = netByAccountId.get(item.id) ?? 0;
+          const balance = (opening + movement).toFixed(2);
+          const goalAmount = item.goalAmount?.toString() ?? null;
+          const goalRaw = goalAmount ? Number(goalAmount) : null;
+          const progressRaw = goalRaw && goalRaw > 0 ? (Number(balance) / goalRaw) * 100 : null;
           return {
             id: item.id,
             name: item.name,
             type: item.type,
-            balance: (opening + movement).toFixed(2),
+            balance,
+            goalAmount,
+            goalProgressPercent: progressRaw == null ? null : Math.max(0, Math.min(100, Math.round(progressRaw * 100) / 100)),
+            remainingToGoal: goalRaw == null ? null : Math.max(goalRaw - Number(balance), 0).toFixed(2),
+            goalReached: goalRaw == null ? false : Number(balance) >= goalRaw,
           };
         });
 
@@ -1571,7 +1650,8 @@ export function installViteApi(server: MiddlewareServer) {
       sendJson(res, 404, { message: "API_ROUTE_NOT_FOUND" });
     } catch (error: any) {
       const message = error?.message ?? "PERSISTENCE_ERROR";
-      sendJson(res, 500, { message });
+      const status = message === "ACCOUNT_GOAL_ONLY_FOR_INVESTMENT" || message === "ACCOUNT_GOAL_INVALID" ? 400 : 500;
+      sendJson(res, status, { message });
     }
   });
 }

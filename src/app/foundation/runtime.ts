@@ -26,7 +26,7 @@ import { TransactionsService } from "../../modules/transactions/transactions.ser
 
 type MethodArgs<T> = T extends (...args: infer A) => unknown ? A : never;
 type MethodReturn<T> = T extends (...args: any[]) => infer R ? R : never;
-type AccountsControllerContract = Pick<AccountsController, "createAccount" | "listAccounts" | "getConsolidatedBalance">;
+type AccountsControllerContract = Pick<AccountsController, "createAccount" | "updateAccountGoal" | "listAccounts" | "getConsolidatedBalance">;
 type CardsControllerContract = Pick<CardsController, "createCard" | "listCards" | "updateCard" | "deleteCard">;
 type CategoriesControllerContract = Pick<CategoriesController, "createCategory" | "listCategories">;
 type TransactionsControllerContract = Pick<
@@ -196,6 +196,8 @@ function createLocalRuntime(): Runtime {
 function createApiRuntime(): Runtime {
   type AccountsCreateInput = MethodArgs<Runtime["accountsController"]["createAccount"]>[0];
   type AccountsCreateOutput = MethodReturn<Runtime["accountsController"]["createAccount"]>;
+  type AccountsUpdateGoalInput = MethodArgs<Runtime["accountsController"]["updateAccountGoal"]>[0];
+  type AccountsUpdateGoalOutput = MethodReturn<Runtime["accountsController"]["updateAccountGoal"]>;
   type AccountsListOutput = MethodReturn<Runtime["accountsController"]["listAccounts"]>;
   type AccountsConsolidatedOutput = MethodReturn<Runtime["accountsController"]["getConsolidatedBalance"]>;
 
@@ -273,6 +275,12 @@ function createApiRuntime(): Runtime {
           name: input.name,
           type: input.type,
           openingBalance: input.openingBalance,
+          goalAmount: input.goalAmount ?? null,
+        }),
+      updateAccountGoal: (input: AccountsUpdateGoalInput): AccountsUpdateGoalOutput =>
+        requestSync<AccountsUpdateGoalOutput>("POST", "/api/accounts/edit", {
+          id: input.id,
+          goalAmount: input.goalAmount,
         }),
       listAccounts: (_householdId: string): AccountsListOutput =>
         requestSync<AccountsListOutput>("GET", "/api/accounts"),

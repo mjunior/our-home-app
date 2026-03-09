@@ -1,10 +1,14 @@
-import { AccountsService, type CreateAccountInput } from "./accounts.service";
+import { AccountsService, type CreateAccountInput, type UpdateAccountGoalInput } from "./accounts.service";
 
 export class AccountsController {
   constructor(private readonly service: AccountsService) {}
 
   createAccount(payload: CreateAccountInput) {
     return this.service.create(payload);
+  }
+
+  updateAccountGoal(payload: UpdateAccountGoalInput) {
+    return this.service.updateGoal(payload);
   }
 
   listAccounts(householdId: string) {

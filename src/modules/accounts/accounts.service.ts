@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { Account } from "../../domain/accounts/account.entity";
-import { sumMoney } from "../../domain/shared/money";
 import { AccountsRepository } from "./accounts.repository";
 import { TransactionsRepository } from "../transactions/transactions.repository";
 
@@ -30,6 +29,13 @@ const accountInputSchema = z.object({
   name: z.string().min(1),
   type: z.enum(["CHECKING", "INVESTMENT"]),
   openingBalance: z.string().min(1),
+  goalAmount: z.string().min(1).nullable().optional(),
+});
+
+const accountGoalUpdateSchema = z.object({
+  id: z.string().min(1),
+  householdId: z.string().min(1),
+  goalAmount: z.string().min(1).nullable(),
 });
 
 export interface CreateAccountInput {
@@ -37,6 +43,48 @@ export interface CreateAccountInput {
   name: string;
   type: "CHECKING" | "INVESTMENT";
   openingBalance: string;
+  goalAmount?: string | null;
+}
+
+export interface UpdateAccountGoalInput {
+  id: string;
+  householdId: string;
+  goalAmount: string | null;
+}
+
+interface AccountGoalSnapshot {
+  goalAmount: string | null;
+  goalProgressPercent: number | null;
+  remainingToGoal: string | null;
+  goalReached: boolean;
+}
+
+function buildAccountGoalSnapshot(input: {
+  type: "CHECKING" | "INVESTMENT";
+  balance: string;
+  goalAmount: string | null;
+}): AccountGoalSnapshot {
+  if (input.type !== "INVESTMENT" || !input.goalAmount) {
+    return {
+      goalAmount: null,
+      goalProgressPercent: null,
+      remainingToGoal: null,
+      goalReached: false,
+    };
+  }
+
+  const balance = Number(input.balance);
+  const goalAmount = Number(input.goalAmount);
+  const progressRaw = goalAmount <= 0 ? 0 : (balance / goalAmount) * 100;
+  const goalProgressPercent = Math.max(0, Math.min(100, Math.round(progressRaw * 100) / 100));
+  const remainingToGoal = Math.max(goalAmount - balance, 0).toFixed(2);
+
+  return {
+    goalAmount: input.goalAmount,
+    goalProgressPercent,
+    remainingToGoal,
+    goalReached: balance >= goalAmount,
+  };
 }
 
 export class AccountsService {
@@ -56,6 +104,7 @@ export class AccountsService {
       name: account.name,
       type: account.type,
       openingBalance: account.openingBalance.toFixed(),
+      goalAmount: account.goalAmount?.toFixed() ?? null,
     });
   }
 
@@ -63,10 +112,43 @@ export class AccountsService {
     return this.repository.listByHousehold(householdId);
   }
 
+  updateGoal(input: UpdateAccountGoalInput) {
+    const parsed = accountGoalUpdateSchema.parse(input);
+    const existing = this.repository.findById(parsed.id);
+    if (!existing || existing.householdId !== parsed.householdId) {
+      throw new Error("ACCOUNT_NOT_FOUND");
+    }
+    if (existing.type !== "INVESTMENT") {
+      throw new Error("ACCOUNT_GOAL_ONLY_FOR_INVESTMENT");
+    }
+
+    const account = new Account({
+      id: existing.id,
+      householdId: existing.householdId,
+      name: existing.name,
+      type: existing.type,
+      openingBalance: existing.openingBalance,
+      goalAmount: parsed.goalAmount,
+    });
+
+    return this.repository.update(parsed.id, {
+      goalAmount: account.goalAmount?.toFixed() ?? null,
+    });
+  }
+
   consolidatedBalance(householdId: string): {
     amount: string;
     byType: { CHECKING: string; INVESTMENT: string };
-    accounts: Array<{ id: string; name: string; type: "CHECKING" | "INVESTMENT"; balance: string }>;
+    accounts: Array<{
+      id: string;
+      name: string;
+      type: "CHECKING" | "INVESTMENT";
+      balance: string;
+      goalAmount: string | null;
+      goalProgressPercent: number | null;
+      remainingToGoal: string | null;
+      goalReached: boolean;
+    }>;
   } {
     const accounts = this.list(householdId);
     const transactions = this.transactionsRepository?.listByHousehold(householdId) ?? [];
@@ -98,11 +180,18 @@ export class AccountsService {
     const accountRows = accounts.map((item) => {
       const opening = Number(item.openingBalance);
       const movement = netByAccountId.get(item.id) ?? 0;
+      const balance = (opening + movement).toFixed(2);
+      const goalSnapshot = buildAccountGoalSnapshot({
+        type: item.type,
+        balance,
+        goalAmount: item.goalAmount ?? null,
+      });
       return {
         id: item.id,
         name: item.name,
         type: item.type,
-        balance: (opening + movement).toFixed(2),
+        balance,
+        ...goalSnapshot,
       };
     });
 

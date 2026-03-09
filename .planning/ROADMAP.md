@@ -17,7 +17,7 @@
 - [x] **Phase 20: Quitacao de Fatura Consolidada de Cartao** - Permitir pagamento de fatura por bloco com conta de pagamento e impacto no saldo atual. (completed 2026-03-08)
 - [x] **Phase 21: Card Mes Atual com Saldo Real + Drill-down por Conta** - Exibir saldo atual e saldo previsto separados, com detalhamento por conta e acoes operacionais no fluxo. (completed 2026-03-07)
 - [x] **Phase 21.1: Gap Closure do Clique no Saldo para Drill-down** - Tornar o proprio saldo do card `Mes atual` o gatilho principal do detalhamento por conta. (completed 2026-03-07)
-- [ ] **Phase 22: Objetivos por Conta de Investimento** - Adicionar meta opcional para contas `INVESTMENT` com persistencia, calculo de progresso e leitura de quanto falta. (planned)
+- [ ] **Phase 22: Objetivos por Conta de Investimento** - Adicionar meta opcional para contas `INVESTMENT` com persistencia, calculo de progresso e leitura de quanto falta. (implemented 2026-03-09; verification pending)
 - [ ] **Phase 23: Feedback Operacional no Cashflow** - Melhorar navegacao mensal e feedback visual de acoes de cadastro para reduzir ambiguidade de interacao. (planned)
 
 ## Phase Details
@@ -108,4 +108,4 @@ Success criteria:
 | v1.4 Faturas de Cartao no Fluxo de Caixa | 15-17 | 9/9 | Complete | 2026-03-07 |
 | v1.5 UX de Faturas em Cartoes | 18 | 3/3 | Complete | 2026-03-07 |
 | v1.6 Controle de Pagamentos e Saldo Atual | 19-21.1 | 10/10 | Complete | 2026-03-07 |
-| v1.7 Objetivos de Investimento e Feedback Operacional | 22-23 | 0/6 | Planned | — |
+| v1.7 Objetivos de Investimento e Feedback Operacional | 22-23 | 3/6 | In Progress | — |

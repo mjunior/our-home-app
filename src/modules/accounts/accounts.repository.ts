@@ -6,6 +6,7 @@ export interface AccountRecord {
   name: string;
   type: "CHECKING" | "INVESTMENT";
   openingBalance: string;
+  goalAmount: string | null;
 }
 
 const accountsStore: AccountRecord[] = [];
@@ -27,6 +28,16 @@ export class AccountsRepository {
 
   findById(id: string): AccountRecord | undefined {
     return accountsStore.find((account) => account.id === id);
+  }
+
+  update(id: string, patch: Partial<Omit<AccountRecord, "id" | "householdId">>): AccountRecord {
+    const account = this.findById(id);
+    if (!account) {
+      throw new Error("ACCOUNT_NOT_FOUND");
+    }
+
+    Object.assign(account, patch);
+    return account;
   }
 
   clearAll(): void {

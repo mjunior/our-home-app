@@ -62,6 +62,7 @@ describe("foundation api", () => {
       name: "Conta Investimento",
       type: "INVESTMENT",
       openingBalance: "200.10",
+      goalAmount: "500.00",
     });
 
     expect(accountsController.listAccounts(householdId)).toHaveLength(2);
@@ -77,14 +78,66 @@ describe("foundation api", () => {
           name: "Conta Principal",
           type: "CHECKING",
           balance: "1000.50",
+          goalAmount: null,
+          goalProgressPercent: null,
+          remainingToGoal: null,
+          goalReached: false,
         },
         {
           id: investment.id,
           name: "Conta Investimento",
           type: "INVESTMENT",
           balance: "200.10",
+          goalAmount: "500.00",
+          goalProgressPercent: 40.02,
+          remainingToGoal: "299.90",
+          goalReached: false,
         },
       ],
+    });
+  });
+
+  it("updates investment goal and clamps remaining value when target is reached", () => {
+    const investment = accountsController.createAccount({
+      householdId,
+      name: "Reserva Longo Prazo",
+      type: "INVESTMENT",
+      openingBalance: "200.00",
+      goalAmount: "1000.00",
+    });
+    const category = categoriesController.createCategory({ householdId, name: "Investimentos" });
+
+    accountsController.updateAccountGoal({
+      householdId,
+      id: investment.id,
+      goalAmount: "300.00",
+    });
+
+    transactionsController.createInvestmentTransfer({
+      householdId,
+      description: "Aporte objetivo",
+      amount: "150.00",
+      occurredAt: "2026-03-10T12:00:00.000Z",
+      categoryId: category.id,
+      sourceAccountId: accountsController.createAccount({
+        householdId,
+        name: "Conta Base",
+        type: "CHECKING",
+        openingBalance: "150.00",
+      }).id,
+      destinationAccountId: investment.id,
+    });
+
+    const consolidated = accountsController.getConsolidatedBalance(householdId);
+    expect(consolidated.accounts.find((account) => account.id === investment.id)).toEqual({
+      id: investment.id,
+      name: "Reserva Longo Prazo",
+      type: "INVESTMENT",
+      balance: "350.00",
+      goalAmount: "300.00",
+      goalProgressPercent: 100,
+      remainingToGoal: "0.00",
+      goalReached: true,
     });
   });
 
@@ -238,8 +291,26 @@ describe("foundation api", () => {
       INVESTMENT: "250.00",
     });
     expect(consolidated.accounts).toEqual([
-      { id: checking.id, name: "Conta Principal", type: "CHECKING", balance: "750.00" },
-      { id: investment.id, name: "Reserva", type: "INVESTMENT", balance: "250.00" },
+      {
+        id: checking.id,
+        name: "Conta Principal",
+        type: "CHECKING",
+        balance: "750.00",
+        goalAmount: null,
+        goalProgressPercent: null,
+        remainingToGoal: null,
+        goalReached: false,
+      },
+      {
+        id: investment.id,
+        name: "Reserva",
+        type: "INVESTMENT",
+        balance: "250.00",
+        goalAmount: null,
+        goalProgressPercent: null,
+        remainingToGoal: null,
+        goalReached: false,
+      },
     ]);
   });
 
@@ -266,7 +337,16 @@ describe("foundation api", () => {
     const consolidated = accountsController.getConsolidatedBalance(householdId);
     expect(consolidated.amount).toBe("1000.00");
     expect(consolidated.accounts).toEqual([
-      { id: checking.id, name: "Conta Principal", type: "CHECKING", balance: "1000.00" },
+      {
+        id: checking.id,
+        name: "Conta Principal",
+        type: "CHECKING",
+        balance: "1000.00",
+        goalAmount: null,
+        goalProgressPercent: null,
+        remainingToGoal: null,
+        goalReached: false,
+      },
     ]);
   });
 
@@ -299,7 +379,16 @@ describe("foundation api", () => {
     const consolidated = accountsController.getConsolidatedBalance(householdId);
     expect(consolidated.amount).toBe("1500.00");
     expect(consolidated.accounts).toEqual([
-      { id: checking.id, name: "Conta Principal", type: "CHECKING", balance: "1500.00" },
+      {
+        id: checking.id,
+        name: "Conta Principal",
+        type: "CHECKING",
+        balance: "1500.00",
+        goalAmount: null,
+        goalProgressPercent: null,
+        remainingToGoal: null,
+        goalReached: false,
+      },
     ]);
   });
 });

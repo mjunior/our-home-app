@@ -8,6 +8,7 @@ export interface AccountProps {
   name: string;
   type: AccountType;
   openingBalance: MoneyInput;
+  goalAmount?: MoneyInput | null;
 }
 
 export class Account {
@@ -16,9 +17,11 @@ export class Account {
   readonly name: string;
   readonly type: AccountType;
   readonly openingBalance: Money;
+  readonly goalAmount: Money | null;
 
   constructor(props: AccountProps) {
     const name = props.name.trim();
+    const rawGoalAmount = props.goalAmount;
 
     if (!props.householdId.trim()) {
       throw new Error("householdId is required");
@@ -33,5 +36,20 @@ export class Account {
     this.name = name;
     this.type = props.type;
     this.openingBalance = new Money(props.openingBalance);
+    if (props.type !== "INVESTMENT" && rawGoalAmount != null) {
+      throw new Error("goalAmount is only supported for investment accounts");
+    }
+
+    if (rawGoalAmount == null) {
+      this.goalAmount = null;
+      return;
+    }
+
+    const goalAmount = new Money(rawGoalAmount);
+    if (goalAmount.toDecimal().lessThanOrEqualTo(0)) {
+      throw new Error("goalAmount must be greater than zero");
+    }
+
+    this.goalAmount = goalAmount;
   }
 }

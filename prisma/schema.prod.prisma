@@ -33,6 +33,7 @@ model Account {
   name           String
   type           AccountType
   openingBalance Decimal
+  goalAmount     Decimal?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   transactions   Transaction[]

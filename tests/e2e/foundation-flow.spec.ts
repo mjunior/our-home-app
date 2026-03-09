@@ -59,6 +59,47 @@ describe("foundation flow", () => {
     expect(screen.getAllByText("Conta investimento").length).toBeGreaterThan(0);
   });
 
+  it("creates and edits investment goal from accounts screen", async () => {
+    const user = userEvent.setup();
+
+    function ShellHarness() {
+      const [route, setRoute] = React.useState<"cashflow" | "accounts" | "cards" | "categories" | "schedules">("accounts");
+      const [darkMode, setDarkMode] = React.useState(true);
+
+      React.useEffect(() => {
+        document.documentElement.classList.toggle("dark", darkMode);
+      }, [darkMode]);
+
+      return React.createElement(AppShell, {
+        route,
+        onRouteChange: setRoute,
+        darkMode,
+        onDarkModeChange: setDarkMode,
+        onLogout: () => undefined,
+      });
+    }
+
+    render(React.createElement(ShellHarness));
+
+    await user.click(screen.getByRole("button", { name: "Nova conta" }));
+    await user.type(screen.getByLabelText("Nome da conta"), "Reserva Invest");
+    await user.selectOptions(screen.getByLabelText("Tipo da conta"), "INVESTMENT");
+    await user.type(screen.getByLabelText("Objetivo da conta"), "1000.00");
+    await user.click(screen.getByRole("button", { name: "Adicionar conta" }));
+
+    expect(screen.getByText("Meta: R$ 1000.00")).toBeInTheDocument();
+    expect(screen.getByText("Faltam R$ 1000.00 para atingir a meta.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Editar objetivo da Reserva Invest" }));
+    const goalInput = screen.getByLabelText("Objetivo da conta");
+    await user.clear(goalInput);
+    await user.type(goalInput, "500.00");
+    await user.click(screen.getByRole("button", { name: "Salvar objetivo" }));
+
+    expect(screen.getByText("Meta: R$ 500.00")).toBeInTheDocument();
+    expect(screen.getByText("Faltam R$ 500.00 para atingir a meta.")).toBeInTheDocument();
+  });
+
   it("toggles theme and can register card and category", async () => {
     const user = userEvent.setup();
 

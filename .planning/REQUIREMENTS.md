@@ -51,11 +51,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INVG-01 | Phase 22 | Pending |
-| INVG-02 | Phase 22 | Pending |
-| INVG-03 | Phase 22 | Pending |
-| INVG-04 | Phase 22 | Pending |
-| INVG-05 | Phase 22 | Pending |
+| INVG-01 | Phase 22 | In Progress |
+| INVG-02 | Phase 22 | In Progress |
+| INVG-03 | Phase 22 | In Progress |
+| INVG-04 | Phase 22 | In Progress |
+| INVG-05 | Phase 22 | In Progress |
 | NAV-01 | Phase 23 | Pending |
 | NAV-02 | Phase 23 | Pending |
 | NAV-03 | Phase 23 | Pending |

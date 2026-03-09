@@ -1,4 +1,5 @@
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 interface ConsolidatedBalanceCardProps {
@@ -12,10 +13,15 @@ interface ConsolidatedBalanceCardProps {
     name: string;
     type: "CHECKING" | "INVESTMENT";
     balance: string;
+    goalAmount: string | null;
+    goalProgressPercent: number | null;
+    remainingToGoal: string | null;
+    goalReached: boolean;
   }>;
+  onEditInvestmentGoal?: (accountId: string) => void;
 }
 
-export function ConsolidatedBalanceCard({ amount, byType, accounts }: ConsolidatedBalanceCardProps) {
+export function ConsolidatedBalanceCard({ amount, byType, accounts, onEditInvestmentGoal }: ConsolidatedBalanceCardProps) {
   return (
     <Card aria-label="Saldo consolidado" className="section-reveal">
       <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
@@ -49,13 +55,49 @@ export function ConsolidatedBalanceCard({ amount, byType, accounts }: Consolidat
                   : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/70"
               }`}
             >
-              <p className="truncate text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">{account.name}</p>
+              <div className="flex items-start justify-between gap-3">
+                <p className="truncate text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">{account.name}</p>
+                {account.type === "INVESTMENT" && onEditInvestmentGoal ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEditInvestmentGoal(account.id)}
+                    aria-label={`Editar objetivo da ${account.name}`}
+                  >
+                    Editar objetivo
+                  </Button>
+                ) : null}
+              </div>
               <p className={`mt-1 text-3xl font-black tracking-tight ${account.type === "INVESTMENT" ? "text-brand-teal dark:text-brand-lime" : ""}`}>
                 R$ {account.balance}
               </p>
               <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                 {account.type === "INVESTMENT" ? "Investimento" : "Corrente"}
               </p>
+              {account.type === "INVESTMENT" && account.goalAmount ? (
+                <div className="mt-4 rounded-2xl border border-brand-teal/15 bg-white/70 p-3 dark:bg-slate-950/30">
+                  <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                    <span>Objetivo</span>
+                    <span>{account.goalProgressPercent?.toFixed(0) ?? "0"}%</span>
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">Meta: R$ {account.goalAmount}</p>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-brand-teal/10 dark:bg-brand-lime/10">
+                    <div
+                      className="h-full rounded-full bg-brand-teal transition-all dark:bg-brand-lime"
+                      style={{ width: `${account.goalProgressPercent ?? 0}%` }}
+                    />
+                  </div>
+                  <p
+                    className={`mt-3 text-sm font-semibold ${account.goalReached ? "text-emerald-600 dark:text-emerald-400" : "text-slate-600 dark:text-slate-300"}`}
+                  >
+                    {account.goalReached ? "Objetivo concluido." : `Faltam R$ ${account.remainingToGoal} para atingir a meta.`}
+                  </p>
+                </div>
+              ) : null}
+              {account.type === "INVESTMENT" && !account.goalAmount ? (
+                <p className="mt-4 text-sm text-slate-500 dark:text-slate-300">Defina um objetivo para acompanhar quanto falta atingir.</p>
+              ) : null}
             </div>
           ))}
         </div>
