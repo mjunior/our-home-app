@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Objetivos de Investimento e Feedback Operacional
-status: defining_requirements
+status: phase_planned
 last_updated: "2026-03-09T12:00:00.000Z"
 progress:
   total_phases: 24
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-03-09)
 
 Phase: Not started (definindo requirements)
 Plan: —
-Status: Milestone v1.7 iniciado; roadmap pronto para planejamento da Phase 22.
-Last activity: 2026-03-09 — novo milestone aberto para objetivo por conta de investimento e melhorias de feedback operacional.
+Status: Phase 22 planejada; pronta para execucao.
+Last activity: 2026-03-09 — contexto e planos 22-01/02/03 criados para objetivo por conta de investimento.
 
-Progress: [░░░░░░░░░░] 0% do milestone v1.7
+Progress: [█░░░░░░░░░] 10% do milestone v1.7
 
 ## Accumulated Context
 
@@ -57,7 +57,7 @@ Progress: [░░░░░░░░░░] 0% do milestone v1.7
 
 ### Pending Todos
 
-- Planejar Phase 22 (`$gsd-plan-phase 22`).
+- Executar Phase 22 (`$gsd-execute-phase 22`).
 
 ### Blockers/Concerns
 
@@ -66,5 +66,5 @@ Progress: [░░░░░░░░░░] 0% do milestone v1.7
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: milestone v1.7 definido; pronto para planejar a Phase 22
-Resume file: .planning/ROADMAP.md
+Stopped at: Phase 22 planejada; pronta para execucao
+Resume file: .planning/phases/22-objetivos-por-conta-de-investimento/22-01-PLAN.md
