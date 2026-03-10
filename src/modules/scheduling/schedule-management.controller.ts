@@ -1,7 +1,7 @@
 import type { CreateInvestmentTransferInput, CreateTransactionInput } from "../transactions/transactions.service";
 import type { CreateInstallmentInput } from "./installments.service";
 import type { CreateRecurringInput } from "./recurrence.service";
-import { ScheduleManagementService } from "./schedule-management.service";
+import { ScheduleManagementService, type RecurringEditScope } from "./schedule-management.service";
 
 export class ScheduleManagementController {
   constructor(private readonly service: ScheduleManagementService) {}
@@ -40,6 +40,7 @@ export class ScheduleManagementController {
   editRecurringSchedule(payload: {
     ruleId: string;
     effectiveMonth: string;
+    scope: RecurringEditScope;
     kind?: "INCOME" | "EXPENSE";
     amount?: string;
     description?: string;

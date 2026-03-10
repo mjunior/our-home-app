@@ -36,6 +36,7 @@ describe("schedule management", () => {
     management.editRecurringSchedule({
       ruleId: rule.id,
       effectiveMonth: "2026-06",
+      scope: "CURRENT_AND_FUTURE",
       amount: "150.00",
     });
 
@@ -195,6 +196,77 @@ describe("schedule management", () => {
     expect(instances[0]?.description).toContain("Notebook Ajustado");
   });
 
+  it("edits only the selected recurring instance without changing the rule or future months", () => {
+    const repository = new ScheduleRepository();
+    repository.clearAll();
+
+    const engine = new ScheduleEngineService();
+    const installments = new InstallmentsService(repository, engine);
+    const recurrence = new RecurrenceService(repository, engine);
+    const management = new ScheduleManagementService(repository, installments, recurrence, engine);
+
+    const rule = management.createRecurringSchedule({
+      householdId,
+      kind: "EXPENSE",
+      description: "Internet",
+      amount: "120.00",
+      startMonth: "2026-03",
+      categoryId: "cat-1",
+      accountId: "acc-1",
+    });
+
+    const updated = management.editRecurringSchedule({
+      ruleId: rule.id,
+      effectiveMonth: "2026-05",
+      scope: "THIS_ONLY",
+      amount: "180.00",
+      description: "Internet promocional",
+    });
+
+    const sameRule = repository.findRecurringRuleById(rule.id)!;
+    const instances = repository.listInstancesBySource("RECURRING", rule.id);
+    const april = instances.find((item) => item.monthKey === "2026-04");
+    const may = instances.find((item) => item.monthKey === "2026-05");
+    const june = instances.find((item) => item.monthKey === "2026-06");
+
+    expect(sameRule.active).toBe(true);
+    expect(updated.monthKey).toBe("2026-05");
+    expect(april?.amount).toBe("120.00");
+    expect(may?.amount).toBe("180.00");
+    expect(may?.description).toBe("Internet promocional");
+    expect(june?.amount).toBe("120.00");
+    expect(repository.listRecurringRules(householdId)).toHaveLength(1);
+  });
+
+  it("fails when editing only one recurring month that does not exist", () => {
+    const repository = new ScheduleRepository();
+    repository.clearAll();
+
+    const engine = new ScheduleEngineService();
+    const installments = new InstallmentsService(repository, engine);
+    const recurrence = new RecurrenceService(repository, engine);
+    const management = new ScheduleManagementService(repository, installments, recurrence, engine);
+
+    const rule = management.createRecurringSchedule({
+      householdId,
+      kind: "EXPENSE",
+      description: "Academia",
+      amount: "100.00",
+      startMonth: "2026-03",
+      categoryId: "cat-1",
+      accountId: "acc-1",
+    });
+
+    expect(() =>
+      management.editRecurringSchedule({
+        ruleId: rule.id,
+        effectiveMonth: "2028-01",
+        scope: "THIS_ONLY",
+        amount: "150.00",
+      }),
+    ).toThrow("RECURRING_INSTANCE_NOT_FOUND");
+  });
+
   it("creates investment launch via unified contract with linked transfer", () => {
     const accountsRepo = new AccountsRepository();
     const cardsRepo = new CardsRepository();
@@ -303,6 +375,7 @@ describe("schedule management", () => {
     const revised = management.editRecurringSchedule({
       ruleId: original.id,
       effectiveMonth: "2026-05",
+      scope: "CURRENT_AND_FUTURE",
       amount: "350.00",
     });
 

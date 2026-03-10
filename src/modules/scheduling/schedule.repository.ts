@@ -132,6 +132,12 @@ export class ScheduleRepository {
     return scheduledInstancesStore.find((item) => item.id === id);
   }
 
+  findInstanceBySourceMonth(sourceType: ScheduleSourceType, sourceId: string, monthKey: string): ScheduledInstanceRecord | undefined {
+    return scheduledInstancesStore.find(
+      (item) => item.sourceType === sourceType && item.sourceId === sourceId && item.monthKey === monthKey,
+    );
+  }
+
   listInstancesByHousehold(householdId: string): ScheduledInstanceRecord[] {
     return scheduledInstancesStore.filter((instance) => instance.householdId === householdId);
   }

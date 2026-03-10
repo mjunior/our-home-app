@@ -31,7 +31,7 @@ export default function SchedulesPage() {
         <CardContent>
           <p className="text-sm text-slate-500 dark:text-slate-300">
             Novos avulsos, recorrencias e parcelamentos sao criados pelo botao <strong>Novo lancamento</strong> no Cashflow.
-            Esta tela fica dedicada para consulta e manutencao future-only.
+            Esta tela fica dedicada para consulta e manutencao de recorrencias e parcelamentos.
           </p>
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             Contas: {accounts.length} | Cartoes: {cards.length} | Categorias: {categories.length}
@@ -47,7 +47,11 @@ export default function SchedulesPage() {
           try {
             scheduleManagementController.editRecurringSchedule(payload);
             setRefreshKey((prev) => prev + 1);
-            notify({ message: "Recorrencia editada com sucesso.", tone: "info" });
+            if (payload.scope === "THIS_ONLY") {
+              notify({ message: "Recorrencia editada somente neste mes.", tone: "info" });
+            } else {
+              notify({ message: "Recorrencia editada neste mes e nas futuras.", tone: "info" });
+            }
           } catch {
             notify({ message: "Nao foi possivel editar a recorrencia.", tone: "error" });
           }

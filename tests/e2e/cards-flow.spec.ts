@@ -2,11 +2,11 @@
 import "@testing-library/jest-dom/vitest";
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import SchedulesPage from "../../src/app/foundation/schedules/page";
+import CardsPage from "../../src/app/foundation/cards/page";
 import { AccountsController } from "../../src/modules/accounts/accounts.controller";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository";
 import { AccountsService } from "../../src/modules/accounts/accounts.service";
@@ -22,22 +22,27 @@ import { ScheduleEngineService } from "../../src/modules/scheduling/schedule-eng
 import { ScheduleManagementService } from "../../src/modules/scheduling/schedule-management.service";
 import { ScheduleRepository } from "../../src/modules/scheduling/schedule.repository";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
-import { TransactionsService } from "../../src/modules/transactions/transactions.service";
 
 const householdId = "household-main";
 
-describe("schedules flow", () => {
+describe("cards flow", () => {
+  afterEach(() => {
+    cleanup();
+    sessionStorage.clear();
+  });
+
   beforeEach(() => {
     const accountsRepo = new AccountsRepository();
     const cardsRepo = new CardsRepository();
     const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
     const scheduleRepo = new ScheduleRepository();
 
     accountsRepo.clearAll();
     cardsRepo.clearAll();
     categoriesRepo.clearAll();
+    transactionsRepo.clearAll();
     scheduleRepo.clearAll();
-    new TransactionsRepository().clearAll();
 
     const accounts = new AccountsController(new AccountsService(accountsRepo));
     const cards = new CardsController(new CardsService(cardsRepo));
@@ -48,61 +53,49 @@ describe("schedules flow", () => {
     categories.createCategory({ householdId, name: "Mercado" });
   });
 
-  it("manages existing recurring schedules without breaking history", async () => {
+  it("edits recurring invoice entries only for the selected occurrence", async () => {
     const user = userEvent.setup();
     const accountsRepo = new AccountsRepository();
     const cardsRepo = new CardsRepository();
     const categoriesRepo = new CategoriesRepository();
     const scheduleRepo = new ScheduleRepository();
-    const transactionsRepo = new TransactionsRepository();
 
-    accountsRepo.clearAll();
-    cardsRepo.clearAll();
-    categoriesRepo.clearAll();
-    scheduleRepo.clearAll();
-    transactionsRepo.clearAll();
+    const card = new CardsController(new CardsService(cardsRepo)).listCards(householdId)[0]!;
+    const category = new CategoriesController(new CategoriesService(categoriesRepo)).listCategories(householdId)[0]!;
 
-    const accounts = new AccountsController(new AccountsService(accountsRepo));
-    const cards = new CardsController(new CardsService(cardsRepo));
-    const categories = new CategoriesController(new CategoriesService(categoriesRepo));
-
-    const account = accounts.createAccount({ householdId, name: "Conta Casa", type: "CHECKING", openingBalance: "1000.00" });
-    cards.createCard({ householdId, name: "Visa Casa", closeDay: 5, dueDay: 12 });
-    const category = categories.createCategory({ householdId, name: "Mercado" });
-
+    const engine = new ScheduleEngineService();
     const scheduleManagement = new ScheduleManagementService(
       scheduleRepo,
-      new InstallmentsService(scheduleRepo, new ScheduleEngineService()),
-      new RecurrenceService(scheduleRepo, new ScheduleEngineService()),
-      new ScheduleEngineService(),
-      new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo),
+      new InstallmentsService(scheduleRepo, engine),
+      new RecurrenceService(scheduleRepo, engine),
+      engine,
     );
 
-    scheduleManagement.createUnifiedLaunch({
-      launchType: "RECURRING",
-      recurring: {
-        householdId,
-        kind: "EXPENSE",
-        description: "Academia",
-        amount: "100.00",
-        startMonth: "2026-03",
-        categoryId: category.id,
-        accountId: account.id,
-      },
+    const rule = scheduleManagement.createRecurringSchedule({
+      householdId,
+      kind: "EXPENSE",
+      description: "Streaming",
+      amount: "90.00",
+      startMonth: "2026-03",
+      categoryId: category.id,
+      creditCardId: card.id,
     });
 
-    render(React.createElement(SchedulesPage));
+    render(React.createElement(CardsPage));
 
-    expect(screen.getByText(/Criacao centralizada no Cashflow/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Academia/).length).toBeGreaterThan(0);
+    expect(await screen.findByText("Streaming")).toBeInTheDocument();
+    await user.click(screen.getByText("Streaming"));
+    expect(screen.getByLabelText("Escopo da edicao recorrente")).toHaveValue("THIS_ONLY");
+    expect(screen.getByText("Esta edicao altera apenas esta ocorrencia da recorrencia.")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Editar descricao da transacao"));
+    await user.type(screen.getByLabelText("Editar descricao da transacao"), "Streaming promo");
+    await user.clear(screen.getByLabelText("Editar valor da transacao"));
+    await user.type(screen.getByLabelText("Editar valor da transacao"), "120.00");
+    await user.click(screen.getByRole("button", { name: "Salvar edicao" }));
 
-    await user.selectOptions(screen.getByRole("combobox", { name: "Escopo da edicao" }), "CURRENT_AND_FUTURE");
-    await user.click(screen.getByRole("button", { name: "Salvar edicao da recorrencia" }));
-    await user.click(screen.getByRole("button", { name: "Encerrar recorrencia" }));
-
-    expect(screen.getAllByText(/inativa/).length).toBeGreaterThan(0);
-
-    await user.click(screen.getByRole("button", { name: /Excluir recorrencia \(tudo\)/i }));
-    expect(screen.queryAllByText(/Academia/i)).toHaveLength(0);
+    expect(await screen.findByText("Streaming promo")).toBeInTheDocument();
+    expect(scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-03")?.amount).toBe("120.00");
+    expect(scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-04")?.amount).toBe("90.00");
+    expect(scheduleRepo.findRecurringRuleById(rule.id)?.active).toBe(true);
   });
 });

@@ -18,7 +18,7 @@ import { InstallmentsService } from "../../modules/scheduling/installments.servi
 import { RecurrenceService } from "../../modules/scheduling/recurrence.service";
 import { ScheduleEngineService } from "../../modules/scheduling/schedule-engine.service";
 import { ScheduleManagementController } from "../../modules/scheduling/schedule-management.controller";
-import { ScheduleManagementService } from "../../modules/scheduling/schedule-management.service";
+import { ScheduleManagementService, type RecurringEditScope } from "../../modules/scheduling/schedule-management.service";
 import { ScheduleRepository } from "../../modules/scheduling/schedule.repository";
 import { TransactionsController } from "../../modules/transactions/transactions.controller";
 import { TransactionsRepository } from "../../modules/transactions/transactions.repository";
@@ -432,7 +432,10 @@ function createApiRuntime(): Runtime {
       updateInstanceSettlement: (input: SchedulesInstanceSettlementInput): SchedulesInstanceSettlementOutput =>
         requestSync<SchedulesInstanceSettlementOutput>("POST", "/api/schedules/instances/settlement", input),
       editRecurringSchedule: (input: RecurringEditInput): RecurringEditOutput =>
-        requestSync<RecurringEditOutput>("POST", "/api/schedules/recurring/edit", input),
+        requestSync<RecurringEditOutput>("POST", "/api/schedules/recurring/edit", {
+          ...input,
+          scope: input.scope as RecurringEditScope,
+        }),
       editInstallmentSchedule: (input: InstallmentEditInput): InstallmentEditOutput =>
         requestSync<InstallmentEditOutput>("POST", "/api/schedules/installment/edit", input),
       deleteRecurringSchedule: (input: RecurringDeleteInput): RecurringDeleteOutput =>

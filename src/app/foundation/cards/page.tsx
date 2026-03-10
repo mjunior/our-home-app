@@ -8,6 +8,7 @@ import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
 import { launchConfettiCanvas, playCheerSound } from "../../../lib/celebration";
 import { formatCurrencyBR, formatDateShortBR, formatMonthLabelBR } from "../../../lib/utils";
+import type { RecurringEditScope } from "../../../modules/scheduling/schedule-management.service";
 import {
   accountsController,
   cardsController,
@@ -62,6 +63,7 @@ export default function CardsPage() {
   const [editOccurredAt, setEditOccurredAt] = useState("2026-03-01");
   const [editCategoryId, setEditCategoryId] = useState("");
   const [deleteScope, setDeleteScope] = useState<"CURRENT_AND_FUTURE" | "ALL">("CURRENT_AND_FUTURE");
+  const [editRecurringScope, setEditRecurringScope] = useState<RecurringEditScope>("THIS_ONLY");
   const settleDebounceTimers = useRef<Record<string, number>>({});
 
   const { notify } = useSnackbar();
@@ -325,6 +327,7 @@ export default function CardsPage() {
                                 setEditingEntryId(entry.sourceType === "ONE_OFF" ? entry.id : null);
                                 setEditingSourceId(entry.sourceType !== "ONE_OFF" ? entry.sourceId : null);
                                 setEditingSourceMonth(entry.monthKey ?? selectedDueMonth);
+                                setEditRecurringScope("THIS_ONLY");
                                 setEditDescription(entry.description);
                                 setEditAmount(entry.amount);
                                 setEditOccurredAt(entry.occurredAt.slice(0, 10));
@@ -449,6 +452,7 @@ export default function CardsPage() {
                   scheduleManagementController.editRecurringSchedule({
                     ruleId: editingSourceId,
                     effectiveMonth: editingSourceMonth,
+                    scope: editRecurringScope,
                     kind: "EXPENSE",
                     description: editDescription,
                     amount: editAmount,
@@ -468,7 +472,13 @@ export default function CardsPage() {
 
                 setRefreshKey((prev) => prev + 1);
                 setEditModalOpen(false);
-                notify({ message: "Edicao aplicada com sucesso.", tone: "success" });
+                notify({
+                  message:
+                    editMode === "RECURRING" && editRecurringScope === "THIS_ONLY"
+                      ? "Edicao aplicada somente nesta ocorrencia."
+                      : "Edicao aplicada com sucesso.",
+                  tone: "success",
+                });
               } catch {
                 notify({ message: "Nao foi possivel editar o item da fatura.", tone: "error" });
               }
@@ -480,10 +490,30 @@ export default function CardsPage() {
                 <input aria-label="Editar data da transacao" type="date" value={editOccurredAt} onChange={(event) => setEditOccurredAt(event.target.value)} />
               </label>
             ) : (
-              <label>
-                Aplicar a partir do mes
-                <input aria-label="Editar mes efetivo" value={editingSourceMonth} onChange={(event) => setEditingSourceMonth(event.target.value)} />
-              </label>
+              <>
+                {editMode === "RECURRING" ? (
+                  <label>
+                    Escopo da edicao recorrente
+                    <select
+                      aria-label="Escopo da edicao recorrente"
+                      value={editRecurringScope}
+                      onChange={(event) => setEditRecurringScope(event.target.value as RecurringEditScope)}
+                    >
+                      <option value="THIS_ONLY">Editar somente esta</option>
+                      <option value="CURRENT_AND_FUTURE">Editar esta e futuras</option>
+                    </select>
+                  </label>
+                ) : null}
+                <label>
+                  {editMode === "RECURRING" && editRecurringScope === "THIS_ONLY" ? "Mes da ocorrencia" : "Aplicar a partir do mes"}
+                  <input
+                    aria-label="Editar mes efetivo"
+                    value={editingSourceMonth}
+                    onChange={(event) => setEditingSourceMonth(event.target.value)}
+                    readOnly={editMode === "RECURRING" && editRecurringScope === "THIS_ONLY"}
+                  />
+                </label>
+              </>
             )}
 
             <label>
@@ -524,6 +554,8 @@ export default function CardsPage() {
             <p className="rounded-xl bg-slate-100/80 p-2 text-xs text-slate-600 dark:bg-slate-900/70 dark:text-slate-300">
               {editMode === "ONE_OFF"
                 ? "Esta edicao altera apenas o item selecionado."
+                : editMode === "RECURRING" && editRecurringScope === "THIS_ONLY"
+                  ? "Esta edicao altera apenas esta ocorrencia da recorrencia."
                 : "Esta edicao altera o mes selecionado e todas as ocorrencias futuras."}
             </p>
 

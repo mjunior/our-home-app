@@ -12,6 +12,11 @@ import { CategoriesService } from "../../src/modules/categories/categories.servi
 import { FreeBalancePolicy } from "../../src/modules/free-balance/free-balance.policy";
 import { FreeBalanceService } from "../../src/modules/free-balance/free-balance.service";
 import { InvoiceCycleService } from "../../src/modules/invoices/invoice-cycle.service";
+import { InstallmentsService } from "../../src/modules/scheduling/installments.service";
+import { RecurrenceService } from "../../src/modules/scheduling/recurrence.service";
+import { ScheduleEngineService } from "../../src/modules/scheduling/schedule-engine.service";
+import { ScheduleManagementController } from "../../src/modules/scheduling/schedule-management.controller";
+import { ScheduleManagementService } from "../../src/modules/scheduling/schedule-management.service";
 import { ScheduleRepository } from "../../src/modules/scheduling/schedule.repository";
 import { TransactionsController } from "../../src/modules/transactions/transactions.controller";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
@@ -30,6 +35,15 @@ const cardsController = new CardsController(new CardsService(cardsRepo));
 const categoriesController = new CategoriesController(new CategoriesService(categoriesRepo));
 const transactionsController = new TransactionsController(
   new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo),
+);
+const scheduleManagementController = new ScheduleManagementController(
+  new ScheduleManagementService(
+    scheduleRepo,
+    new InstallmentsService(scheduleRepo, new ScheduleEngineService()),
+    new RecurrenceService(scheduleRepo, new ScheduleEngineService()),
+    new ScheduleEngineService(),
+    new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo),
+  ),
 );
 const freeBalanceService = new FreeBalanceService(
   accountsRepo,
@@ -390,5 +404,42 @@ describe("foundation api", () => {
         goalReached: false,
       },
     ]);
+  });
+
+  it("edits a recurring instance with THIS_ONLY scope without revising the recurring rule", () => {
+    const checking = accountsController.createAccount({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const category = categoriesController.createCategory({ householdId, name: "Casa" });
+
+    const rule = scheduleManagementController.createRecurringSchedule({
+      householdId,
+      kind: "EXPENSE",
+      description: "Academia",
+      amount: "100.00",
+      startMonth: "2026-03",
+      categoryId: category.id,
+      accountId: checking.id,
+    });
+
+    scheduleManagementController.editRecurringSchedule({
+      ruleId: rule.id,
+      effectiveMonth: "2026-04",
+      scope: "THIS_ONLY",
+      amount: "145.00",
+      description: "Academia ajuste",
+    });
+
+    const april = scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-04");
+    const may = scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-05");
+
+    expect(scheduleRepo.listRecurringRules(householdId)).toHaveLength(1);
+    expect(april?.amount).toBe("145.00");
+    expect(april?.description).toBe("Academia ajuste");
+    expect(may?.amount).toBe("100.00");
+    expect(scheduleRepo.findRecurringRuleById(rule.id)?.active).toBe(true);
   });
 });

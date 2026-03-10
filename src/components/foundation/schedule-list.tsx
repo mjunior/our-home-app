@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import type { RecurringEditScope } from "../../modules/scheduling/schedule-management.service";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
@@ -33,7 +34,7 @@ interface ScheduleListProps {
   installments: InstallmentListItem[];
   recurrences: RecurrenceListItem[];
   instances: InstanceListItem[];
-  onEditRecurring: (payload: { ruleId: string; effectiveMonth: string; amount?: string; description?: string }) => void;
+  onEditRecurring: (payload: { ruleId: string; effectiveMonth: string; scope: RecurringEditScope; amount?: string; description?: string }) => void;
   onStopRecurring: (payload: { ruleId: string; stopFromMonth: string }) => void;
   onDeleteRecurring: (payload: { ruleId: string; fromMonth: string; scope: "CURRENT_AND_FUTURE" | "ALL" }) => void;
 }
@@ -43,6 +44,7 @@ export function ScheduleList({ installments, recurrences, instances, onEditRecur
   const [editDescription, setEditDescription] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [effectiveMonth, setEffectiveMonth] = useState("2026-03");
+  const [editScope, setEditScope] = useState<RecurringEditScope>("THIS_ONLY");
   const [stopFromMonth, setStopFromMonth] = useState("2026-03");
   const selectedRule = recurrences.find((item) => item.id === selectedRuleId) ?? recurrences[0];
 
@@ -52,6 +54,7 @@ export function ScheduleList({ installments, recurrences, instances, onEditRecur
     setEditDescription(selectedRule.description);
     setEditAmount(selectedRule.amount);
     setEffectiveMonth(selectedRule.startMonth);
+    setEditScope("THIS_ONLY");
     setStopFromMonth(selectedRule.startMonth);
   }, [selectedRule?.id]);
 
@@ -98,8 +101,15 @@ export function ScheduleList({ installments, recurrences, instances, onEditRecur
                 </select>
               </label>
               <label>
-                Mes efetivo edicao
-                <input value={effectiveMonth} onChange={(event) => setEffectiveMonth(event.target.value)} />
+                Escopo da edicao
+                <select value={editScope} onChange={(event) => setEditScope(event.target.value as RecurringEditScope)}>
+                  <option value="THIS_ONLY">Editar somente este mes</option>
+                  <option value="CURRENT_AND_FUTURE">Editar este mes e futuras</option>
+                </select>
+              </label>
+              <label>
+                {editScope === "THIS_ONLY" ? "Mes da ocorrencia" : "Mes efetivo da edicao"}
+                <input value={effectiveMonth} onChange={(event) => setEffectiveMonth(event.target.value)} readOnly={editScope === "THIS_ONLY"} />
               </label>
               <label>
                 Nova descricao
@@ -124,10 +134,11 @@ export function ScheduleList({ installments, recurrences, instances, onEditRecur
                     description: editDescription,
                     amount: editAmount,
                     effectiveMonth,
+                    scope: editScope,
                   })
                 }
               >
-                Aplicar edicao recorrencia
+                Salvar edicao da recorrencia
               </Button>
               <Button
                 type="button"
@@ -143,6 +154,11 @@ export function ScheduleList({ installments, recurrences, instances, onEditRecur
               </Button>
             </div>
             <div className="mt-2">
+              <p className="mb-2 rounded-xl bg-slate-100/80 p-2 text-xs text-slate-600 dark:bg-slate-900/70 dark:text-slate-300">
+                {editScope === "THIS_ONLY"
+                  ? "Esta edicao altera apenas a ocorrencia do mes selecionado."
+                  : "Esta edicao altera o mes selecionado e todas as ocorrencias futuras."}
+              </p>
               <Button
                 type="button"
                 variant="danger"

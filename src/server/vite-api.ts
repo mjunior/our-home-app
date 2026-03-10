@@ -1397,6 +1397,32 @@ export function installViteApi(server: MiddlewareServer) {
           return;
         }
 
+        if (body.scope === "THIS_ONLY") {
+          const instance = await prisma.scheduledInstance.findFirst({
+            where: {
+              sourceType: "RECURRING",
+              sourceId: original.id,
+              monthKey: body.effectiveMonth,
+            },
+          });
+          if (!instance || instance.householdId !== authHouseholdId) {
+            sendJson(res, 404, { message: "RECURRING_INSTANCE_NOT_FOUND" });
+            return;
+          }
+
+          const updated = await prisma.scheduledInstance.update({
+            where: { id: instance.id },
+            data: {
+              kind: body.kind ?? instance.kind,
+              description: body.description ?? instance.description,
+              amount: body.amount ?? instance.amount,
+            },
+          });
+
+          sendJson(res, 200, { ...updated, amount: updated.amount.toString() });
+          return;
+        }
+
         await prisma.scheduledInstance.updateMany({
           where: {
             sourceType: "RECURRING",

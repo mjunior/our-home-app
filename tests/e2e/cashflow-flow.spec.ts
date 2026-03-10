@@ -16,6 +16,11 @@ import { CardsService } from "../../src/modules/cards/cards.service";
 import { CategoriesController } from "../../src/modules/categories/categories.controller";
 import { CategoriesRepository } from "../../src/modules/categories/categories.repository";
 import { CategoriesService } from "../../src/modules/categories/categories.service";
+import { InstallmentsService } from "../../src/modules/scheduling/installments.service";
+import { RecurrenceService } from "../../src/modules/scheduling/recurrence.service";
+import { ScheduleEngineService } from "../../src/modules/scheduling/schedule-engine.service";
+import { ScheduleManagementService } from "../../src/modules/scheduling/schedule-management.service";
+import { ScheduleRepository } from "../../src/modules/scheduling/schedule.repository";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
 
 const householdId = "household-main";
@@ -30,11 +35,13 @@ describe("cashflow flow", () => {
     const cardsRepo = new CardsRepository();
     const categoriesRepo = new CategoriesRepository();
     const transactionsRepo = new TransactionsRepository();
+    const scheduleRepo = new ScheduleRepository();
 
     accountsRepo.clearAll();
     cardsRepo.clearAll();
     categoriesRepo.clearAll();
     transactionsRepo.clearAll();
+    scheduleRepo.clearAll();
 
     const accounts = new AccountsController(new AccountsService(accountsRepo));
     const cards = new CardsController(new CardsService(cardsRepo));
@@ -97,7 +104,7 @@ describe("cashflow flow", () => {
     await user.click(screen.getByRole("button", { name: "Abrir composicao do saldo atual" }));
     expect(screen.getByText("Detalhamento do saldo atual - Mes atual")).toBeInTheDocument();
     expect(screen.getByText("Conta Casa")).toBeInTheDocument();
-    expect(screen.getByText("Reserva Invest")).toBeInTheDocument();
+    expect(screen.queryByText("Reserva Invest")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(screen.getByText("Fatura Visa Casa")).toBeInTheDocument();
@@ -143,5 +150,95 @@ describe("cashflow flow", () => {
     await user.click(screen.getAllByRole("button", { name: "Editar lancamento" })[0]!);
     await user.click(screen.getByRole("button", { name: "Excluir" }));
     expect(screen.queryByText("Aporte ajustado")).not.toBeInTheDocument();
+  });
+
+  it("does not add investment opening balance to the current month balance card", async () => {
+    const user = userEvent.setup();
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+
+    accountsRepo.clearAll();
+    cardsRepo.clearAll();
+    categoriesRepo.clearAll();
+    transactionsRepo.clearAll();
+
+    const accounts = new AccountsController(new AccountsService(accountsRepo));
+    const cards = new CardsController(new CardsService(cardsRepo));
+    const categories = new CategoriesController(new CategoriesService(categoriesRepo));
+
+    accounts.createAccount({ householdId, name: "Conta Casa", type: "CHECKING", openingBalance: "1000.00" });
+    accounts.createAccount({ householdId, name: "Reserva Invest", type: "INVESTMENT", openingBalance: "700.00", goalAmount: "1000.00" });
+    cards.createCard({ householdId, name: "Visa Casa", closeDay: 5, dueDay: 12 });
+    categories.createCategory({ householdId, name: "Mercado" });
+
+    render(React.createElement(CashflowPage));
+
+    expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 1.000,00");
+
+    await user.click(screen.getByRole("button", { name: "Abrir composicao do saldo atual" }));
+    expect(screen.getByText("Conta Casa")).toBeInTheDocument();
+    expect(screen.queryByText("Reserva Invest")).not.toBeInTheDocument();
+    expect(screen.getByText("Saldo atual em contas")).toBeInTheDocument();
+    expect(screen.getByText("R$ 1.000,00")).toBeInTheDocument();
+  });
+
+  it("edits recurring entries only for the selected month", async () => {
+    const user = userEvent.setup();
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+    const scheduleRepo = new ScheduleRepository();
+
+    accountsRepo.clearAll();
+    cardsRepo.clearAll();
+    categoriesRepo.clearAll();
+    transactionsRepo.clearAll();
+    scheduleRepo.clearAll();
+
+    const accounts = new AccountsController(new AccountsService(accountsRepo));
+    const cards = new CardsController(new CardsService(cardsRepo));
+    const categories = new CategoriesController(new CategoriesService(categoriesRepo));
+
+    const account = accounts.createAccount({ householdId, name: "Conta Casa", type: "CHECKING", openingBalance: "1000.00" });
+    cards.createCard({ householdId, name: "Visa Casa", closeDay: 5, dueDay: 12 });
+    const category = categories.createCategory({ householdId, name: "Mercado" });
+
+    const engine = new ScheduleEngineService();
+    const scheduleManagement = new ScheduleManagementService(
+      scheduleRepo,
+      new InstallmentsService(scheduleRepo, engine),
+      new RecurrenceService(scheduleRepo, engine),
+      engine,
+    );
+
+    scheduleManagement.createRecurringSchedule({
+      householdId,
+      kind: "EXPENSE",
+      description: "Academia",
+      amount: "100.00",
+      startMonth: "2026-03",
+      categoryId: category.id,
+      accountId: account.id,
+    });
+
+    render(React.createElement(CashflowPage));
+
+    expect(screen.getByText("Academia")).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Editar lancamento" })[0]!);
+    expect(screen.getByLabelText("Escopo da edicao recorrente")).toHaveValue("THIS_ONLY");
+    expect(screen.getByText("Esta edicao altera apenas esta ocorrencia da recorrencia.")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Editar descricao da transacao"));
+    await user.type(screen.getByLabelText("Editar descricao da transacao"), "Academia promocional");
+    await user.clear(screen.getByLabelText("Editar valor da transacao"));
+    await user.type(screen.getByLabelText("Editar valor da transacao"), "150.00");
+    await user.click(screen.getByRole("button", { name: "Salvar edicao" }));
+
+    expect(screen.getByText("Academia promocional")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ir para proximo mes" }));
+    expect(screen.queryByText("Academia promocional")).not.toBeInTheDocument();
+    expect(screen.getByText("Academia")).toBeInTheDocument();
   });
 });

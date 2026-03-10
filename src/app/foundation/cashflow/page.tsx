@@ -12,6 +12,7 @@ import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
 import { launchConfettiCanvas, playCashRegisterSound, playCheerSound } from "../../../lib/celebration";
 import { formatCurrencyBR, formatMonthLabelBR } from "../../../lib/utils";
+import type { RecurringEditScope } from "../../../modules/scheduling/schedule-management.service";
 import {
   accountsController,
   cardsController,
@@ -73,6 +74,7 @@ export default function CashflowPage() {
   const [optimisticSettlementByEntryId, setOptimisticSettlementByEntryId] = useState<Record<string, "PAID" | "UNPAID">>({});
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteScope, setDeleteScope] = useState<"CURRENT_AND_FUTURE" | "ALL">("CURRENT_AND_FUTURE");
+  const [editRecurringScope, setEditRecurringScope] = useState<RecurringEditScope>("THIS_ONLY");
   const { notify } = useSnackbar();
   const householdId = getRuntimeHouseholdId();
 
@@ -342,7 +344,7 @@ export default function CashflowPage() {
       </Card>
 
       <FreeBalanceSemaphore
-        currentBalance={consolidatedBalance.amount}
+        currentBalance={consolidatedBalance.byType.CHECKING}
         currentProjectedBalance={freeBalance.freeBalanceCurrent}
         freeBalanceNext={freeBalance.freeBalanceNext}
         gastosOperacionais={freeBalance.breakdown.current.gastosOperacionais}
@@ -385,6 +387,7 @@ export default function CashflowPage() {
           setEditingSourceId(!isOneOff && !isInvestment ? entry.sourceId ?? null : null);
           setEditingTransferGroupId(entry.transferGroupId ?? null);
           setEditingSourceMonth(entry.monthKey ?? month);
+          setEditRecurringScope("THIS_ONLY");
           setDeleteScope("CURRENT_AND_FUTURE");
           setEditKind(entry.kind);
           setEditDescription(entry.description);
@@ -568,7 +571,7 @@ export default function CashflowPage() {
             </SheetTitle>
             <SheetDescription>
               {detailMonthKey === "current"
-                ? "Composicao do saldo real por conta no momento atual."
+                ? "Composicao do saldo real disponivel em contas correntes no momento atual."
                 : "Transparencia completa dos componentes usados no calculo da projecao."}
             </SheetDescription>
           </SheetHeader>
@@ -583,7 +586,7 @@ export default function CashflowPage() {
             </CardHeader>
             <CardContent>
               {detailMonthKey === "current"
-                ? consolidatedBalance.accounts.map((account) => (
+                ? consolidatedBalance.accounts.filter((account) => account.type === "CHECKING").map((account) => (
                   <div key={account.id} className="row-animate flex items-center justify-between rounded-xl px-2 py-1.5 text-sm">
                     <span className="text-slate-500 dark:text-slate-300">{account.name}</span>
                     <strong>{formatCurrencyBR(account.balance)}</strong>
@@ -596,10 +599,10 @@ export default function CashflowPage() {
                   </div>
                 ))}
               <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-sm dark:border-slate-700">
-                <span>{detailMonthKey === "current" ? "Saldo atual consolidado" : "Saldo livre final"}</span>
+                <span>{detailMonthKey === "current" ? "Saldo atual em contas" : "Saldo livre final"}</span>
                 <strong>
                   {formatCurrencyBR(
-                    detailMonthKey === "current" ? consolidatedBalance.amount : freeBalance.breakdown.next.freeBalance,
+                    detailMonthKey === "current" ? consolidatedBalance.byType.CHECKING : freeBalance.breakdown.next.freeBalance,
                   )}
                 </strong>
               </div>
@@ -662,6 +665,7 @@ export default function CashflowPage() {
                   scheduleManagementController.editRecurringSchedule({
                     ruleId: editingSourceId,
                     effectiveMonth: editingSourceMonth,
+                    scope: editRecurringScope,
                     kind: editKind,
                     description: editDescription,
                     amount: editAmount,
@@ -680,7 +684,13 @@ export default function CashflowPage() {
                 }
                 setRefreshKey((prev) => prev + 1);
                 setEditModalOpen(false);
-                notify({ message: "Edicao aplicada no mes atual e futuras.", tone: "success" });
+                notify({
+                  message:
+                    editMode === "RECURRING" && editRecurringScope === "THIS_ONLY"
+                      ? "Edicao aplicada somente nesta ocorrencia."
+                      : "Edicao aplicada no mes atual e futuras.",
+                  tone: "success",
+                });
               } catch {
                 notify({ message: "Nao foi possivel editar o lancamento.", tone: "error" });
               }
@@ -715,9 +725,27 @@ export default function CashflowPage() {
                     <option value="EXPENSE">Saida</option>
                   </select>
                 </label>
+                {editMode === "RECURRING" ? (
+                  <label>
+                    Escopo da edicao recorrente
+                    <select
+                      aria-label="Escopo da edicao recorrente"
+                      value={editRecurringScope}
+                      onChange={(event) => setEditRecurringScope(event.target.value as RecurringEditScope)}
+                    >
+                      <option value="THIS_ONLY">Editar somente esta</option>
+                      <option value="CURRENT_AND_FUTURE">Editar esta e futuras</option>
+                    </select>
+                  </label>
+                ) : null}
                 <label>
-                  Aplicar a partir do mes
-                  <input aria-label="Editar mes efetivo" value={editingSourceMonth} onChange={(event) => setEditingSourceMonth(event.target.value)} />
+                  {editMode === "RECURRING" && editRecurringScope === "THIS_ONLY" ? "Mes da ocorrencia" : "Aplicar a partir do mes"}
+                  <input
+                    aria-label="Editar mes efetivo"
+                    value={editingSourceMonth}
+                    onChange={(event) => setEditingSourceMonth(event.target.value)}
+                    readOnly={editMode === "RECURRING" && editRecurringScope === "THIS_ONLY"}
+                  />
                 </label>
               </div>
             )}
@@ -839,6 +867,8 @@ export default function CashflowPage() {
                 ? "Esta edicao altera apenas o lancamento selecionado."
                 : editMode === "INVESTMENT"
                   ? "Esta edicao altera o par vinculado de investimento (debito e credito)."
+                : editMode === "RECURRING" && editRecurringScope === "THIS_ONLY"
+                  ? "Esta edicao altera apenas esta ocorrencia da recorrencia."
                 : "Esta edicao altera o mes atual selecionado e todas as ocorrencias futuras."}
             </p>
 

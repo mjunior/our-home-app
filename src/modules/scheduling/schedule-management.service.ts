@@ -13,6 +13,7 @@ import { ScheduleRepository } from "./schedule.repository";
 const editRecurringSchema = z.object({
   ruleId: z.string().min(1),
   effectiveMonth: z.string().regex(/^\d{4}-\d{2}$/),
+  scope: z.enum(["THIS_ONLY", "CURRENT_AND_FUTURE"]),
   kind: z.enum(["INCOME", "EXPENSE"]).optional(),
   amount: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
@@ -120,6 +121,8 @@ export interface LaunchBatchResult {
   errors: Array<{ index: number; error: string }>;
 }
 
+export type RecurringEditScope = "THIS_ONLY" | "CURRENT_AND_FUTURE";
+
 export class ScheduleManagementService {
   constructor(
     private readonly repository: ScheduleRepository,
@@ -188,12 +191,32 @@ export class ScheduleManagementService {
     };
   }
 
-  editRecurringSchedule(input: { ruleId: string; effectiveMonth: string; kind?: "INCOME" | "EXPENSE"; amount?: string; description?: string }) {
+  editRecurringSchedule(input: {
+    ruleId: string;
+    effectiveMonth: string;
+    scope: RecurringEditScope;
+    kind?: "INCOME" | "EXPENSE";
+    amount?: string;
+    description?: string;
+  }) {
     const parsed = editRecurringSchema.parse(input);
     const rule = this.repository.findRecurringRuleById(parsed.ruleId);
 
     if (!rule) {
       throw new Error("RECURRING_RULE_NOT_FOUND");
+    }
+
+    if (parsed.scope === "THIS_ONLY") {
+      const instance = this.repository.findInstanceBySourceMonth("RECURRING", rule.id, parsed.effectiveMonth);
+      if (!instance) {
+        throw new Error("RECURRING_INSTANCE_NOT_FOUND");
+      }
+
+      return this.repository.updateScheduledInstance(instance.id, {
+        kind: parsed.kind ?? instance.kind,
+        amount: parsed.amount ?? instance.amount,
+        description: parsed.description ?? instance.description,
+      });
     }
 
     this.repository.lockInstancesBeforeMonth("RECURRING", rule.id, parsed.effectiveMonth);
