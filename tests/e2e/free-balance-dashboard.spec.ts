@@ -50,12 +50,17 @@ describe("free balance dashboard", () => {
   it("shows clean dashboard with semaphore and statement only", async () => {
     const user = userEvent.setup();
     render(React.createElement(CashflowPage));
+    await user.click(screen.getByRole("button", { name: "Ir para proximo mes" }));
+    expect(screen.getByRole("tab", { name: "Abr/26", selected: true })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ir para mes anterior" }));
+    expect(screen.getByRole("tab", { name: "Mar/26", selected: true })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
     await user.type(screen.getByLabelText("Descricao da transacao"), "Salario");
     await user.clear(screen.getByLabelText("Valor da transacao"));
     await user.type(screen.getByLabelText("Valor da transacao"), "3000.00");
     await user.click(screen.getAllByRole("button", { name: "Adicionar lancamento" })[0]!);
+    expect(screen.getByRole("button", { name: "Salvando..." })).toBeDisabled();
 
     expect(screen.getByLabelText("Semaforo saldo livre")).toBeInTheDocument();
     expect(screen.getByTestId("free-balance-current")).toHaveTextContent("R$");

@@ -56,12 +56,12 @@
 | INVG-03 | Phase 22 | In Progress |
 | INVG-04 | Phase 22 | In Progress |
 | INVG-05 | Phase 22 | In Progress |
-| NAV-01 | Phase 23 | Pending |
-| NAV-02 | Phase 23 | Pending |
-| NAV-03 | Phase 23 | Pending |
-| TXF-01 | Phase 23 | Pending |
-| TXF-02 | Phase 23 | Pending |
-| TXF-03 | Phase 23 | Pending |
+| NAV-01 | Phase 23 | In Progress |
+| NAV-02 | Phase 23 | In Progress |
+| NAV-03 | Phase 23 | In Progress |
+| TXF-01 | Phase 23 | In Progress |
+| TXF-02 | Phase 23 | In Progress |
+| TXF-03 | Phase 23 | In Progress |
 
 **Coverage:**
 - v1 requirements: 11 total

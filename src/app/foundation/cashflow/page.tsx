@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { FreeBalanceSemaphore } from "../../../components/foundation/free-balance-semaphore";
 import { StatementTable } from "../../../components/foundation/statement-table";
@@ -265,6 +266,10 @@ export default function CashflowPage() {
     };
   }, []);
 
+  function handleMonthNavigation(offset: number) {
+    setMonth(addMonths(month, offset));
+  }
+
   return (
     <main className="space-y-4 pb-36 lg:pb-4">
       <section className="section-reveal flex flex-col items-start gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -281,22 +286,49 @@ export default function CashflowPage() {
         <CardContent className="pt-5">
           <div className="flex flex-col gap-3">
             <div className="space-y-2.5 lg:space-y-0">
-              <div className="cashflow-month-rail" role="tablist" aria-label="Selecionar mes" ref={setMonthRailEl}>
-                {monthRail.map((monthItem) => {
-                  const active = monthItem === month;
-                  return (
+              <div className="cashflow-month-shell">
+                <div className="cashflow-month-shell__header">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Competencia</p>
+                    <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{formatMonthLabelBR(month)}</p>
+                  </div>
+                  <div className="cashflow-month-nav" aria-label="Navegacao mensal">
                     <button
-                      key={monthItem}
                       type="button"
-                      role="tab"
-                      aria-selected={active}
-                      className={`cashflow-month-rail__item ${active ? "is-active" : ""}`}
-                      onClick={() => setMonth(monthItem)}
+                      className="cashflow-month-nav__button"
+                      aria-label="Ir para mes anterior"
+                      onClick={() => handleMonthNavigation(-1)}
                     >
-                      {formatMonthLabelBR(monthItem)}
+                      <ChevronLeft className="h-4 w-4" />
                     </button>
-                  );
-                })}
+                    <button
+                      type="button"
+                      className="cashflow-month-nav__button"
+                      aria-label="Ir para proximo mes"
+                      onClick={() => handleMonthNavigation(1)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="cashflow-month-rail" role="tablist" aria-label="Selecionar mes" ref={setMonthRailEl}>
+                  {monthRail.map((monthItem) => {
+                    const active = monthItem === month;
+                    return (
+                      <button
+                        key={monthItem}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        className={`cashflow-month-rail__item ${active ? "is-active" : ""}`}
+                        onClick={() => setMonth(monthItem)}
+                      >
+                        {formatMonthLabelBR(monthItem)}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="sm:inline-flex">
@@ -476,15 +508,23 @@ export default function CashflowPage() {
               accounts={accounts.map((item) => ({ id: item.id, label: item.name, type: item.type }))}
               cards={cards.map((item) => ({ id: item.id, label: item.name }))}
               categories={categories.map((item) => ({ id: item.id, label: item.name }))}
-              onSubmit={(payload) => {
-                try {
-                  scheduleManagementController.createLaunch(payload);
-                  setRefreshKey((prev) => prev + 1);
-                  setTransactionModalOpen(false);
-                  notify({ message: "Lancamento cadastrado com sucesso.", tone: "success" });
-                } catch {
-                  notify({ message: "Nao foi possivel cadastrar o lancamento.", tone: "error" });
-                }
+              onSubmit={async (payload) => {
+                await new Promise<void>((resolve, reject) => {
+                  const runCreate = () => {
+                    try {
+                      scheduleManagementController.createLaunch(payload);
+                      setRefreshKey((prev) => prev + 1);
+                      setTransactionModalOpen(false);
+                      notify({ message: "Lancamento cadastrado com sucesso.", tone: "success" });
+                      resolve();
+                    } catch (error) {
+                      notify({ message: "Nao foi possivel cadastrar o lancamento.", tone: "error" });
+                      reject(error);
+                    }
+                  };
+
+                  window.setTimeout(runCreate, import.meta.env.MODE === "test" ? 32 : 140);
+                });
               }}
             />
           </div>

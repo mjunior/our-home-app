@@ -50,13 +50,20 @@ describe("cashflow flow", () => {
     const user = userEvent.setup();
 
     render(React.createElement(CashflowPage));
-    expect(screen.getByText("Mar/26")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Mar/26", selected: true })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ir para proximo mes" }));
+    expect(screen.getByRole("tab", { name: "Abr/26", selected: true })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ir para mes anterior" }));
+    expect(screen.getByRole("tab", { name: "Mar/26", selected: true })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
     await user.type(screen.getByLabelText("Descricao da transacao"), "Salario");
     await user.clear(screen.getByLabelText("Valor da transacao"));
     await user.type(screen.getByLabelText("Valor da transacao"), "5000.00");
     await user.click(screen.getByRole("button", { name: "Adicionar lancamento" }));
+    expect(screen.getByRole("button", { name: "Salvando..." })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: "Investimento" })).toBeDisabled();
+    expect(await screen.findByText("Salario")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
     await user.selectOptions(screen.getByLabelText("Tipo da transacao"), "EXPENSE");
@@ -65,10 +72,8 @@ describe("cashflow flow", () => {
     await user.type(screen.getByLabelText("Valor da transacao"), "200.00");
     await user.selectOptions(screen.getByLabelText("Destino da transacao"), "card");
     await user.click(screen.getByRole("button", { name: "Adicionar lancamento" }));
-
-    expect(screen.getByText("Salario")).toBeInTheDocument();
+    expect(await screen.findByText("Fatura Visa Casa")).toBeInTheDocument();
     expect(screen.queryByText("Supermercado cartao")).not.toBeInTheDocument();
-    expect(screen.getByText("Fatura Visa Casa")).toBeInTheDocument();
     expect(screen.getAllByText("Mercado").length).toBeGreaterThan(0);
     expect(screen.getByText("Entrada")).toBeInTheDocument();
     expect(screen.getByText("Saida")).toBeInTheDocument();
@@ -119,8 +124,9 @@ describe("cashflow flow", () => {
     await user.clear(screen.getByLabelText("Valor da transacao"));
     await user.type(screen.getByLabelText("Valor da transacao"), "300.00");
     await user.click(screen.getByRole("button", { name: "Adicionar lancamento" }));
+    expect(screen.getByRole("button", { name: "Salvando..." })).toBeDisabled();
 
-    expect(screen.getAllByText("Aporte")).toHaveLength(1);
+    expect(await screen.findAllByText("Aporte")).toHaveLength(1);
     expect(screen.getAllByText(/Investimento/).length).toBeGreaterThan(0);
     expect(screen.queryByText("Saida")).not.toBeInTheDocument();
     expect(screen.getByText("Conta Casa -> Reserva Invest")).toBeInTheDocument();
