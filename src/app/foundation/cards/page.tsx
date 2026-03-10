@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CardForm } from "../../../components/foundation/card-form";
+import { TransactionForm } from "../../../components/foundation/transaction-form";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
@@ -25,6 +26,32 @@ function addMonths(monthKey: string, count: number): string {
   return `${date.getUTCFullYear().toString().padStart(4, "0")}-${(date.getUTCMonth() + 1).toString().padStart(2, "0")}`;
 }
 
+function getTodayDateInputValue() {
+  const now = new Date();
+  const year = now.getFullYear().toString().padStart(4, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function resolveDefaultExpenseDateForInvoice(dueMonth: string, closeDay: number) {
+  const today = getTodayDateInputValue();
+  const [todayYear, todayMonth] = today.split("-").map(Number);
+  const todayUtc = new Date(Date.UTC(todayYear, todayMonth - 1, Number(today.slice(8, 10))));
+  const todayMonthKey = today.slice(0, 7);
+  const todayCycleMonth = todayUtc.getUTCDate() >= closeDay ? addMonths(todayMonthKey, 1) : todayMonthKey;
+  if (todayCycleMonth === dueMonth) {
+    return today;
+  }
+
+  if (closeDay === 1) {
+    const previousMonth = addMonths(dueMonth, -1);
+    return `${previousMonth}-01`;
+  }
+
+  return `${dueMonth}-${String(closeDay - 1).padStart(2, "0")}`;
+}
+
 type EditMode = "ONE_OFF" | "RECURRING" | "INSTALLMENT" | null;
 
 export default function CardsPage() {
@@ -33,6 +60,8 @@ export default function CardsPage() {
   const [deleteCardModalOpen, setDeleteCardModalOpen] = useState(false);
   const [pendingDeleteCardId, setPendingDeleteCardId] = useState<string | null>(null);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [quickExpenseModalOpen, setQuickExpenseModalOpen] = useState(false);
+  const [quickExpenseResetKey, setQuickExpenseResetKey] = useState(0);
   const [navigationContext] = useState<{ cardId: string; dueMonth: string } | null>(() => {
     const raw = sessionStorage.getItem("cards:navigation-context");
     if (!raw) {
@@ -115,7 +144,25 @@ export default function CardsPage() {
   }, [householdId, refreshKey, selectedDueMonth, selectedInvoiceCardId]);
 
   const selectedInvoiceSummary = monthlyInvoices.cards.find((item) => item.cardId === selectedInvoiceCardId) ?? null;
+  const selectedCard = cards.find((item) => item.id === selectedInvoiceCardId) ?? null;
   const pendingDeleteCard = cards.find((item) => item.id === pendingDeleteCardId) ?? null;
+  const sortedInvoiceEntries = useMemo(
+    () => [...(invoiceDetails?.entries ?? [])].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)),
+    [invoiceDetails?.entries],
+  );
+  const quickExpenseInitialValues = useMemo(
+    () =>
+      selectedInvoiceSummary && selectedCard
+        ? {
+            kind: "EXPENSE" as const,
+            target: "card" as const,
+            targetId: selectedInvoiceSummary.cardId,
+            occurredAt: resolveDefaultExpenseDateForInvoice(selectedDueMonth, selectedCard.closeDay),
+            categoryId: categories[0]?.id ?? "",
+          }
+        : undefined,
+    [categories, selectedCard, selectedDueMonth, selectedInvoiceSummary],
+  );
 
   return (
     <main className="space-y-4">
@@ -281,7 +328,22 @@ export default function CardsPage() {
                       ? `Detalhe da fatura: ${selectedInvoiceSummary.cardName}`
                       : "Detalhe da fatura"}
                   </CardTitle>
-                  {selectedInvoiceSummary ? <Badge variant="outline">{formatCurrencyBR(selectedInvoiceSummary.total)}</Badge> : null}
+                  <div className="flex items-center gap-2">
+                    {selectedInvoiceSummary ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setQuickExpenseResetKey((prev) => prev + 1);
+                          setQuickExpenseModalOpen(true);
+                        }}
+                      >
+                        Adicionar despesa
+                      </Button>
+                    ) : null}
+                    {selectedInvoiceSummary ? <Badge variant="outline">{formatCurrencyBR(selectedInvoiceSummary.total)}</Badge> : null}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-0 text-sm text-slate-600 dark:text-slate-300">
@@ -293,7 +355,7 @@ export default function CardsPage() {
                   <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
                     Nao foi possivel carregar os itens desta fatura. Tente atualizar a pagina.
                   </div>
-                ) : invoiceDetails.entries.length === 0 ? (
+                ) : sortedInvoiceEntries.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-300">
                     Esta fatura nao possui transacoes no periodo.
                   </div>
@@ -308,7 +370,7 @@ export default function CardsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {invoiceDetails.entries.map((entry, index) => {
+                        {sortedInvoiceEntries.map((entry, index) => {
                           const installmentMatch = entry.description.match(/\((\d+\/\d+)\)\s*$/);
                           const installmentLabel = entry.sourceType === "INSTALLMENT" ? installmentMatch?.[1] ?? "" : "";
                           const baseDescription = installmentMatch
@@ -414,6 +476,53 @@ export default function CardsPage() {
           </ul>
         </CardContent>
       </Card>
+
+      <Sheet open={quickExpenseModalOpen} onOpenChange={setQuickExpenseModalOpen}>
+        <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[88vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
+          <SheetHeader>
+            <SheetTitle>Adicionar despesa no cartao</SheetTitle>
+            <SheetDescription>
+              {selectedInvoiceSummary
+                ? `${selectedInvoiceSummary.cardName} - ${formatMonthLabelBR(selectedDueMonth)}`
+                : "Selecione uma fatura para lancar uma nova despesa."}
+            </SheetDescription>
+          </SheetHeader>
+          {selectedInvoiceSummary ? (
+            <div className="mt-4">
+              <TransactionForm
+                formId="cards-quick-expense-form"
+                title="Nova despesa"
+                submitLabel="Adicionar despesa"
+                resetKey={quickExpenseResetKey}
+                lockKind
+                lockTarget
+                initialValues={quickExpenseInitialValues}
+                accounts={checkingAccounts.map((item) => ({ id: item.id, label: item.name }))}
+                cards={cards.map((item) => ({ id: item.id, label: item.name }))}
+                categories={categories.map((item) => ({ id: item.id, label: item.name }))}
+                onSubmit={(values) => {
+                  try {
+                    transactionsController.createTransaction({
+                      householdId,
+                      kind: "EXPENSE",
+                      description: values.description,
+                      amount: values.amount,
+                      occurredAt: values.occurredAt,
+                      creditCardId: selectedInvoiceSummary.cardId,
+                      categoryId: values.categoryId,
+                    });
+                    setRefreshKey((prev) => prev + 1);
+                    setQuickExpenseModalOpen(false);
+                    notify({ message: "Despesa adicionada ao cartao.", tone: "success" });
+                  } catch {
+                    notify({ message: "Nao foi possivel adicionar a despesa.", tone: "error" });
+                  }
+                }}
+              />
+            </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
 
       <Sheet open={editModalOpen} onOpenChange={setEditModalOpen}>
         <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[88vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">

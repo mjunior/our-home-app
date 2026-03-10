@@ -21,7 +21,9 @@ import { RecurrenceService } from "../../src/modules/scheduling/recurrence.servi
 import { ScheduleEngineService } from "../../src/modules/scheduling/schedule-engine.service";
 import { ScheduleManagementService } from "../../src/modules/scheduling/schedule-management.service";
 import { ScheduleRepository } from "../../src/modules/scheduling/schedule.repository";
+import { TransactionsController } from "../../src/modules/transactions/transactions.controller";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
+import { TransactionsService } from "../../src/modules/transactions/transactions.service";
 
 const householdId = "household-main";
 
@@ -97,5 +99,78 @@ describe("cards flow", () => {
     expect(scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-03")?.amount).toBe("120.00");
     expect(scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-04")?.amount).toBe("90.00");
     expect(scheduleRepo.findRecurringRuleById(rule.id)?.active).toBe(true);
+  });
+
+  it("shows newest card transactions first", async () => {
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+
+    const card = new CardsController(new CardsService(cardsRepo)).listCards(householdId)[0]!;
+    const category = new CategoriesController(new CategoriesService(categoriesRepo)).listCategories(householdId)[0]!;
+    const transactions = new TransactionsController(new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo));
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra antiga",
+      amount: "50.00",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra recente",
+      amount: "90.00",
+      occurredAt: "2026-03-04T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    render(React.createElement(CardsPage));
+
+    const recentRow = await screen.findByText("Compra recente");
+    const olderRow = screen.getByText("Compra antiga");
+    const relation = recentRow.compareDocumentPosition(olderRow);
+    expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("adds a new expense directly to the selected card", async () => {
+    const user = userEvent.setup();
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+
+    const card = new CardsController(new CardsService(cardsRepo)).listCards(householdId)[0]!;
+    const category = new CategoriesController(new CategoriesService(categoriesRepo)).listCategories(householdId)[0]!;
+    const transactions = new TransactionsController(new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo));
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra base",
+      amount: "50.00",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    render(React.createElement(CardsPage));
+
+    await user.click(screen.getByRole("button", { name: "Adicionar despesa" }));
+    expect(screen.getByLabelText("Tipo da transacao")).toHaveValue("EXPENSE");
+    expect(screen.getByLabelText("Destino da transacao")).toHaveValue("card");
+    expect(screen.getByLabelText("Opcao de destino")).toHaveValue(card.id);
+    await user.type(screen.getByLabelText("Descricao da transacao"), "Compra rapida");
+    await user.clear(screen.getByLabelText("Valor da transacao"));
+    await user.type(screen.getByLabelText("Valor da transacao"), "120.00");
+    await user.click(screen.getByRole("button", { name: "Adicionar despesa" }));
+
+    expect(await screen.findByText("Compra rapida")).toBeInTheDocument();
+    expect(screen.getByText(/R\$\s*170[,.]00/)).toBeInTheDocument();
   });
 });

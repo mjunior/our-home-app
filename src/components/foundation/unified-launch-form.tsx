@@ -1,10 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { currencyInputToDecimal, formatCurrencyInputBRL } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
+
+function getTodayDateInputValue() {
+  const now = new Date();
+  const year = now.getFullYear().toString().padStart(4, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 interface AccountOption {
   id: string;
@@ -79,6 +87,7 @@ interface UnifiedLaunchFormProps {
   onSubmit: (payload: UnifiedLaunchPayload) => Promise<void> | void;
   formId?: string;
   showSubmit?: boolean;
+  resetKey?: number;
 }
 
 export function UnifiedLaunchForm({
@@ -89,15 +98,17 @@ export function UnifiedLaunchForm({
   onSubmit,
   formId = "unified-launch-form",
   showSubmit = true,
+  resetKey = 0,
 }: UnifiedLaunchFormProps) {
+  const defaultToday = getTodayDateInputValue();
   const [launchType, setLaunchType] = useState<"ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT">("ONE_OFF");
   const [kind, setKind] = useState<"INCOME" | "EXPENSE">("INCOME");
   const [target, setTarget] = useState<"account" | "card">("account");
   const [targetId, setTargetId] = useState<string>(accounts[0]?.id ?? cards[0]?.id ?? "");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("0,00");
-  const [occurredDate, setOccurredDate] = useState("2026-03-01");
-  const [startMonth, setStartMonth] = useState("2026-03");
+  const [occurredDate, setOccurredDate] = useState(defaultToday);
+  const [startMonth, setStartMonth] = useState(defaultToday.slice(0, 7));
   const [installmentsCount, setInstallmentsCount] = useState(2);
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [settlementStatus, setSettlementStatus] = useState<"PAID" | "UNPAID">("PAID");
@@ -109,6 +120,24 @@ export function UnifiedLaunchForm({
 
   const options = target === "account" ? accounts : cards;
   const resolvedCategoryId = categoryId || categories[0]?.id || "";
+
+  useEffect(() => {
+    const today = getTodayDateInputValue();
+    setLaunchType("ONE_OFF");
+    setKind("INCOME");
+    setTarget("account");
+    setTargetId(accounts[0]?.id ?? cards[0]?.id ?? "");
+    setDescription("");
+    setAmount("0,00");
+    setOccurredDate(today);
+    setStartMonth(today.slice(0, 7));
+    setInstallmentsCount(2);
+    setCategoryId(categories[0]?.id ?? "");
+    setSettlementStatus("PAID");
+    setInvestmentSourceId(checkingAccounts[0]?.id ?? "");
+    setInvestmentDestinationId(investmentAccounts[0]?.id ?? "");
+    setIsSubmitting(false);
+  }, [resetKey, accounts, cards, categories, checkingAccounts, investmentAccounts]);
 
   const title = useMemo(() => {
     if (launchType === "RECURRING") return "Nova recorrencia";

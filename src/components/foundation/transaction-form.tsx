@@ -9,6 +9,14 @@ interface SimpleOption {
   label: string;
 }
 
+function getTodayDateInputValue() {
+  const now = new Date();
+  const year = now.getFullYear().toString().padStart(4, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export interface TransactionFormValues {
   kind: "INCOME" | "EXPENSE";
   description: string;
@@ -27,6 +35,21 @@ interface TransactionFormProps {
   onSubmit: (values: TransactionFormValues) => void;
   formId?: string;
   showSubmit?: boolean;
+  title?: string;
+  submitLabel?: string;
+  resetKey?: number;
+  initialValues?: Partial<{
+    kind: "INCOME" | "EXPENSE";
+    target: "account" | "card";
+    targetId: string;
+    description: string;
+    amount: string;
+    occurredAt: string;
+    categoryId: string;
+    settlementStatus: "PAID" | "UNPAID";
+  }>;
+  lockKind?: boolean;
+  lockTarget?: boolean;
 }
 
 export function TransactionForm({
@@ -36,15 +59,21 @@ export function TransactionForm({
   onSubmit,
   formId = "transaction-form",
   showSubmit = true,
+  title = "Novo Lancamento",
+  submitLabel = "Adicionar lancamento",
+  resetKey = 0,
+  initialValues,
+  lockKind = false,
+  lockTarget = false,
 }: TransactionFormProps) {
-  const [kind, setKind] = useState<"INCOME" | "EXPENSE">("INCOME");
-  const [target, setTarget] = useState<"account" | "card">("account");
-  const [targetId, setTargetId] = useState<string>(accounts[0]?.id ?? cards[0]?.id ?? "");
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("0,00");
-  const [occurredDate, setOccurredDate] = useState("2026-03-01");
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
-  const [settlementStatus, setSettlementStatus] = useState<"PAID" | "UNPAID">("PAID");
+  const [kind, setKind] = useState<"INCOME" | "EXPENSE">(initialValues?.kind ?? "INCOME");
+  const [target, setTarget] = useState<"account" | "card">(initialValues?.target ?? "account");
+  const [targetId, setTargetId] = useState<string>(initialValues?.targetId ?? accounts[0]?.id ?? cards[0]?.id ?? "");
+  const [description, setDescription] = useState(initialValues?.description ?? "");
+  const [amount, setAmount] = useState(initialValues?.amount ?? "0,00");
+  const [occurredDate, setOccurredDate] = useState(initialValues?.occurredAt ?? getTodayDateInputValue());
+  const [categoryId, setCategoryId] = useState(initialValues?.categoryId ?? categories[0]?.id ?? "");
+  const [settlementStatus, setSettlementStatus] = useState<"PAID" | "UNPAID">(initialValues?.settlementStatus ?? "PAID");
 
   const options = target === "account" ? accounts : cards;
 
@@ -64,10 +93,21 @@ export function TransactionForm({
     }
   }, [categoryId, categories]);
 
+  useEffect(() => {
+    setKind(initialValues?.kind ?? "INCOME");
+    setTarget(initialValues?.target ?? "account");
+    setTargetId(initialValues?.targetId ?? accounts[0]?.id ?? cards[0]?.id ?? "");
+    setDescription(initialValues?.description ?? "");
+    setAmount(initialValues?.amount ?? "0,00");
+    setOccurredDate(initialValues?.occurredAt ?? getTodayDateInputValue());
+    setCategoryId(initialValues?.categoryId ?? categories[0]?.id ?? "");
+    setSettlementStatus(initialValues?.settlementStatus ?? "PAID");
+  }, [resetKey, initialValues, accounts, cards, categories]);
+
   return (
     <Card className="section-reveal">
       <CardHeader>
-        <CardTitle>Novo Lancamento</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -98,6 +138,7 @@ export function TransactionForm({
               <select
                 aria-label="Tipo da transacao"
                 value={kind}
+                disabled={lockKind}
                 onChange={(event) => setKind(event.target.value as "INCOME" | "EXPENSE")}
               >
                 <option value="INCOME">Entrada</option>
@@ -143,6 +184,7 @@ export function TransactionForm({
               <select
                 aria-label="Destino da transacao"
                 value={target}
+                disabled={lockTarget}
                 onChange={(event) => {
                   const value = event.target.value as "account" | "card";
                   setTarget(value);
@@ -157,7 +199,7 @@ export function TransactionForm({
 
             <label>
               Opcao de destino
-              <select aria-label="Opcao de destino" value={targetId} onChange={(event) => setTargetId(event.target.value)}>
+              <select aria-label="Opcao de destino" value={targetId} disabled={lockTarget} onChange={(event) => setTargetId(event.target.value)}>
                 {options.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.label}
@@ -194,7 +236,7 @@ export function TransactionForm({
 
           {showSubmit ? (
             <Button type="submit" className="w-full">
-              Adicionar lancamento
+              {submitLabel}
             </Button>
           ) : null}
         </form>

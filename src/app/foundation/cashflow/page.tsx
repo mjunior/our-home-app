@@ -51,6 +51,7 @@ export default function CashflowPage() {
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [transactionFormResetKey, setTransactionFormResetKey] = useState(0);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailMonthKey, setDetailMonthKey] = useState<"current" | "next">("current");
@@ -258,7 +259,7 @@ export default function CashflowPage() {
   }, [month, monthRailEl]);
 
   useEffect(() => {
-    const openLaunch = () => setTransactionModalOpen(true);
+    const openLaunch = () => handleOpenTransactionModal();
     const openImport = () => setImportModalOpen(true);
     window.addEventListener("cashflow:new-launch", openLaunch);
     window.addEventListener("cashflow:import-launch", openImport);
@@ -272,11 +273,21 @@ export default function CashflowPage() {
     setMonth(addMonths(month, offset));
   }
 
+  function handleOpenTransactionModal() {
+    setTransactionFormResetKey((prev) => prev + 1);
+    setTransactionModalOpen(true);
+  }
+
   return (
     <main className="space-y-4 pb-36 lg:pb-4">
       <section className="section-reveal flex flex-col items-start gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
-          <button type="button" aria-label="Novo lancamento" className="sr-only" onClick={() => setTransactionModalOpen(true)}>
+          <button
+            type="button"
+            aria-label="Novo lancamento"
+            className="sr-only"
+            onClick={handleOpenTransactionModal}
+          >
             Novo lancamento
           </button>
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Visao operacional</p>
@@ -506,6 +517,7 @@ export default function CashflowPage() {
           </SheetHeader>
           <div className="mt-4">
             <UnifiedLaunchForm
+              resetKey={transactionFormResetKey}
               formId="cashflow-unified-launch-form"
               householdId={householdId}
               accounts={accounts.map((item) => ({ id: item.id, label: item.name, type: item.type }))}

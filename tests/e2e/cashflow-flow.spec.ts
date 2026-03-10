@@ -25,6 +25,14 @@ import { TransactionsRepository } from "../../src/modules/transactions/transacti
 
 const householdId = "household-main";
 
+function getTodayDateInputValue() {
+  const now = new Date();
+  const year = now.getFullYear().toString().padStart(4, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 describe("cashflow flow", () => {
   afterEach(() => {
     cleanup();
@@ -64,6 +72,7 @@ describe("cashflow flow", () => {
     expect(screen.getByRole("tab", { name: "Mar/26", selected: true })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
+    expect(screen.getByLabelText("Data da transacao")).toHaveValue(getTodayDateInputValue());
     await user.type(screen.getByLabelText("Descricao da transacao"), "Salario");
     await user.clear(screen.getByLabelText("Valor da transacao"));
     await user.type(screen.getByLabelText("Valor da transacao"), "5000.00");
