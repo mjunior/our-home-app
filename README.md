@@ -1,5 +1,7 @@
 # Our Home App
 
+## Test PR via OpenClaw
+
 App web financeiro doméstico com foco em saldo livre mensal e projeção de risco para o próximo mês.
 
 ## Requisitos
