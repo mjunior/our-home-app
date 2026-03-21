@@ -2,6 +2,10 @@
 
 ## Test PR via OpenClaw
 
+open claw edited by jesse
+
+## Test PR via OpenClaw
+
 App web financeiro doméstico com foco em saldo livre mensal e projeção de risco para o próximo mês.
 
 ## Requisitos
