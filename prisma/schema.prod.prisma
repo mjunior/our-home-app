@@ -27,6 +27,13 @@ enum ScheduleSourceType {
   RECURRING
 }
 
+enum GoalType {
+  FINANCIAL
+  PERSONAL
+  FAMILY
+  DREAM
+}
+
 model Account {
   id             String        @id @default(cuid())
   householdId    String
@@ -163,6 +170,22 @@ model ScheduledInstance {
   creditCard CreditCard? @relation(fields: [creditCardId], references: [id])
 
   @@index([householdId, monthKey])
+}
+
+
+model Goal {
+  id          String    @id @default(cuid())
+  householdId String
+  title       String
+  description String
+  type        GoalType
+  targetDate  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([householdId, createdAt])
+  @@index([householdId, type])
+  @@index([householdId, targetDate])
 }
 
 model Household {

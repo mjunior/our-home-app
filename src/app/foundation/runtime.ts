@@ -29,6 +29,51 @@ type MethodReturn<T> = T extends (...args: any[]) => infer R ? R : never;
 type AccountsControllerContract = Pick<AccountsController, "createAccount" | "updateAccountGoal" | "listAccounts" | "getConsolidatedBalance">;
 type CardsControllerContract = Pick<CardsController, "createCard" | "listCards" | "updateCard" | "deleteCard">;
 type CategoriesControllerContract = Pick<CategoriesController, "createCategory" | "listCategories">;
+type GoalsControllerContract = {
+  createGoal: (input: {
+    householdId: string;
+    title: string;
+    description: string;
+    type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
+    targetDate?: string | null;
+  }) => {
+    id: string;
+    householdId: string;
+    title: string;
+    description: string;
+    type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
+    targetDate: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  listGoals: (householdId: string) => Array<{
+    id: string;
+    householdId: string;
+    title: string;
+    description: string;
+    type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
+    targetDate: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  updateGoal: (input: {
+    householdId: string;
+    id: string;
+    title: string;
+    description: string;
+    type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
+    targetDate?: string | null;
+  }) => {
+    id: string;
+    householdId: string;
+    title: string;
+    description: string;
+    type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
+    targetDate: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
 type TransactionsControllerContract = Pick<
   TransactionsController,
   | "createTransaction"
@@ -69,6 +114,7 @@ type Runtime = {
   accountsController: AccountsControllerContract;
   cardsController: CardsControllerContract;
   categoriesController: CategoriesControllerContract;
+  goalsController: GoalsControllerContract;
   transactionsController: TransactionsControllerContract;
   invoicesController: InvoicesControllerContract;
   freeBalanceController: FreeBalanceControllerContract;
@@ -167,6 +213,17 @@ function createLocalRuntime(): Runtime {
     ),
   );
 
+  const localGoalsStore: Array<{
+    id: string;
+    householdId: string;
+    title: string;
+    description: string;
+    type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
+    targetDate: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }> = [];
+
   return {
     accountsController,
     cardsController: {
@@ -186,6 +243,39 @@ function createLocalRuntime(): Runtime {
       },
     },
     categoriesController,
+    goalsController: {
+      createGoal: (input) => {
+        const now = new Date().toISOString();
+        const record = {
+          id: `goal-${Date.now()}`,
+          householdId: input.householdId,
+          title: input.title,
+          description: input.description,
+          type: input.type,
+          targetDate: input.targetDate ?? null,
+          createdAt: now,
+          updatedAt: now,
+        };
+        localGoalsStore.push(record);
+        return record;
+      },
+      listGoals: (householdId) =>
+        localGoalsStore
+          .filter((item) => item.householdId === householdId)
+          .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+      updateGoal: (input) => {
+        const found = localGoalsStore.find((item) => item.id === input.id && item.householdId === input.householdId);
+        if (!found) {
+          throw new Error("GOAL_NOT_FOUND");
+        }
+        found.title = input.title;
+        found.description = input.description;
+        found.type = input.type;
+        found.targetDate = input.targetDate ?? null;
+        found.updatedAt = new Date().toISOString();
+        return found;
+      },
+    },
     transactionsController,
     invoicesController,
     freeBalanceController,
@@ -212,6 +302,12 @@ function createApiRuntime(): Runtime {
   type CategoriesCreateInput = MethodArgs<Runtime["categoriesController"]["createCategory"]>[0];
   type CategoriesCreateOutput = MethodReturn<Runtime["categoriesController"]["createCategory"]>;
   type CategoriesListOutput = MethodReturn<Runtime["categoriesController"]["listCategories"]>;
+
+  type GoalsCreateInput = MethodArgs<Runtime["goalsController"]["createGoal"]>[0];
+  type GoalsCreateOutput = MethodReturn<Runtime["goalsController"]["createGoal"]>;
+  type GoalsListOutput = MethodReturn<Runtime["goalsController"]["listGoals"]>;
+  type GoalsUpdateInput = MethodArgs<Runtime["goalsController"]["updateGoal"]>[0];
+  type GoalsUpdateOutput = MethodReturn<Runtime["goalsController"]["updateGoal"]>;
 
   type TransactionsCreateInput = MethodArgs<Runtime["transactionsController"]["createTransaction"]>[0];
   type TransactionsCreateOutput = MethodReturn<Runtime["transactionsController"]["createTransaction"]>;
@@ -313,6 +409,24 @@ function createApiRuntime(): Runtime {
         requestSync<CategoriesCreateOutput>("POST", "/api/categories", { name: input.name }),
       listCategories: (_householdId: string): CategoriesListOutput =>
         requestSync<CategoriesListOutput>("GET", "/api/categories"),
+    },
+    goalsController: {
+      createGoal: (input: GoalsCreateInput): GoalsCreateOutput =>
+        requestSync<GoalsCreateOutput>("POST", "/api/goals", {
+          title: input.title,
+          description: input.description,
+          type: input.type,
+          targetDate: input.targetDate ?? null,
+        }),
+      listGoals: (_householdId: string): GoalsListOutput => requestSync<GoalsListOutput>("GET", "/api/goals"),
+      updateGoal: (input: GoalsUpdateInput): GoalsUpdateOutput =>
+        requestSync<GoalsUpdateOutput>("POST", "/api/goals/edit", {
+          id: input.id,
+          title: input.title,
+          description: input.description,
+          type: input.type,
+          targetDate: input.targetDate ?? null,
+        }),
     },
     transactionsController: {
       createTransaction: (input: TransactionsCreateInput): TransactionsCreateOutput =>
@@ -457,6 +571,7 @@ const runtime = createRuntime();
 export const accountsController = runtime.accountsController;
 export const cardsController = runtime.cardsController;
 export const categoriesController = runtime.categoriesController;
+export const goalsController = runtime.goalsController;
 export const transactionsController = runtime.transactionsController;
 export const invoicesController = runtime.invoicesController;
 export const freeBalanceController = runtime.freeBalanceController;

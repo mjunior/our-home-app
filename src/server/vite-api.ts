@@ -133,6 +133,22 @@ function normalizeName(value: string) {
   return value.trim().toLocaleLowerCase("pt-BR");
 }
 
+function isGoalType(value: unknown): value is "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM" {
+  return value === "FINANCIAL" || value === "PERSONAL" || value === "FAMILY" || value === "DREAM";
+}
+
+function normalizeGoalDate(raw: unknown): Date | null {
+  if (raw == null || raw === "") {
+    return null;
+  }
+  const normalized = typeof raw === "string" && raw.length === 10 ? `${raw}T00:00:00.000Z` : String(raw);
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error("GOAL_INVALID_INPUT");
+  }
+  return parsed;
+}
+
 function addMonths(monthKey: string, count: number) {
   const [year, month] = monthKey.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1 + count, 1));
@@ -811,6 +827,102 @@ export function installViteApi(server: MiddlewareServer) {
           data: { householdId: authHouseholdId, name: body.name.trim(), normalized: normalizeName(body.name) },
         });
         sendJson(res, 200, created);
+        return;
+      }
+
+      if (req.method === "GET" && path === "/api/goals") {
+        const rows = await prisma.goal.findMany({
+          where: { householdId: authHouseholdId },
+          orderBy: { createdAt: "desc" },
+        });
+        sendJson(
+          res,
+          200,
+          rows.map((goal) => ({
+            ...goal,
+            targetDate: goal.targetDate ? goal.targetDate.toISOString() : null,
+            createdAt: goal.createdAt.toISOString(),
+            updatedAt: goal.updatedAt.toISOString(),
+          })),
+        );
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/goals") {
+        const body = await readJsonBody(req);
+        const title = String(body.title ?? "").trim();
+        const description = String(body.description ?? "").trim();
+        if (title.length < 3 || title.length > 120 || description.length < 3 || description.length > 1000 || !isGoalType(body.type)) {
+          sendJson(res, 400, { message: "GOAL_INVALID_INPUT" });
+          return;
+        }
+
+        let targetDate: Date | null = null;
+        try {
+          targetDate = normalizeGoalDate(body.targetDate);
+        } catch {
+          sendJson(res, 400, { message: "GOAL_INVALID_INPUT" });
+          return;
+        }
+
+        const created = await prisma.goal.create({
+          data: {
+            householdId: authHouseholdId,
+            title,
+            description,
+            type: body.type,
+            targetDate,
+          },
+        });
+
+        sendJson(res, 200, {
+          ...created,
+          targetDate: created.targetDate ? created.targetDate.toISOString() : null,
+          createdAt: created.createdAt.toISOString(),
+          updatedAt: created.updatedAt.toISOString(),
+        });
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/goals/edit") {
+        const body = await readJsonBody(req);
+        const existing = await prisma.goal.findUnique({ where: { id: body.id } });
+        if (!existing || existing.householdId !== authHouseholdId) {
+          sendJson(res, 404, { message: "GOAL_NOT_FOUND" });
+          return;
+        }
+
+        const title = String(body.title ?? "").trim();
+        const description = String(body.description ?? "").trim();
+        if (title.length < 3 || title.length > 120 || description.length < 3 || description.length > 1000 || !isGoalType(body.type)) {
+          sendJson(res, 400, { message: "GOAL_INVALID_INPUT" });
+          return;
+        }
+
+        let targetDate: Date | null = null;
+        try {
+          targetDate = normalizeGoalDate(body.targetDate);
+        } catch {
+          sendJson(res, 400, { message: "GOAL_INVALID_INPUT" });
+          return;
+        }
+
+        const updated = await prisma.goal.update({
+          where: { id: body.id },
+          data: {
+            title,
+            description,
+            type: body.type,
+            targetDate,
+          },
+        });
+
+        sendJson(res, 200, {
+          ...updated,
+          targetDate: updated.targetDate ? updated.targetDate.toISOString() : null,
+          createdAt: updated.createdAt.toISOString(),
+          updatedAt: updated.updatedAt.toISOString(),
+        });
         return;
       }
 
