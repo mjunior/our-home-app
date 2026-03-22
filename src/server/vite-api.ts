@@ -137,6 +137,10 @@ function isGoalType(value: unknown): value is "FINANCIAL" | "PERSONAL" | "FAMILY
   return value === "FINANCIAL" || value === "PERSONAL" || value === "FAMILY" || value === "DREAM";
 }
 
+function isGoalMetricType(value: unknown): value is "PERCENTAGE" | "QUANTITY" | "OCCURRENCE" {
+  return value === "PERCENTAGE" || value === "QUANTITY" || value === "OCCURRENCE";
+}
+
 function normalizeGoalDate(raw: unknown): Date | null {
   if (raw == null || raw === "") {
     return null;
@@ -147,6 +151,71 @@ function normalizeGoalDate(raw: unknown): Date | null {
     throw new Error("GOAL_INVALID_INPUT");
   }
   return parsed;
+}
+
+function normalizeGoalMetricInput(input: { metricType: unknown; metricValue: unknown; metricTarget: unknown }) {
+  if (!isGoalMetricType(input.metricType)) {
+    throw new Error("GOAL_INVALID_INPUT");
+  }
+
+  const metricValue = Number(input.metricValue);
+  if (!Number.isInteger(metricValue) || metricValue < 0) {
+    throw new Error("GOAL_INVALID_INPUT");
+  }
+
+  if (input.metricType === "PERCENTAGE") {
+    if (metricValue > 100) {
+      throw new Error("GOAL_INVALID_INPUT");
+    }
+    return { metricType: input.metricType, metricValue, metricTarget: null as number | null };
+  }
+
+  if (input.metricType === "QUANTITY") {
+    const metricTarget = Number(input.metricTarget);
+    if (!Number.isInteger(metricTarget) || metricTarget <= 0) {
+      throw new Error("GOAL_INVALID_INPUT");
+    }
+    return { metricType: input.metricType, metricValue, metricTarget };
+  }
+
+  if (input.metricTarget == null || input.metricTarget === "") {
+    return { metricType: input.metricType, metricValue, metricTarget: null as number | null };
+  }
+
+  const metricTarget = Number(input.metricTarget);
+  if (!Number.isInteger(metricTarget) || metricTarget <= 0) {
+    throw new Error("GOAL_INVALID_INPUT");
+  }
+  return { metricType: input.metricType, metricValue, metricTarget };
+}
+
+function toGoalDto(goal: {
+  id: string;
+  householdId: string;
+  title: string;
+  description: string;
+  type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
+  targetDate: Date | null;
+  metricType: "PERCENTAGE" | "QUANTITY" | "OCCURRENCE";
+  metricValue: number;
+  metricTarget: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  const progressPercent =
+    goal.metricType === "PERCENTAGE"
+      ? Math.max(0, Math.min(100, goal.metricValue))
+      : goal.metricTarget && goal.metricTarget > 0
+        ? Math.max(0, Math.min(100, Math.round((goal.metricValue / goal.metricTarget) * 100)))
+        : 0;
+
+  return {
+    ...goal,
+    progressPercent,
+    targetDate: goal.targetDate ? goal.targetDate.toISOString() : null,
+    createdAt: goal.createdAt.toISOString(),
+    updatedAt: goal.updatedAt.toISOString(),
+  };
 }
 
 function addMonths(monthKey: string, count: number) {
@@ -835,16 +904,7 @@ export function installViteApi(server: MiddlewareServer) {
           where: { householdId: authHouseholdId },
           orderBy: { createdAt: "desc" },
         });
-        sendJson(
-          res,
-          200,
-          rows.map((goal) => ({
-            ...goal,
-            targetDate: goal.targetDate ? goal.targetDate.toISOString() : null,
-            createdAt: goal.createdAt.toISOString(),
-            updatedAt: goal.updatedAt.toISOString(),
-          })),
-        );
+        sendJson(res, 200, rows.map(toGoalDto));
         return;
       }
 
@@ -858,8 +918,14 @@ export function installViteApi(server: MiddlewareServer) {
         }
 
         let targetDate: Date | null = null;
+        let metricInput: { metricType: "PERCENTAGE" | "QUANTITY" | "OCCURRENCE"; metricValue: number; metricTarget: number | null };
         try {
           targetDate = normalizeGoalDate(body.targetDate);
+          metricInput = normalizeGoalMetricInput({
+            metricType: body.metricType,
+            metricValue: body.metricValue,
+            metricTarget: body.metricTarget,
+          });
         } catch {
           sendJson(res, 400, { message: "GOAL_INVALID_INPUT" });
           return;
@@ -872,15 +938,13 @@ export function installViteApi(server: MiddlewareServer) {
             description,
             type: body.type,
             targetDate,
+            metricType: metricInput.metricType,
+            metricValue: metricInput.metricValue,
+            metricTarget: metricInput.metricTarget,
           },
         });
 
-        sendJson(res, 200, {
-          ...created,
-          targetDate: created.targetDate ? created.targetDate.toISOString() : null,
-          createdAt: created.createdAt.toISOString(),
-          updatedAt: created.updatedAt.toISOString(),
-        });
+        sendJson(res, 200, toGoalDto(created));
         return;
       }
 
@@ -900,8 +964,14 @@ export function installViteApi(server: MiddlewareServer) {
         }
 
         let targetDate: Date | null = null;
+        let metricInput: { metricType: "PERCENTAGE" | "QUANTITY" | "OCCURRENCE"; metricValue: number; metricTarget: number | null };
         try {
           targetDate = normalizeGoalDate(body.targetDate);
+          metricInput = normalizeGoalMetricInput({
+            metricType: body.metricType,
+            metricValue: body.metricValue,
+            metricTarget: body.metricTarget,
+          });
         } catch {
           sendJson(res, 400, { message: "GOAL_INVALID_INPUT" });
           return;
@@ -914,15 +984,13 @@ export function installViteApi(server: MiddlewareServer) {
             description,
             type: body.type,
             targetDate,
+            metricType: metricInput.metricType,
+            metricValue: metricInput.metricValue,
+            metricTarget: metricInput.metricTarget,
           },
         });
 
-        sendJson(res, 200, {
-          ...updated,
-          targetDate: updated.targetDate ? updated.targetDate.toISOString() : null,
-          createdAt: updated.createdAt.toISOString(),
-          updatedAt: updated.updatedAt.toISOString(),
-        });
+        sendJson(res, 200, toGoalDto(updated));
         return;
       }
 
