@@ -29,6 +29,21 @@ type MethodReturn<T> = T extends (...args: any[]) => infer R ? R : never;
 type AccountsControllerContract = Pick<AccountsController, "createAccount" | "updateAccountGoal" | "listAccounts" | "getConsolidatedBalance">;
 type CardsControllerContract = Pick<CardsController, "createCard" | "listCards" | "updateCard" | "deleteCard">;
 type CategoriesControllerContract = Pick<CategoriesController, "createCategory" | "listCategories">;
+type GoalMetricType = "PERCENTAGE" | "QUANTITY" | "OCCURRENCE";
+type GoalDto = {
+  id: string;
+  householdId: string;
+  title: string;
+  description: string;
+  type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
+  targetDate: string | null;
+  metricType: GoalMetricType;
+  metricValue: number;
+  metricTarget: number | null;
+  progressPercent: number;
+  createdAt: string;
+  updatedAt: string;
+};
 type GoalsControllerContract = {
   createGoal: (input: {
     householdId: string;
@@ -36,26 +51,11 @@ type GoalsControllerContract = {
     description: string;
     type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
     targetDate?: string | null;
-  }) => {
-    id: string;
-    householdId: string;
-    title: string;
-    description: string;
-    type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
-    targetDate: string | null;
-    createdAt: string;
-    updatedAt: string;
-  };
-  listGoals: (householdId: string) => Array<{
-    id: string;
-    householdId: string;
-    title: string;
-    description: string;
-    type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
-    targetDate: string | null;
-    createdAt: string;
-    updatedAt: string;
-  }>;
+    metricType: GoalMetricType;
+    metricValue: number;
+    metricTarget?: number | null;
+  }) => GoalDto;
+  listGoals: (householdId: string) => GoalDto[];
   updateGoal: (input: {
     householdId: string;
     id: string;
@@ -63,16 +63,10 @@ type GoalsControllerContract = {
     description: string;
     type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
     targetDate?: string | null;
-  }) => {
-    id: string;
-    householdId: string;
-    title: string;
-    description: string;
-    type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
-    targetDate: string | null;
-    createdAt: string;
-    updatedAt: string;
-  };
+    metricType: GoalMetricType;
+    metricValue: number;
+    metricTarget?: number | null;
+  }) => GoalDto;
 };
 type TransactionsControllerContract = Pick<
   TransactionsController,
@@ -141,6 +135,18 @@ function handleUnauthorized() {
   if (typeof window !== "undefined" && window.location.pathname !== "/") {
     window.location.assign("/");
   }
+}
+
+function calculateGoalProgress(input: { metricType: GoalMetricType; metricValue: number; metricTarget: number | null }) {
+  if (input.metricType === "PERCENTAGE") {
+    return Math.max(0, Math.min(100, Math.round(input.metricValue)));
+  }
+
+  if (input.metricTarget == null || input.metricTarget <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, Math.round((input.metricValue / input.metricTarget) * 100)));
 }
 
 function requestSync<T>(method: "GET" | "POST", url: string, payload?: unknown): T {
@@ -213,16 +219,7 @@ function createLocalRuntime(): Runtime {
     ),
   );
 
-  const localGoalsStore: Array<{
-    id: string;
-    householdId: string;
-    title: string;
-    description: string;
-    type: "FINANCIAL" | "PERSONAL" | "FAMILY" | "DREAM";
-    targetDate: string | null;
-    createdAt: string;
-    updatedAt: string;
-  }> = [];
+  const localGoalsStore: GoalDto[] = [];
 
   return {
     accountsController,
@@ -246,13 +243,21 @@ function createLocalRuntime(): Runtime {
     goalsController: {
       createGoal: (input) => {
         const now = new Date().toISOString();
-        const record = {
+        const record: GoalDto = {
           id: `goal-${Date.now()}`,
           householdId: input.householdId,
           title: input.title,
           description: input.description,
           type: input.type,
           targetDate: input.targetDate ?? null,
+          metricType: input.metricType,
+          metricValue: input.metricValue,
+          metricTarget: input.metricType === "PERCENTAGE" ? null : (input.metricTarget ?? null),
+          progressPercent: calculateGoalProgress({
+            metricType: input.metricType,
+            metricValue: input.metricValue,
+            metricTarget: input.metricType === "PERCENTAGE" ? null : (input.metricTarget ?? null),
+          }),
           createdAt: now,
           updatedAt: now,
         };
@@ -272,6 +277,14 @@ function createLocalRuntime(): Runtime {
         found.description = input.description;
         found.type = input.type;
         found.targetDate = input.targetDate ?? null;
+        found.metricType = input.metricType;
+        found.metricValue = input.metricValue;
+        found.metricTarget = input.metricType === "PERCENTAGE" ? null : (input.metricTarget ?? null);
+        found.progressPercent = calculateGoalProgress({
+          metricType: found.metricType,
+          metricValue: found.metricValue,
+          metricTarget: found.metricTarget,
+        });
         found.updatedAt = new Date().toISOString();
         return found;
       },
@@ -417,6 +430,9 @@ function createApiRuntime(): Runtime {
           description: input.description,
           type: input.type,
           targetDate: input.targetDate ?? null,
+          metricType: input.metricType,
+          metricValue: input.metricValue,
+          metricTarget: input.metricTarget ?? null,
         }),
       listGoals: (_householdId: string): GoalsListOutput => requestSync<GoalsListOutput>("GET", "/api/goals"),
       updateGoal: (input: GoalsUpdateInput): GoalsUpdateOutput =>
@@ -426,6 +442,9 @@ function createApiRuntime(): Runtime {
           description: input.description,
           type: input.type,
           targetDate: input.targetDate ?? null,
+          metricType: input.metricType,
+          metricValue: input.metricValue,
+          metricTarget: input.metricTarget ?? null,
         }),
     },
     transactionsController: {
