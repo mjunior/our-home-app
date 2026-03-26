@@ -41,66 +41,21 @@ interface BuildPayloadResult {
   errors: ParsedImportError[];
 }
 
-function normalizeToken(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-}
-
-function resolveByToken(token: string, options: AccountOption[]): AccountOption | null {
-  const normalizedToken = normalizeToken(token);
-  const exact = options.find((item) => normalizeToken(item.label) === normalizedToken);
-  if (exact) return exact;
-
-  const partialMatches = options.filter((item) => {
-    const normalizedLabel = normalizeToken(item.label);
-    return normalizedLabel.includes(normalizedToken) || normalizedToken.includes(normalizedLabel);
-  });
-
-  if (partialMatches.length === 1) {
-    return partialMatches[0] ?? null;
+function getDefaultOccurredDate(month: string): string {
+  if (/^\d{4}-\d{2}$/.test(month)) {
+    return `${month}-01`;
   }
 
-  return null;
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const monthValue = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const dayValue = String(now.getUTCDate()).padStart(2, "0");
+  return `${year}-${monthValue}-${dayValue}`;
 }
 
-function resolveCategory(token: string, options: CategoryOption[]): CategoryOption | null {
-  const normalizedToken = normalizeToken(token);
-
-  const byNormalized = options.find((item) => normalizeToken(item.normalized ?? "") === normalizedToken);
-  if (byNormalized) return byNormalized;
-
-  const byName = options.find((item) => normalizeToken(item.label) === normalizedToken);
-  if (byName) return byName;
-
-  const partialMatches = options.filter((item) => {
-    const normalizedLabel = normalizeToken(item.label);
-    const normalizedField = normalizeToken(item.normalized ?? "");
-    return (
-      normalizedLabel.includes(normalizedToken) ||
-      normalizedToken.includes(normalizedLabel) ||
-      normalizedField.includes(normalizedToken) ||
-      normalizedToken.includes(normalizedField)
-    );
-  });
-
-  if (partialMatches.length === 1) {
-    return partialMatches[0] ?? null;
-  }
-
-  return null;
-}
-
-function resolveScheduleStartMonth(input: {
-  occurredAt: string;
-  kind: "INCOME" | "EXPENSE";
-  matchedAccount: AccountOption | null;
-  matchedCard: AccountOption | null;
-}): string {
+function resolveScheduleStartMonth(input: { occurredAt: string; targetType: "account" | "card"; matchedCard?: AccountOption }): string {
   const defaultMonth = input.occurredAt.slice(0, 7);
-  if (input.kind !== "EXPENSE" || input.matchedAccount || !input.matchedCard) {
+  if (input.targetType !== "card" || !input.matchedCard) {
     return defaultMonth;
   }
 
@@ -114,110 +69,68 @@ function resolveScheduleStartMonth(input: {
   return cycle.monthKey;
 }
 
-export function TransactionImportForm({
-  householdId,
-  month,
-  accounts,
-  cards,
-  categories,
-  onSubmitBatch,
-}: TransactionImportFormProps) {
+export function TransactionImportForm({ householdId, month, accounts, cards, categories, onSubmitBatch }: TransactionImportFormProps) {
+  const [targetType, setTargetType] = useState<"account" | "card">("account");
+  const [targetId, setTargetId] = useState<string>(accounts[0]?.id ?? cards[0]?.id ?? "");
+  const [categoryId, setCategoryId] = useState<string>(categories[0]?.id ?? "");
+  const [occurredDate, setOccurredDate] = useState<string>(getDefaultOccurredDate(month));
   const [textValue, setTextValue] = useState("");
   const [lineErrors, setLineErrors] = useState<ParsedImportError[]>([]);
   const [payloads, setPayloads] = useState<UnifiedLaunchPayload[]>([]);
   const [processed, setProcessed] = useState(false);
   const [batchResult, setBatchResult] = useState<ImportBatchResult | null>(null);
 
-  const totalLines = useMemo(
-    () => textValue.split(/\r?\n/).filter((line) => line.trim().length > 0).length,
-    [textValue],
-  );
+  const totalLines = useMemo(() => textValue.split(/\r?\n/).filter((line) => line.trim().length > 0).length, [textValue]);
+  const targetOptions = targetType === "account" ? accounts : cards;
 
   function buildPayloads(): BuildPayloadResult {
     const parsed = parseTransactionImportText(textValue);
-    const referenceYear = Number(month.split("-")[0]) || new Date().getUTCFullYear();
     const prepared: UnifiedLaunchPayload[] = [];
     const extraErrors: ParsedImportError[] = [];
 
+    if (!targetId) {
+      extraErrors.push({ lineNumber: 0, raw: "", reason: "CONTA_OU_CARTAO_OBRIGATORIO" });
+    }
+
+    if (!categoryId) {
+      extraErrors.push({ lineNumber: 0, raw: "", reason: "CATEGORIA_OBRIGATORIA" });
+    }
+
+    const occurredAt = toIsoDateAtNoon(occurredDate);
+    const matchedCard = targetType === "card" ? cards.find((item) => item.id === targetId) : undefined;
+    const startMonth = resolveScheduleStartMonth({ occurredAt, targetType, matchedCard });
+
     for (const line of parsed.valid) {
-      const category = resolveCategory(line.categoryToken, categories);
-      if (!category) {
-        extraErrors.push({
-          lineNumber: line.lineNumber,
-          raw: line.raw,
-          reason: "CATEGORIA_NAO_ENCONTRADA",
-        });
-        continue;
-      }
-
-      const matchedAccount = resolveByToken(line.accountToken, accounts);
-      const matchedCard = resolveByToken(line.accountToken, cards);
-
-      if (!matchedAccount && !matchedCard) {
-        extraErrors.push({
-          lineNumber: line.lineNumber,
-          raw: line.raw,
-          reason: "CONTA_OU_CARTAO_NAO_ENCONTRADO",
-        });
-        continue;
-      }
-
-      const occurredAt = toIsoDateAtNoon(line.dateToken, referenceYear);
-      const startMonth = resolveScheduleStartMonth({
-        occurredAt,
-        kind: line.kind,
-        matchedAccount,
-        matchedCard,
-      });
-
       if (line.valueMode === "INSTALLMENT") {
         prepared.push({
           launchType: "INSTALLMENT",
           installment: {
             householdId,
-            description: line.description.replaceAll("_", " "),
+            description: line.description,
             totalAmount: line.totalAmount,
             installmentsCount: line.installmentsCount,
             startMonth,
-            categoryId: category.id,
-            accountId: matchedAccount?.id,
-            creditCardId: matchedAccount ? undefined : matchedCard?.id,
+            categoryId,
+            accountId: targetType === "account" ? targetId : undefined,
+            creditCardId: targetType === "card" ? targetId : undefined,
           },
         });
         continue;
       }
 
       if (line.recurring) {
-        if (line.kind === "INCOME" && !matchedAccount) {
-          extraErrors.push({
-            lineNumber: line.lineNumber,
-            raw: line.raw,
-            reason: "ENTRADA_RECORRENTE_EXIGE_CONTA",
-          });
-          continue;
-        }
-
         prepared.push({
           launchType: "RECURRING",
           recurring: {
             householdId,
-            kind: line.kind,
-            description: line.description.replaceAll("_", " "),
+            kind: "EXPENSE",
+            description: line.description,
             amount: line.amount,
             startMonth,
-            categoryId: category.id,
-            accountId: matchedAccount?.id,
-            creditCardId: matchedAccount ? undefined : matchedCard?.id,
+            categoryId,
+            accountId: targetType === "account" ? targetId : undefined,
+            creditCardId: targetType === "card" ? targetId : undefined,
           },
-        });
-        continue;
-      }
-
-      if (line.kind === "INCOME" && !matchedAccount) {
-        extraErrors.push({
-          lineNumber: line.lineNumber,
-          raw: line.raw,
-          reason: "ENTRADA_EXIGE_CONTA",
         });
         continue;
       }
@@ -226,13 +139,13 @@ export function TransactionImportForm({
         launchType: "ONE_OFF",
         transaction: {
           householdId,
-          kind: line.kind,
-          description: line.description.replaceAll("_", " "),
+          kind: "EXPENSE",
+          description: line.description,
           amount: line.amount,
           occurredAt,
-          categoryId: category.id,
-          accountId: matchedAccount?.id,
-          creditCardId: matchedAccount ? undefined : matchedCard?.id,
+          categoryId,
+          accountId: targetType === "account" ? targetId : undefined,
+          creditCardId: targetType === "card" ? targetId : undefined,
         },
       });
     }
@@ -252,9 +165,7 @@ export function TransactionImportForm({
   }
 
   function handleImport() {
-    if (payloads.length === 0) {
-      return;
-    }
+    if (payloads.length === 0) return;
     const result = onSubmitBatch(payloads);
     setBatchResult(result);
   }
@@ -265,6 +176,51 @@ export function TransactionImportForm({
         <CardTitle>Importacao por texto</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <label className="grid gap-1 text-sm">
+            Destino
+            <select
+              aria-label="Destino da importacao"
+              value={targetType}
+              onChange={(event) => {
+                const nextType = event.target.value as "account" | "card";
+                setTargetType(nextType);
+                setTargetId(nextType === "account" ? (accounts[0]?.id ?? "") : (cards[0]?.id ?? ""));
+              }}
+            >
+              <option value="account">Conta</option>
+              <option value="card">Cartao</option>
+            </select>
+          </label>
+
+          <label className="grid gap-1 text-sm">
+            {targetType === "account" ? "Conta" : "Cartao"}
+            <select aria-label="Conta ou cartao da importacao" value={targetId} onChange={(event) => setTargetId(event.target.value)}>
+              {targetOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-1 text-sm">
+            Categoria
+            <select aria-label="Categoria da importacao" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+              {categories.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="grid gap-1 text-sm">
+          Data das transacoes
+          <input aria-label="Data da importacao" type="date" value={occurredDate} onChange={(event) => setOccurredDate(event.target.value)} />
+        </label>
+
         <label className="grid gap-1 text-sm">
           Linhas de importacao
           <textarea
@@ -272,27 +228,23 @@ export function TransactionImportForm({
             rows={16}
             value={textValue}
             onChange={(event) => setTextValue(event.target.value)}
-            placeholder="01/03 entrada salario 5000.00 renda conta_principal nao"
+            placeholder="compra mercado 50.00\ncelular 50.22*3\nnotebook 150/3 recorrente"
             className="min-h-[44vh] w-full resize-y rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-teal dark:border-slate-700 dark:bg-slate-900"
           />
         </label>
 
         <details className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/35 dark:text-slate-300">
-          <summary className="cursor-pointer select-none text-sm font-medium text-slate-700 dark:text-slate-100">
-            Ajuda do formato
-          </summary>
+          <summary className="cursor-pointer select-none text-sm font-medium text-slate-700 dark:text-slate-100">Ajuda do formato</summary>
           <div className="mt-2 space-y-2">
             <p>
-              Cole uma transacao por linha no formato:
-              <strong className="ml-1">data tipo descricao valor categoria conta recorrente</strong>
+              Cole uma transacao por linha no formato: <strong className="ml-1">descricao valor [recorrente]</strong>
             </p>
             <p>
-              Valor numerico puro = nao parcelado (aceita negativo, ex.: <code>-120.50</code>). Parcelado: <code>50.22x3</code> (3x de 50.22) ou{" "}
+              Valor numerico puro = nao parcelado (aceita negativo, ex.: <code>-120.50</code>). Parcelado: <code>50.22*3</code> (3x de 50.22) ou{' '}
               <code>150/3</code> (total 150 em 3x).
             </p>
             <p>
-              Exemplos: <code>01/02 saida compra_bahamas 50.00 mercado c6 nao</code>, <code>01/02 saida celular 50.22x3 mercado c6 nao</code>,{" "}
-              <code>01/02 saida notebook 150/3 mercado c6 nao</code>
+              Recorrencia opcional: <code>recorrente</code>, <code>sim</code>, <code>r</code> ou <code>mensal</code>.
             </p>
           </div>
         </details>
@@ -316,9 +268,9 @@ export function TransactionImportForm({
 
             {lineErrors.length > 0 ? (
               <ul className="space-y-1 text-xs text-red-500">
-                {lineErrors.map((error) => (
-                  <li key={`${error.lineNumber}-${error.reason}`}>
-                    Linha {error.lineNumber}: {error.reason}
+                {lineErrors.map((error, index) => (
+                  <li key={`${error.lineNumber}-${error.reason}-${index}`}>
+                    {error.lineNumber > 0 ? `Linha ${error.lineNumber}:` : "Config:"} {error.reason}
                   </li>
                 ))}
               </ul>
