@@ -60,24 +60,22 @@ describe("cashflow import flow", () => {
     await user.type(
       screen.getByLabelText("Linhas de importacao"),
       [
-        "01/03 entrada salario 5000.00 renda c6 nao",
-        "02/03 saida compra_bahamas 50.00 mercado c6 nao",
-        "03/03 saida celular 50.22x3 mercado c6 recorrente",
-        "04/03 saida notebook 150/3 mercado c6 nao",
-        "05/03 saida erro xx mercado c6 nao",
+        "compra bahamas 50.00",
+        "celular 50.22*3 recorrente",
+        "notebook 150/3",
+        "erro xx",
       ].join("\n"),
     );
 
     await user.click(screen.getByRole("button", { name: "Processar linhas" }));
 
-    expect(screen.getByText("Validas: 4")).toBeInTheDocument();
+    expect(screen.getByText("Validas: 3")).toBeInTheDocument();
     expect(screen.getByText("Invalidas: 1")).toBeInTheDocument();
-    expect(screen.getByText(/Linha 5: VALOR_INVALIDO/)).toBeInTheDocument();
+    expect(screen.getByText(/Linha 4: VALOR_INVALIDO/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Importar lancamentos validos" }));
 
     expect(screen.getByText(/Importacao finalizada:/)).toBeInTheDocument();
-    expect(screen.getByText("salario")).toBeInTheDocument();
     expect(screen.getByText("compra bahamas")).toBeInTheDocument();
     expect(screen.getByText("celular (1/3) (1)")).toBeInTheDocument();
     expect(screen.getByText("notebook (1/3) (1)")).toBeInTheDocument();
@@ -90,10 +88,13 @@ describe("cashflow import flow", () => {
     await user.click(screen.getByRole("button", { name: "Importar texto" }));
     expect(screen.getByText("Importacao por texto")).toBeInTheDocument();
 
+    await user.selectOptions(screen.getByLabelText("Destino da importacao"), "card");
     await user.type(
       screen.getByLabelText("Linhas de importacao"),
-      "06/02 saida compra_pos_fechamento 120x3 outros cartaoc6 nao",
+      "compra pos fechamento 120*3",
     );
+    await user.clear(screen.getByLabelText("Data da importacao"));
+    await user.type(screen.getByLabelText("Data da importacao"), "2026-02-06");
 
     await user.click(screen.getByRole("button", { name: "Processar linhas" }));
     expect(screen.getByText("Validas: 1")).toBeInTheDocument();
