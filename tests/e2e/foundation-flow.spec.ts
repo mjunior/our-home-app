@@ -2,10 +2,11 @@
 import "@testing-library/jest-dom/vitest";
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import type { RouteKey } from "../../src/app/routes";
 import { AppShell } from "../../src/components/layout/app-shell";
 import { accountsController, cardsController, categoriesController, transactionsController } from "../../src/app/foundation/runtime";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository";
@@ -22,11 +23,17 @@ describe("foundation flow", () => {
     document.documentElement.classList.add("dark");
   });
 
+  afterEach(() => {
+    cleanup();
+    document.body.removeAttribute("data-scroll-locked");
+    document.body.style.pointerEvents = "";
+  });
+
   it("navigates through shell and creates account", async () => {
     const user = userEvent.setup();
 
     function ShellHarness() {
-      const [route, setRoute] = React.useState<"cashflow" | "accounts" | "cards" | "categories" | "schedules">("cashflow");
+      const [route, setRoute] = React.useState<RouteKey>("cashflow");
       const [darkMode, setDarkMode] = React.useState(true);
 
       React.useEffect(() => {
@@ -63,7 +70,7 @@ describe("foundation flow", () => {
     const user = userEvent.setup();
 
     function ShellHarness() {
-      const [route, setRoute] = React.useState<"cashflow" | "accounts" | "cards" | "categories" | "schedules">("accounts");
+      const [route, setRoute] = React.useState<RouteKey>("accounts");
       const [darkMode, setDarkMode] = React.useState(true);
 
       React.useEffect(() => {
@@ -100,11 +107,67 @@ describe("foundation flow", () => {
     expect(screen.getByText("Faltam R$ 500.00 para atingir a meta.")).toBeInTheDocument();
   });
 
+  it("adjusts account balance from accounts screen and records paid adjustment transaction", async () => {
+    const user = userEvent.setup();
+
+    accountsController.createAccount({
+      householdId: "household-main",
+      name: "Conta Ajuste",
+      type: "CHECKING",
+      openingBalance: "500.00",
+    });
+
+    function ShellHarness() {
+      const [route, setRoute] = React.useState<RouteKey>("accounts");
+      const [darkMode, setDarkMode] = React.useState(true);
+
+      React.useEffect(() => {
+        document.documentElement.classList.toggle("dark", darkMode);
+      }, [darkMode]);
+
+      return React.createElement(AppShell, {
+        route,
+        onRouteChange: setRoute,
+        darkMode,
+        onDarkModeChange: setDarkMode,
+        onLogout: () => undefined,
+      });
+    }
+
+    render(React.createElement(ShellHarness));
+
+    await user.click(screen.getByRole("button", { name: "Reajustar saldo da Conta Ajuste" }));
+    expect(screen.getByText("Conta Ajuste")).toBeInTheDocument();
+    expect(screen.getByText("Saldo atual no app: R$ 500.00")).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Valor real"));
+    await user.type(screen.getByLabelText("Valor real"), "65000");
+    await user.clear(screen.getByLabelText("Mes de competencia"));
+    await user.type(screen.getByLabelText("Mes de competencia"), "2026-04");
+    await user.clear(screen.getByLabelText("Data do reajuste"));
+    await user.type(screen.getByLabelText("Data do reajuste"), "2026-04-15");
+    await user.click(screen.getByRole("button", { name: "Salvar reajuste" }));
+
+    expect(screen.getByTestId("consolidated-balance")).toHaveTextContent("R$ 650.00");
+
+    const adjustments = transactionsController
+      .listTransactionsByMonth({ householdId: "household-main", month: "2026-04" })
+      .filter((transaction) => transaction.description === "REAJUSTE");
+
+    expect(adjustments).toHaveLength(1);
+    expect(adjustments[0]).toMatchObject({
+      kind: "INCOME",
+      amount: "150.00",
+      settlementStatus: "PAID",
+      occurredAt: "2026-04-15T12:00:00.000Z",
+    });
+  });
+
   it("toggles theme and can register card and category", async () => {
     const user = userEvent.setup();
 
     function ShellHarness() {
-      const [route, setRoute] = React.useState<"cashflow" | "accounts" | "cards" | "categories" | "schedules">("cards");
+      const [route, setRoute] = React.useState<RouteKey>("cards");
       const [darkMode, setDarkMode] = React.useState(true);
 
       React.useEffect(() => {
@@ -185,7 +248,7 @@ describe("foundation flow", () => {
     const category = categoriesController.createCategory({ householdId: "household-main", name: "Lazer" });
 
     function ShellHarness() {
-      const [route, setRoute] = React.useState<"cashflow" | "accounts" | "cards" | "categories" | "schedules">("cashflow");
+      const [route, setRoute] = React.useState<RouteKey>("cashflow");
       const [darkMode, setDarkMode] = React.useState(true);
 
       React.useEffect(() => {
