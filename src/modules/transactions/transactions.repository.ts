@@ -17,6 +17,7 @@ export interface TransactionRecord {
   invoiceDueDate: string | null;
   settlementStatus: SettlementStatus | null;
   transferGroupId: string | null;
+  createdAt: string;
 }
 
 export interface TransactionMonthFilter {
@@ -33,10 +34,11 @@ function toMonthKey(occurredAt: string): string {
 }
 
 export class TransactionsRepository {
-  create(data: Omit<TransactionRecord, "id">): TransactionRecord {
+  create(data: Omit<TransactionRecord, "id" | "createdAt"> & { createdAt?: string }): TransactionRecord {
     const record: TransactionRecord = {
       id: createId(),
       ...data,
+      createdAt: data.createdAt ?? new Date().toISOString(),
     };
 
     transactionsStore.push(record);

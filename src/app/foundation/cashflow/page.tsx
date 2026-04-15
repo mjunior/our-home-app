@@ -279,8 +279,8 @@ export default function CashflowPage() {
   }
 
   return (
-    <main className="space-y-4 pb-36 lg:pb-4">
-      <section className="section-reveal flex flex-col items-start gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <main className="min-w-0 space-y-4 pb-36 lg:pb-4">
+      <section className="section-reveal flex min-w-0 flex-col items-start gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
           <button
             type="button"
@@ -295,10 +295,10 @@ export default function CashflowPage() {
         </div>
       </section>
 
-      <Card className="section-reveal">
+      <Card className="section-reveal min-w-0">
         <CardContent className="pt-5">
-          <div className="flex flex-col gap-3">
-            <div className="space-y-2.5 lg:space-y-0">
+          <div className="flex min-w-0 flex-col gap-3">
+            <div className="min-w-0 space-y-2.5 lg:space-y-0">
               <div className="cashflow-month-shell">
                 <div className="cashflow-month-shell__header">
                   <div>

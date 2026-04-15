@@ -66,8 +66,8 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange, onL
   }, [onRouteChange]);
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[300px_1fr]">
-      <aside className="hidden border-r border-slate-200/80 bg-white/80 p-4 backdrop-blur dark:border-slate-800 dark:bg-[#090f13]/80 lg:block">
+    <div className="min-h-screen overflow-x-hidden lg:grid lg:grid-cols-[minmax(236px,280px)_minmax(0,1fr)]">
+      <aside className="hidden min-w-0 border-r border-slate-200/80 bg-white/80 p-3 backdrop-blur dark:border-slate-800 dark:bg-[#090f13]/80 xl:p-4 lg:block">
         <Card className="h-full section-reveal">
           <CardHeader>
             <Badge variant="lime" className="w-fit">
@@ -96,7 +96,7 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange, onL
         </Card>
       </aside>
 
-      <main className="safe-bottom p-3 pb-24 pt-4 lg:p-8 lg:pb-8">
+      <main className="safe-bottom min-w-0 p-3 pb-24 pt-4 lg:p-6 lg:pb-8 xl:p-8 xl:pb-8">
         <header className="trevo-mobile-topbar section-reveal mb-4 lg:hidden">
           <div className="trevo-mobile-topbar__inner">
           <Sheet>
@@ -170,11 +170,11 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange, onL
           </div>
         </header>
 
-        <header className="mb-6 hidden items-center justify-between lg:flex">
-          <div className="stagger-up">
+        <header className="mb-6 hidden min-w-0 items-center justify-between gap-4 lg:flex">
+          <div className="stagger-up min-w-0">
             <h2 className="text-3xl">{routes[route].label}</h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {route === "cashflow" ? (
               <Button type="button" aria-label="Novo lancamento" onClick={() => window.dispatchEvent(new CustomEvent("cashflow:new-launch"))}>
                 Novo lancamento
@@ -189,7 +189,7 @@ export function AppShell({ route, onRouteChange, darkMode, onDarkModeChange, onL
           </div>
         </header>
 
-        <section className="section-reveal space-y-4">{routes[route].render()}</section>
+        <section className="section-reveal min-w-0 space-y-4">{routes[route].render()}</section>
 
         <div className="mobile-bottom-nav lg:hidden">
           <Tabs value={route} onValueChange={(value) => onRouteChange(value as RouteKey)}>

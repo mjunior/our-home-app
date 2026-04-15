@@ -1,7 +1,11 @@
 import { sumMoney } from "../../domain/shared/money";
 import { CardsRepository } from "../cards/cards.repository";
 import { type InvoiceSettlementRecord } from "./invoice-settlement.repository";
-import { type ScheduledInstanceRecord } from "../scheduling/schedule.repository";
+import {
+  type InstallmentPlanRecord,
+  type RecurringRuleRecord,
+  type ScheduledInstanceRecord,
+} from "../scheduling/schedule.repository";
 import { TransactionsRepository } from "../transactions/transactions.repository";
 import { InvoiceCycleService } from "./invoice-cycle.service";
 
@@ -43,6 +47,8 @@ export interface CardInvoiceEntriesInput {
 
 interface ScheduleReadRepositoryLike {
   listInstancesByHousehold(householdId: string): ScheduledInstanceRecord[];
+  findInstallmentPlanById?(id: string): InstallmentPlanRecord | undefined;
+  findRecurringRuleById?(id: string): RecurringRuleRecord | undefined;
 }
 
 interface InvoiceSettlementRepositoryLike {
@@ -52,6 +58,57 @@ interface InvoiceSettlementRepositoryLike {
 }
 
 type InvoiceEntryOrigin = "ONE_OFF" | "RECURRING" | "INSTALLMENT";
+type InvoiceEntryDisplayGroup = "OPEN_INSTALLMENT" | "LATEST" | "RECURRING";
+
+const invoiceEntryGroupOrder: Record<InvoiceEntryDisplayGroup, number> = {
+  OPEN_INSTALLMENT: 0,
+  LATEST: 1,
+  RECURRING: 2,
+};
+
+interface InvoiceEntry {
+  id: string;
+  description: string;
+  amount: string;
+  occurredAt: string;
+  registeredAt: string;
+  categoryId: string;
+  sourceType: InvoiceEntryOrigin;
+  sourceId: string | null;
+  monthKey: string | null;
+  installmentSequence: number | null;
+}
+
+function resolveInvoiceEntryDisplayGroup(entry: InvoiceEntry): InvoiceEntryDisplayGroup {
+  if (entry.sourceType === "INSTALLMENT" && entry.installmentSequence !== 1) {
+    return "OPEN_INSTALLMENT";
+  }
+
+  if (entry.sourceType === "RECURRING") {
+    return "RECURRING";
+  }
+
+  return "LATEST";
+}
+
+function compareInvoiceEntries(a: InvoiceEntry, b: InvoiceEntry): number {
+  const groupDiff = invoiceEntryGroupOrder[resolveInvoiceEntryDisplayGroup(a)] - invoiceEntryGroupOrder[resolveInvoiceEntryDisplayGroup(b)];
+  if (groupDiff !== 0) {
+    return groupDiff;
+  }
+
+  const registeredDiff = b.registeredAt.localeCompare(a.registeredAt);
+  if (registeredDiff !== 0) {
+    return registeredDiff;
+  }
+
+  const occurredDiff = b.occurredAt.localeCompare(a.occurredAt);
+  if (occurredDiff !== 0) {
+    return occurredDiff;
+  }
+
+  return a.description.localeCompare(b.description, "pt-BR");
+}
 
 export class InvoicesService {
   constructor(
@@ -250,16 +307,7 @@ export class InvoicesService {
       throw new Error("CARD_NOT_FOUND");
     }
 
-    const entries: Array<{
-      id: string;
-      description: string;
-      amount: string;
-      occurredAt: string;
-      categoryId: string;
-      sourceType: InvoiceEntryOrigin;
-      sourceId: string | null;
-      monthKey: string | null;
-    }> = [];
+    const entries: InvoiceEntry[] = [];
 
     for (const expense of this.transactionsRepository.listByHousehold(input.householdId)) {
       if (expense.kind !== "EXPENSE" || expense.creditCardId !== card.id) {
@@ -277,10 +325,12 @@ export class InvoicesService {
         description: expense.description,
         amount: expense.amount,
         occurredAt: expense.occurredAt,
+        registeredAt: expense.createdAt ?? expense.occurredAt,
         categoryId: expense.categoryId,
         sourceType: "ONE_OFF",
         sourceId: null,
         monthKey: null,
+        installmentSequence: null,
       });
     }
 
@@ -294,19 +344,25 @@ export class InvoicesService {
         continue;
       }
 
+      const source = instance.sourceType === "INSTALLMENT"
+        ? this.scheduleRepository?.findInstallmentPlanById?.(instance.sourceId)
+        : this.scheduleRepository?.findRecurringRuleById?.(instance.sourceId);
+
       entries.push({
         id: `schedule:${instance.id}`,
         description: instance.description,
         amount: instance.amount,
         occurredAt: instance.occurredAt,
+        registeredAt: source?.createdAt ?? instance.occurredAt,
         categoryId: instance.categoryId,
         sourceType: instance.sourceType,
         sourceId: instance.sourceId,
         monthKey: instance.monthKey,
+        installmentSequence: instance.sourceType === "INSTALLMENT" ? instance.sequence : null,
       });
     }
 
-    entries.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+    entries.sort(compareInvoiceEntries);
 
     return {
       cardId: card.id,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import { CardForm } from "../../../components/foundation/card-form";
 import { TransactionForm } from "../../../components/foundation/transaction-form";
@@ -7,6 +7,7 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
+import { sumMoney } from "../../../domain/shared/money";
 import { launchConfettiCanvas, playCheerSound } from "../../../lib/celebration";
 import { formatCurrencyBR, formatDateShortBR, formatMonthLabelBR } from "../../../lib/utils";
 import type { RecurringEditScope } from "../../../modules/scheduling/schedule-management.service";
@@ -53,6 +54,58 @@ function resolveDefaultExpenseDateForInvoice(dueMonth: string, closeDay: number)
 }
 
 type EditMode = "ONE_OFF" | "RECURRING" | "INSTALLMENT" | null;
+type InvoiceEntrySourceType = Exclude<EditMode, null>;
+type InvoiceEntryDisplayGroup = "OPEN_INSTALLMENT" | "LATEST" | "RECURRING";
+
+const invoiceEntryGroups: Array<{ key: InvoiceEntryDisplayGroup; label: string }> = [
+  { key: "OPEN_INSTALLMENT", label: "Parcelamentos" },
+  { key: "LATEST", label: "Ultimos lancamentos" },
+  { key: "RECURRING", label: "Recorrencias" },
+];
+
+const invoiceEntryGroupOrder: Record<InvoiceEntryDisplayGroup, number> = {
+  OPEN_INSTALLMENT: 0,
+  LATEST: 1,
+  RECURRING: 2,
+};
+
+function resolveRegisteredAt(entry: { registeredAt?: string; occurredAt: string }) {
+  return entry.registeredAt ?? entry.occurredAt;
+}
+
+function compareInvoiceEntries(
+  a: { sourceType: InvoiceEntrySourceType; installmentSequence?: number | null; registeredAt?: string; occurredAt: string; description: string },
+  b: { sourceType: InvoiceEntrySourceType; installmentSequence?: number | null; registeredAt?: string; occurredAt: string; description: string },
+) {
+  const groupDiff = invoiceEntryGroupOrder[resolveInvoiceEntryDisplayGroup(a)] - invoiceEntryGroupOrder[resolveInvoiceEntryDisplayGroup(b)];
+  if (groupDiff !== 0) {
+    return groupDiff;
+  }
+
+  const registeredDiff = resolveRegisteredAt(b).localeCompare(resolveRegisteredAt(a));
+  if (registeredDiff !== 0) {
+    return registeredDiff;
+  }
+
+  const occurredDiff = b.occurredAt.localeCompare(a.occurredAt);
+  if (occurredDiff !== 0) {
+    return occurredDiff;
+  }
+
+  return a.description.localeCompare(b.description, "pt-BR");
+}
+
+function resolveInvoiceEntryDisplayGroup(entry: { sourceType: InvoiceEntrySourceType; installmentSequence?: number | null }): InvoiceEntryDisplayGroup {
+  if (entry.sourceType === "INSTALLMENT" && entry.installmentSequence !== 1) {
+    return "OPEN_INSTALLMENT";
+  }
+
+  if (entry.sourceType === "RECURRING") {
+    return "RECURRING";
+  }
+
+  return "LATEST";
+}
 
 export default function CardsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -147,8 +200,22 @@ export default function CardsPage() {
   const selectedCard = cards.find((item) => item.id === selectedInvoiceCardId) ?? null;
   const pendingDeleteCard = cards.find((item) => item.id === pendingDeleteCardId) ?? null;
   const sortedInvoiceEntries = useMemo(
-    () => [...(invoiceDetails?.entries ?? [])].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)),
+    () => [...(invoiceDetails?.entries ?? [])].sort(compareInvoiceEntries),
     [invoiceDetails?.entries],
+  );
+  const groupedInvoiceEntries = useMemo(
+    () =>
+      invoiceEntryGroups
+        .map((group) => {
+          const entries = sortedInvoiceEntries.filter((entry) => resolveInvoiceEntryDisplayGroup(entry) === group.key);
+          return {
+            ...group,
+            entries,
+            total: sumMoney(entries.map((entry) => entry.amount)),
+          };
+        })
+        .filter((group) => group.entries.length > 0),
+    [sortedInvoiceEntries],
   );
   const quickExpenseInitialValues = useMemo(
     () =>
@@ -360,56 +427,78 @@ export default function CardsPage() {
                     Esta fatura nao possui transacoes no periodo.
                   </div>
                 ) : (
-                  <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
-                    <table className="w-full text-sm">
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                    <table className="w-full min-w-[720px] text-sm">
                       <thead>
                         <tr className="border-b border-slate-200/70 bg-slate-100/70 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                          <th className="px-3 py-2 text-left">Data</th>
+                          <th className="px-3 py-2 text-left">Lancado em</th>
+                          <th className="px-3 py-2 text-left">Registrado em</th>
                           <th className="px-3 py-2 text-left">Descricao</th>
                           <th className="px-3 py-2 text-right">Valor</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {sortedInvoiceEntries.map((entry, index) => {
-                          const installmentMatch = entry.description.match(/\((\d+\/\d+)\)\s*$/);
-                          const installmentLabel = entry.sourceType === "INSTALLMENT" ? installmentMatch?.[1] ?? "" : "";
-                          const baseDescription = installmentMatch
-                            ? entry.description.replace(/\s*\(\d+\/\d+\)\s*$/, "")
-                            : entry.description;
-                          const recurringMark = entry.sourceType === "RECURRING" ? "↻ " : "";
-
-                          return (
-                            <tr
-                              key={entry.id}
-                              className={`cursor-pointer border-b border-slate-200/70 text-slate-700 transition hover:bg-slate-100/70 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900/70 ${
-                                index % 2 === 0 ? "bg-transparent" : "bg-slate-50/60 dark:bg-slate-950/40"
-                              }`}
-                              onClick={() => {
-                                setEditMode(entry.sourceType);
-                                setEditingEntryId(entry.sourceType === "ONE_OFF" ? entry.id : null);
-                                setEditingSourceId(entry.sourceType !== "ONE_OFF" ? entry.sourceId : null);
-                                setEditingSourceMonth(entry.monthKey ?? selectedDueMonth);
-                                setEditRecurringScope("THIS_ONLY");
-                                setEditDescription(entry.description);
-                                setEditAmount(entry.amount);
-                                setEditOccurredAt(entry.occurredAt.slice(0, 10));
-                                setEditCategoryId(entry.categoryId);
-                                setDeleteScope("CURRENT_AND_FUTURE");
-                                setEditModalOpen(true);
-                              }}
-                            >
-                              <td className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">{formatDateShortBR(entry.occurredAt)}</td>
-                              <td className="px-3 py-2">
-                                <span className="font-medium">
-                                  {recurringMark}
-                                  {baseDescription}
-                                  {installmentLabel ? ` ${installmentLabel}` : ""}
-                                </span>
+                        {groupedInvoiceEntries.map((group) => (
+                          <Fragment key={group.key}>
+                            <tr className="border-b border-slate-200/70 bg-slate-50 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
+                              <td colSpan={4} className="px-3 py-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span className="font-semibold">{group.label}</span>
+                                  <span>
+                                    {group.entries.length} {group.entries.length === 1 ? "item" : "itens"} - {formatCurrencyBR(group.total)}
+                                  </span>
+                                </div>
                               </td>
-                              <td className="px-3 py-2 text-right font-semibold">{formatCurrencyBR(entry.amount)}</td>
                             </tr>
-                          );
-                        })}
+                            {group.entries.map((entry, index) => {
+                              const installmentMatch = entry.description.match(/\((\d+\/\d+)\)\s*$/);
+                              const installmentLabel = entry.sourceType === "INSTALLMENT" ? installmentMatch?.[1] ?? "" : "";
+                              const baseDescription = installmentMatch
+                                ? entry.description.replace(/\s*\(\d+\/\d+\)\s*$/, "")
+                                : entry.description;
+                              const recurringMark = entry.sourceType === "RECURRING" ? "↻ " : "";
+
+                              return (
+                                <tr
+                                  key={entry.id}
+                                  className={`cursor-pointer border-b border-slate-200/70 text-slate-700 transition hover:bg-slate-100/70 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900/70 ${
+                                    index % 2 === 0 ? "bg-transparent" : "bg-slate-50/60 dark:bg-slate-950/40"
+                                  }`}
+                                  onClick={() => {
+                                    setEditMode(entry.sourceType);
+                                    setEditingEntryId(entry.sourceType === "ONE_OFF" ? entry.id : null);
+                                    setEditingSourceId(entry.sourceType !== "ONE_OFF" ? entry.sourceId : null);
+                                    setEditingSourceMonth(entry.monthKey ?? selectedDueMonth);
+                                    setEditRecurringScope("THIS_ONLY");
+                                    setEditDescription(entry.description);
+                                    setEditAmount(entry.amount);
+                                    setEditOccurredAt(entry.occurredAt.slice(0, 10));
+                                    setEditCategoryId(entry.categoryId);
+                                    setDeleteScope("CURRENT_AND_FUTURE");
+                                    setEditModalOpen(true);
+                                  }}
+                                >
+                                  <td className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
+                                    <span className="block text-[10px] uppercase text-slate-400 sm:hidden">Lancado</span>
+                                    {formatDateShortBR(entry.occurredAt)}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
+                                    <span className="block text-[10px] uppercase text-slate-400 sm:hidden">Registrado</span>
+                                    {formatDateShortBR(resolveRegisteredAt(entry))}
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <span className="font-medium">
+                                      {recurringMark}
+                                      {baseDescription}
+                                      {installmentLabel ? ` ${installmentLabel}` : ""}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-semibold">{formatCurrencyBR(entry.amount)}</td>
+                                </tr>
+                              );
+                            })}
+                          </Fragment>
+                        ))}
                       </tbody>
                     </table>
                   </div>

@@ -174,13 +174,13 @@ export function StatementTable({
     Boolean(onToggleSettlement) && (entry.sourceType === "INVOICE" || (!!entry.accountId && !entry.transferGroupId));
 
   return (
-    <section className="section-reveal">
+    <section className="section-reveal min-w-0">
       {entries.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-300">
           Nenhum lancamento no periodo atual.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
             {isDesktop ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[940px] text-sm">
@@ -220,7 +220,7 @@ export function StatementTable({
                               <SettlementToggle
                                 loading={loadingSettlementEntryId === entry.id}
                                 checked={entry.settlementStatus !== "UNPAID"}
-                                onToggle={() => onToggleSettlement(entry)}
+                                onToggle={() => onToggleSettlement?.(entry)}
                               />
                             ) : (
                               <span className="text-xs text-slate-400">—</span>
@@ -291,7 +291,7 @@ export function StatementTable({
                             compact
                             loading={loadingSettlementEntryId === entry.id}
                             checked={entry.settlementStatus !== "UNPAID"}
-                            onToggle={() => onToggleSettlement(entry)}
+                            onToggle={() => onToggleSettlement?.(entry)}
                           />
                         ) : (
                           <span className="inline-flex h-6 w-6 items-center justify-center text-xs text-slate-500">—</span>

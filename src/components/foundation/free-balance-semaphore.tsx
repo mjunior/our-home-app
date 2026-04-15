@@ -41,13 +41,13 @@ export function FreeBalanceSemaphore({
   const projectedIsNegative = Number(currentProjectedBalance) < 0;
 
   return (
-    <section aria-label="Semaforo saldo livre" className="stagger-up space-y-3">
+    <section aria-label="Semaforo saldo livre" className="stagger-up min-w-0 space-y-3">
       <p data-testid="free-balance-risk" className="sr-only">
         {style.title}
       </p>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <article className="rounded-2xl border border-brand-teal/30 bg-brand-teal/5 p-3 dark:border-brand-lime/30 dark:bg-brand-lime/5">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-3">
+        <article className="min-w-0 rounded-2xl border border-brand-teal/30 bg-brand-teal/5 p-3 dark:border-brand-lime/30 dark:bg-brand-lime/5">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Mes atual</p>
             <Button
@@ -91,7 +91,7 @@ export function FreeBalanceSemaphore({
           </p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 dark:border-slate-700/80 dark:bg-slate-950/60">
+        <article className="min-w-0 rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 dark:border-slate-700/80 dark:bg-slate-950/60">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Proximo mes</p>
             <Button
@@ -114,7 +114,7 @@ export function FreeBalanceSemaphore({
           </div>
         </article>
 
-        <article className="rounded-2xl border border-brand-teal/30 bg-brand-teal/5 p-3 dark:border-brand-lime/30 dark:bg-brand-lime/5">
+        <article className="min-w-0 rounded-2xl border border-brand-teal/30 bg-brand-teal/5 p-3 dark:border-brand-lime/30 dark:bg-brand-lime/5">
           <p className="text-xs uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Gastos mes</p>
           <dl className="mt-2 space-y-1 text-sm">
             <div className="flex items-center justify-between gap-2">

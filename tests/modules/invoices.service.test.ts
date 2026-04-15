@@ -360,6 +360,204 @@ describe("invoice services", () => {
     ).toBe(true);
   });
 
+  it("returns registered dates and groups invoice entries by operational source", () => {
+    const card = cards.createCard({ householdId, name: "Auditoria Fatura", closeDay: 5, dueDay: 12 });
+    const category = categories.createCategory({ householdId, name: "Auditoria" });
+
+    transactionsRepo.create({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra antiga",
+      amount: "30.00",
+      occurredAt: "2026-03-02T12:00:00.000Z",
+      accountId: null,
+      creditCardId: card.id,
+      categoryId: category.id,
+      invoiceMonthKey: "2026-03",
+      invoiceDueDate: "2026-03-12T00:00:00.000Z",
+      settlementStatus: null,
+      transferGroupId: null,
+      createdAt: "2026-03-10T09:00:00.000Z",
+    });
+
+    transactionsRepo.create({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra nova",
+      amount: "40.00",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      accountId: null,
+      creditCardId: card.id,
+      categoryId: category.id,
+      invoiceMonthKey: "2026-03",
+      invoiceDueDate: "2026-03-12T00:00:00.000Z",
+      settlementStatus: null,
+      transferGroupId: null,
+      createdAt: "2026-03-12T09:00:00.000Z",
+    });
+
+    const installmentPlan = scheduleRepo.createInstallmentPlan({
+      householdId,
+      description: "Notebook",
+      totalAmount: "300.00",
+      installmentsCount: 3,
+      startMonth: "2026-03",
+      categoryId: category.id,
+      accountId: null,
+      creditCardId: card.id,
+      active: true,
+      createdAt: "2026-03-08T09:00:00.000Z",
+    });
+    scheduleRepo.createInstanceIfMissing({
+      householdId,
+      sourceType: "INSTALLMENT",
+      sourceId: installmentPlan.id,
+      sequence: 1,
+      monthKey: "2026-03",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      kind: "EXPENSE",
+      description: "Notebook (1/3)",
+      amount: "100.00",
+      categoryId: category.id,
+      accountId: null,
+      creditCardId: card.id,
+      instanceKey: `INSTALLMENT:${installmentPlan.id}:1:2026-03`,
+      locked: false,
+      settlementStatus: null,
+    });
+
+    const recurringRule = scheduleRepo.createRecurringRule({
+      householdId,
+      kind: "EXPENSE",
+      description: "Streaming",
+      amount: "50.00",
+      startMonth: "2026-03",
+      categoryId: category.id,
+      accountId: null,
+      creditCardId: card.id,
+      active: true,
+      revisionOfRuleId: null,
+      createdAt: "2026-03-20T09:00:00.000Z",
+    });
+    scheduleRepo.createInstanceIfMissing({
+      householdId,
+      sourceType: "RECURRING",
+      sourceId: recurringRule.id,
+      sequence: 1,
+      monthKey: "2026-03",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      kind: "EXPENSE",
+      description: "Streaming",
+      amount: "50.00",
+      categoryId: category.id,
+      accountId: null,
+      creditCardId: card.id,
+      instanceKey: `RECURRING:${recurringRule.id}:1:2026-03`,
+      locked: false,
+      settlementStatus: null,
+    });
+
+    const details = invoices.getCardInvoiceEntriesByDueMonth({ householdId, cardId: card.id, dueMonth: "2026-03" });
+
+    expect(details.entries.map((entry) => entry.description)).toEqual([
+      "Compra nova",
+      "Compra antiga",
+      "Notebook (1/3)",
+      "Streaming",
+    ]);
+    expect(details.entries.find((entry) => entry.description === "Compra nova")?.registeredAt).toBe("2026-03-12T09:00:00.000Z");
+    expect(details.entries.find((entry) => entry.description === "Notebook (1/3)")?.registeredAt).toBe("2026-03-08T09:00:00.000Z");
+    expect(details.entries.find((entry) => entry.description === "Notebook (1/3)")?.installmentSequence).toBe(1);
+    expect(details.entries.find((entry) => entry.description === "Streaming")?.registeredAt).toBe("2026-03-20T09:00:00.000Z");
+  });
+
+  it("places ongoing installments before latest launches while first installments stay with latest launches", () => {
+    const card = cards.createCard({ householdId, name: "Parcelas Reais", closeDay: 5, dueDay: 12 });
+    const category = categories.createCategory({ householdId, name: "Compras Parceladas" });
+
+    const ongoingPlan = scheduleRepo.createInstallmentPlan({
+      householdId,
+      description: "Sofa",
+      totalAmount: "800.00",
+      installmentsCount: 4,
+      startMonth: "2026-02",
+      categoryId: category.id,
+      accountId: null,
+      creditCardId: card.id,
+      active: true,
+      createdAt: "2026-02-01T09:00:00.000Z",
+    });
+    scheduleRepo.createInstanceIfMissing({
+      householdId,
+      sourceType: "INSTALLMENT",
+      sourceId: ongoingPlan.id,
+      sequence: 2,
+      monthKey: "2026-03",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      kind: "EXPENSE",
+      description: "Sofa (2/4)",
+      amount: "200.00",
+      categoryId: category.id,
+      accountId: null,
+      creditCardId: card.id,
+      instanceKey: `INSTALLMENT:${ongoingPlan.id}:2:2026-03`,
+      locked: false,
+      settlementStatus: null,
+    });
+
+    transactionsRepo.create({
+      householdId,
+      kind: "EXPENSE",
+      description: "Mercado",
+      amount: "70.00",
+      occurredAt: "2026-03-04T12:00:00.000Z",
+      accountId: null,
+      creditCardId: card.id,
+      categoryId: category.id,
+      invoiceMonthKey: "2026-03",
+      invoiceDueDate: "2026-03-12T00:00:00.000Z",
+      settlementStatus: null,
+      transferGroupId: null,
+      createdAt: "2026-03-20T09:00:00.000Z",
+    });
+
+    const firstInstallmentPlan = scheduleRepo.createInstallmentPlan({
+      householdId,
+      description: "Fone",
+      totalAmount: "100.00",
+      installmentsCount: 2,
+      startMonth: "2026-03",
+      categoryId: category.id,
+      accountId: null,
+      creditCardId: card.id,
+      active: true,
+      createdAt: "2026-03-19T09:00:00.000Z",
+    });
+    scheduleRepo.createInstanceIfMissing({
+      householdId,
+      sourceType: "INSTALLMENT",
+      sourceId: firstInstallmentPlan.id,
+      sequence: 1,
+      monthKey: "2026-03",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      kind: "EXPENSE",
+      description: "Fone (1/2)",
+      amount: "50.00",
+      categoryId: category.id,
+      accountId: null,
+      creditCardId: card.id,
+      instanceKey: `INSTALLMENT:${firstInstallmentPlan.id}:1:2026-03`,
+      locked: false,
+      settlementStatus: null,
+    });
+
+    const details = invoices.getCardInvoiceEntriesByDueMonth({ householdId, cardId: card.id, dueMonth: "2026-03" });
+
+    expect(details.entries.map((entry) => entry.description)).toEqual(["Sofa (2/4)", "Mercado", "Fone (1/2)"]);
+    expect(details.entries[0]?.installmentSequence).toBe(2);
+    expect(details.entries[2]?.installmentSequence).toBe(1);
+  });
+
   it("recomputes consolidated invoice total after card expense edits and deletes", () => {
     const card = cards.createCard({ householdId, name: "Master Recalc", closeDay: 5, dueDay: 12 });
     const category = categories.createCategory({ householdId, name: "Casa" });

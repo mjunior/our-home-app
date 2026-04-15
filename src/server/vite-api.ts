@@ -84,8 +84,14 @@ class TransactionsReadRepository {
   }
 }
 class ScheduleReadRepository {
-  constructor(private readonly rows: Array<any>) {}
+  constructor(
+    private readonly rows: Array<any>,
+    private readonly installmentPlans: Array<any> = [],
+    private readonly recurringRules: Array<any> = [],
+  ) {}
   listInstancesByHousehold(householdId: string) { return this.rows.filter((item) => item.householdId === householdId); }
+  findInstallmentPlanById(id: string) { return this.installmentPlans.find((item) => item.id === id); }
+  findRecurringRuleById(id: string) { return this.recurringRules.find((item) => item.id === id); }
 }
 class InvoiceSettlementReadRepository {
   constructor(private readonly rows: Array<any>) {}
@@ -386,6 +392,7 @@ function toTransactionDto(row: any) {
     invoiceDueDate: row.invoiceDueDate ? row.invoiceDueDate.toISOString() : null,
     settlementStatus: row.settlementStatus ?? null,
     transferGroupId: row.transferGroupId ?? null,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 
@@ -462,6 +469,8 @@ async function loadServices() {
   const cards = await prisma.creditCard.findMany();
   const transactions = await prisma.transaction.findMany();
   const instances = await prisma.scheduledInstance.findMany();
+  const installmentPlans = await prisma.installmentPlan.findMany();
+  const recurringRules = await prisma.recurringRule.findMany();
   const invoiceSettlements = await prisma.invoiceSettlement.findMany();
 
   const accountRepo = new AccountsReadRepository(accounts.map((item) => ({
@@ -482,24 +491,36 @@ async function loadServices() {
   })));
 
   const transactionRepo = new TransactionsReadRepository(transactions.map(toTransactionDto));
-  const scheduleRepo = new ScheduleReadRepository(instances.map((item) => ({
-    id: item.id,
-    householdId: item.householdId,
-    sourceType: item.sourceType,
-    sourceId: item.sourceId,
-    sequence: item.sequence,
-    monthKey: item.monthKey,
-    occurredAt: item.occurredAt.toISOString(),
-    kind: item.kind,
-    description: item.description,
-    amount: item.amount.toString(),
-    categoryId: item.categoryId,
-    accountId: item.accountId,
-    creditCardId: item.creditCardId,
-    instanceKey: item.instanceKey,
-    locked: item.locked,
-    settlementStatus: item.settlementStatus ?? null,
-  })));
+  const scheduleRepo = new ScheduleReadRepository(
+    instances.map((item) => ({
+      id: item.id,
+      householdId: item.householdId,
+      sourceType: item.sourceType,
+      sourceId: item.sourceId,
+      sequence: item.sequence,
+      monthKey: item.monthKey,
+      occurredAt: item.occurredAt.toISOString(),
+      kind: item.kind,
+      description: item.description,
+      amount: item.amount.toString(),
+      categoryId: item.categoryId,
+      accountId: item.accountId,
+      creditCardId: item.creditCardId,
+      instanceKey: item.instanceKey,
+      locked: item.locked,
+      settlementStatus: item.settlementStatus ?? null,
+    })),
+    installmentPlans.map((item) => ({
+      ...item,
+      totalAmount: item.totalAmount.toString(),
+      createdAt: item.createdAt.toISOString(),
+    })),
+    recurringRules.map((item) => ({
+      ...item,
+      amount: item.amount.toString(),
+      createdAt: item.createdAt.toISOString(),
+    })),
+  );
   const invoiceSettlementRepo = new InvoiceSettlementReadRepository(invoiceSettlements.map((item) => ({
     id: item.id,
     householdId: item.householdId,

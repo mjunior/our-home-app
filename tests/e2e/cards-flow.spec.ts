@@ -85,8 +85,8 @@ describe("cards flow", () => {
 
     render(React.createElement(CardsPage));
 
-    expect(await screen.findByText("Streaming")).toBeInTheDocument();
-    await user.click(screen.getByText("Streaming"));
+    expect(await screen.findByText(/Streaming/)).toBeInTheDocument();
+    await user.click(screen.getByText(/Streaming/));
     expect(screen.getByLabelText("Escopo da edicao recorrente")).toHaveValue("THIS_ONLY");
     expect(screen.getByText("Esta edicao altera apenas esta ocorrencia da recorrencia.")).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Editar descricao da transacao"));
@@ -95,7 +95,7 @@ describe("cards flow", () => {
     await user.type(screen.getByLabelText("Editar valor da transacao"), "120.00");
     await user.click(screen.getByRole("button", { name: "Salvar edicao" }));
 
-    expect(await screen.findByText("Streaming promo")).toBeInTheDocument();
+    expect(await screen.findByText(/Streaming promo/)).toBeInTheDocument();
     expect(scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-03")?.amount).toBe("120.00");
     expect(scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-04")?.amount).toBe("90.00");
     expect(scheduleRepo.findRecurringRuleById(rule.id)?.active).toBe(true);
@@ -138,6 +138,69 @@ describe("cards flow", () => {
     expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("groups invoice entries by source and shows launch and registration dates", async () => {
+    const user = userEvent.setup();
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+    const scheduleRepo = new ScheduleRepository();
+
+    const card = new CardsController(new CardsService(cardsRepo)).listCards(householdId)[0]!;
+    const category = new CategoriesController(new CategoriesService(categoriesRepo)).listCategories(householdId)[0]!;
+    const transactions = new TransactionsController(new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo));
+    const engine = new ScheduleEngineService();
+    const scheduleManagement = new ScheduleManagementService(
+      scheduleRepo,
+      new InstallmentsService(scheduleRepo, engine),
+      new RecurrenceService(scheduleRepo, engine),
+      engine,
+    );
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra avulsa",
+      amount: "50.00",
+      occurredAt: "2026-03-02T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+    scheduleManagement.createInstallmentSchedule({
+      householdId,
+      description: "Notebook",
+      totalAmount: "300.00",
+      installmentsCount: 3,
+      startMonth: "2026-02",
+      categoryId: category.id,
+      creditCardId: card.id,
+    });
+    scheduleManagement.createRecurringSchedule({
+      householdId,
+      kind: "EXPENSE",
+      description: "Streaming",
+      amount: "90.00",
+      startMonth: "2026-03",
+      categoryId: category.id,
+      creditCardId: card.id,
+    });
+
+    render(React.createElement(CardsPage));
+
+    const latestHeader = await screen.findByText("Ultimos lancamentos");
+    const installmentsHeader = screen.getByText("Parcelamentos");
+    const recurringHeader = screen.getByText("Recorrencias");
+
+    expect(screen.getByText("Lancado em")).toBeInTheDocument();
+    expect(screen.getByText("Registrado em")).toBeInTheDocument();
+    expect(installmentsHeader.compareDocumentPosition(latestHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(latestHeader.compareDocumentPosition(recurringHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await user.click(screen.getByText("Compra avulsa"));
+    expect(screen.getByText("Editar item da fatura")).toBeInTheDocument();
+    expect(screen.getByLabelText("Editar data da transacao")).toHaveValue("2026-03-02");
+  });
+
   it("adds a new expense directly to the selected card", async () => {
     const user = userEvent.setup();
     const accountsRepo = new AccountsRepository();
@@ -171,6 +234,6 @@ describe("cards flow", () => {
     await user.click(screen.getByRole("button", { name: "Adicionar despesa" }));
 
     expect(await screen.findByText("Compra rapida")).toBeInTheDocument();
-    expect(screen.getByText(/R\$\s*170[,.]00/)).toBeInTheDocument();
+    expect(screen.getAllByText(/R\$\s*170[,.]00/).length).toBeGreaterThan(0);
   });
 });
