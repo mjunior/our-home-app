@@ -21,6 +21,7 @@ const scheduleRepo = new ScheduleRepository();
 const cards = new CardsController(new CardsService(cardsRepo));
 const invoicesService = new InvoicesService(transactionsRepo, cardsRepo, new InvoiceCycleService(), scheduleRepo);
 const adjustmentsService = new CreditCardAdjustmentsService(invoicesService, transactionsRepo, categoriesRepo);
+const invoices = new InvoicesController(invoicesService, adjustmentsService);
 
 describe("credit card adjustments", () => {
   beforeEach(() => {
@@ -136,5 +137,56 @@ describe("credit card adjustments", () => {
     ).toThrow("CARD_NOT_FOUND");
     expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(0);
     expect(transactionsRepo.listByHousehold(otherHouseholdId)).toHaveLength(0);
+  });
+
+  it("delegates credit card adjustment creation through the invoices controller", () => {
+    const card = cards.createCard({ householdId, name: "Controller Card", closeDay: 5, dueDay: 12 });
+    const category = categoriesRepo.create({ householdId, name: "Compras", normalized: "compras" });
+    transactionsRepo.create({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra",
+      amount: "80.00",
+      occurredAt: "2026-05-01T12:00:00.000Z",
+      accountId: null,
+      creditCardId: card.id,
+      categoryId: category.id,
+      invoiceMonthKey: "2026-05",
+      invoiceDueDate: "2026-05-12T00:00:00.000Z",
+      settlementStatus: null,
+      transferGroupId: null,
+    });
+
+    const result = invoices.createCreditCardAdjustment({
+      householdId,
+      cardId: card.id,
+      realInvoiceTotal: "95.00",
+      dueMonth: "2026-05",
+      occurredAt: "2026-05-15T12:00:00.000Z",
+    });
+
+    expect(result.previousInvoiceTotal).toBe("80.00");
+    expect(result.realInvoiceTotal).toBe("95.00");
+    expect(result.difference).toBe("15.00");
+    expect(result.transaction).toMatchObject({
+      kind: "EXPENSE",
+      description: "REAJUSTE",
+      amount: "15.00",
+      creditCardId: card.id,
+    });
+  });
+
+  it("fails clearly when credit card adjustment controller contract is called without the service", () => {
+    const controller = new InvoicesController(invoicesService);
+
+    expect(() =>
+      controller.createCreditCardAdjustment({
+        householdId,
+        cardId: "card-id",
+        realInvoiceTotal: "95.00",
+        dueMonth: "2026-05",
+        occurredAt: "2026-05-15T12:00:00.000Z",
+      }),
+    ).toThrow("CREDIT_CARD_ADJUSTMENT_SERVICE_NOT_CONFIGURED");
   });
 });
