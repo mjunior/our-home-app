@@ -59,12 +59,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| ACADJ-01 | Phase 24 | Pending |
+| ACADJ-02 | Phase 24 | Pending |
+| ACADJ-03 | Phase 24 | Pending |
+| ACADJ-04 | Phase 24 | Pending |
+| ACADJ-05 | Phase 24 | Pending |
+| CCADJ-01 | Phase 25 | Pending |
+| CCADJ-02 | Phase 25 | Pending |
+| CCADJ-03 | Phase 25 | Pending |
+| CCADJ-04 | Phase 25 | Pending |
+| CCADJ-05 | Phase 25 | Pending |
+| ADJ-01 | Phase 26 | Pending |
+| ADJ-02 | Phase 26 | Pending |
+| ADJ-03 | Phase 26 | Pending |
+| ADJ-04 | Phase 24 | Pending |
 
 **Coverage:**
 - v1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-15*
-*Last updated: 2026-04-15 after v1.8 requirements definition*
+*Last updated: 2026-04-15 after v1.8 roadmap creation*

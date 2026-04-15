@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Reajuste de Conta e Cartao
-status: defining_requirements
+status: roadmap_created
 last_updated: "2026-04-15T00:00:00.000Z"
 progress:
   total_phases: 27
   completed_phases: 22
-  total_plans: 68
+  total_plans: 77
   completed_plans: 68
 ---
 
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 24 - reajuste de saldo em conta
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-15 — Milestone v1.8 started for manual balance/invoice adjustment.
+Status: Roadmap created; ready to discuss or plan Phase 24.
+Last activity: 2026-04-15 — Milestone v1.8 roadmap created with phases 24-26.
 
 Progress: [░░░░░░░░░░] 0% do milestone v1.8
 
@@ -66,12 +66,15 @@ Progress: [░░░░░░░░░░] 0% do milestone v1.8
 - Phase 22 implemented: goalAmount em contas de investimento com create/edit/read e visualizacao de progresso
 - Phase 23 implemented: navegacao mensal explicita e feedback operacional no cadastro de lancamentos
 - Milestone v1.8 initialized: reajuste manual de conta e cartao para sincronizar app com carteira real.
+- Phase 24 planned: reajuste de saldo em conta.
+- Phase 25 planned: reajuste de fatura de cartao.
+- Phase 26 planned: preview, auditoria e salvaguardas de reajuste.
 
 ### Pending Todos
 
 - Verificar Phases 22 e 23 assim que `node`/`npm` estiverem disponiveis no ambiente.
 - Avaliar fechamento formal do milestone v1.7 apos verificacao.
-- Planejar e executar Phase 24 do milestone v1.8.
+- Discutir ou planejar Phase 24 do milestone v1.8.
 
 ### Blockers/Concerns
 
@@ -81,5 +84,5 @@ Progress: [░░░░░░░░░░] 0% do milestone v1.8
 ## Session Continuity
 
 Last session: 2026-04-15
-Stopped at: milestone v1.8 iniciado; requisitos e roadmap em definicao
+Stopped at: milestone v1.8 inicializado; pronto para Phase 24
 Resume file: .planning/ROADMAP.md

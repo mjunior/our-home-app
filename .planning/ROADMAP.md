@@ -9,7 +9,8 @@
 - ✅ **v1.4 Faturas de Cartao no Fluxo de Caixa** — Phases 15-17 (shipped 2026-03-07) — detalhes: `.planning/milestones/v1.4-ROADMAP.md`
 - ✅ **v1.5 UX de Faturas em Cartoes** — Phase 18 (shipped 2026-03-07) — detalhes: `.planning/milestones/v1.5-ROADMAP.md`
 - ✅ **v1.6 Controle de Pagamentos e Saldo Atual** — Phases 19-21.1 (shipped 2026-03-07)
-- ◆ **v1.7 Objetivos de Investimento e Feedback Operacional** — Phases 22-23 (planned 2026-03-09)
+- ◆ **v1.7 Objetivos de Investimento e Feedback Operacional** — Phases 22-23 (implemented 2026-03-09; verification pending)
+- ◆ **v1.8 Reajuste de Conta e Cartao** — Phases 24-26 (planned 2026-04-15)
 
 ## Phases
 
@@ -19,6 +20,9 @@
 - [x] **Phase 21.1: Gap Closure do Clique no Saldo para Drill-down** - Tornar o proprio saldo do card `Mes atual` o gatilho principal do detalhamento por conta. (completed 2026-03-07)
 - [ ] **Phase 22: Objetivos por Conta de Investimento** - Adicionar meta opcional para contas `INVESTMENT` com persistencia, calculo de progresso e leitura de quanto falta. (implemented 2026-03-09; verification pending)
 - [ ] **Phase 23: Feedback Operacional no Cashflow** - Melhorar navegacao mensal e feedback visual de acoes de cadastro para reduzir ambiguidade de interacao. (implemented 2026-03-09; verification pending)
+- [ ] **Phase 24: Reajuste de Saldo em Conta** - Permitir que o usuario informe o saldo real de uma conta e gerar automaticamente um lancamento `REAJUSTE` positivo ou negativo para igualar o app. (planned)
+- [ ] **Phase 25: Reajuste de Fatura de Cartao** - Permitir que o usuario informe o valor real de uma fatura de cartao e gerar automaticamente uma transacao `REAJUSTE` na fatura correta. (planned)
+- [ ] **Phase 26: Preview, Auditoria e Salvaguardas de Reajuste** - Consolidar preview, caso sem diferenca, identificacao de reajustes e protecoes de propriedade antes da gravacao. (planned)
 
 ## Phase Details
 
@@ -97,6 +101,45 @@ Success criteria:
 3. Formulario de novo lancamento mostra processamento em andamento e evita submissao duplicada.
 4. Feedback visual de botoes/CTAs fica consistente com a linguagem do app em mobile e desktop.
 
+### Phase 24: Reajuste de Saldo em Conta
+
+**Goal**: Criar o fluxo de dominio/API/UI para reajustar uma conta a partir do saldo real informado pelo usuario.  
+**Depends on**: Phase 23  
+**Requirements**: ACADJ-01, ACADJ-02, ACADJ-03, ACADJ-04, ACADJ-05, ADJ-04  
+**Plans**: 3 plans
+
+Success criteria:
+1. Usuario seleciona conta, data, mes de competencia e valor real para simular o reajuste.
+2. Sistema calcula a diferenca entre saldo do app e valor real informado, incluindo sinal correto.
+3. Sistema grava lancamento `REAJUSTE` positivo ou negativo na data escolhida para igualar a conta ao valor real.
+4. Calculo respeita isolamento por `userId` e atualiza saldo atual/previsto sem afetar outras contas.
+
+### Phase 25: Reajuste de Fatura de Cartao
+
+**Goal**: Estender o reajuste para faturas de cartao, comparando o total da fatura no app com o valor real informado pelo usuario.  
+**Depends on**: Phase 24  
+**Requirements**: CCADJ-01, CCADJ-02, CCADJ-03, CCADJ-04, CCADJ-05  
+**Plans**: 3 plans
+
+Success criteria:
+1. Usuario seleciona cartao, mes da fatura, data do lancamento e valor real da fatura.
+2. Sistema calcula a diferenca entre total da fatura no app e valor real informado.
+3. Sistema grava transacao de cartao `REAJUSTE` positiva ou negativa vinculada a fatura correta.
+4. Reajuste aparece no modulo de cartoes e no cashflow consolidado da fatura sem alterar outros ciclos.
+
+### Phase 26: Preview, Auditoria e Salvaguardas de Reajuste
+
+**Goal**: Fechar a experiencia compartilhada de reajuste com preview claro, caso sem diferenca e identificacao auditavel no historico.  
+**Depends on**: Phase 25  
+**Requirements**: ADJ-01, ADJ-02, ADJ-03  
+**Plans**: 3 plans
+
+Success criteria:
+1. Antes de salvar, usuario ve valor no app, valor real informado, diferenca calculada e sinal do reajuste.
+2. Quando a diferenca e zero, sistema comunica que nao ha lancamento necessario e nao cria transacao vazia.
+3. Reajustes ficam visivelmente identificados como `REAJUSTE` em extratos/faturas e continuam editaveis/excluiveis conforme regras existentes.
+4. Testes cobrem reajuste positivo, reajuste negativo e caso sem diferenca para conta e cartao.
+
 ## Progress
 
 | Milestone | Phases | Plans | Status | Shipped |
@@ -109,3 +152,4 @@ Success criteria:
 | v1.5 UX de Faturas em Cartoes | 18 | 3/3 | Complete | 2026-03-07 |
 | v1.6 Controle de Pagamentos e Saldo Atual | 19-21.1 | 10/10 | Complete | 2026-03-07 |
 | v1.7 Objetivos de Investimento e Feedback Operacional | 22-23 | 6/6 | Implementation Complete | — |
+| v1.8 Reajuste de Conta e Cartao | 24-26 | 0/9 | Planned | — |
