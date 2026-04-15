@@ -36,6 +36,10 @@ export class CategoriesRepository {
     return categoriesStore.find((category) => category.id === id);
   }
 
+  findByNormalized(householdId: string, normalized: string): CategoryRecord | undefined {
+    return categoriesStore.find((category) => category.householdId === householdId && category.normalized === normalized);
+  }
+
   clearAll(): void {
     categoriesStore.length = 0;
   }
