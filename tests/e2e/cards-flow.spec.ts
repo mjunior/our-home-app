@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import CardsPage from "../../src/app/foundation/cards/page";
+import { SnackbarProvider } from "../../src/components/ui/snackbar";
 import { AccountsController } from "../../src/modules/accounts/accounts.controller";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository";
 import { AccountsService } from "../../src/modules/accounts/accounts.service";
@@ -258,7 +259,7 @@ describe("cards flow", () => {
       categoryId: category.id,
     });
 
-    render(React.createElement(CardsPage));
+    render(React.createElement(SnackbarProvider, null, React.createElement(CardsPage)));
 
     await user.click(await screen.findByRole("button", { name: `Reajustar fatura ${card.name}` }));
     expect(screen.getByText("Reajustar fatura")).toBeInTheDocument();

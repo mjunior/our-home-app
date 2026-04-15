@@ -9,7 +9,7 @@ import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
 import { sumMoney } from "../../../domain/shared/money";
 import { launchConfettiCanvas, playCheerSound } from "../../../lib/celebration";
-import { formatCurrencyBR, formatDateShortBR, formatMonthLabelBR } from "../../../lib/utils";
+import { currencyInputToDecimal, formatCurrencyBR, formatCurrencyInputBRL, formatDateShortBR, formatMonthLabelBR } from "../../../lib/utils";
 import type { RecurringEditScope } from "../../../modules/scheduling/schedule-management.service";
 import {
   accountsController,
@@ -56,6 +56,12 @@ function resolveDefaultExpenseDateForInvoice(dueMonth: string, closeDay: number)
 type EditMode = "ONE_OFF" | "RECURRING" | "INSTALLMENT" | null;
 type InvoiceEntrySourceType = Exclude<EditMode, null>;
 type InvoiceEntryDisplayGroup = "OPEN_INSTALLMENT" | "LATEST" | "RECURRING";
+type InvoiceAdjustmentTarget = {
+  cardId: string;
+  cardName: string;
+  total: string;
+  dueMonth: string;
+};
 
 const invoiceEntryGroups: Array<{ key: InvoiceEntryDisplayGroup; label: string }> = [
   { key: "OPEN_INSTALLMENT", label: "Parcelamentos" },
@@ -115,6 +121,11 @@ export default function CardsPage() {
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [quickExpenseModalOpen, setQuickExpenseModalOpen] = useState(false);
   const [quickExpenseResetKey, setQuickExpenseResetKey] = useState(0);
+  const [adjustmentSheetOpen, setAdjustmentSheetOpen] = useState(false);
+  const [adjustmentTarget, setAdjustmentTarget] = useState<InvoiceAdjustmentTarget | null>(null);
+  const [adjustmentRealTotal, setAdjustmentRealTotal] = useState("");
+  const [adjustmentDueMonth, setAdjustmentDueMonth] = useState("2026-03");
+  const [adjustmentOccurredAt, setAdjustmentOccurredAt] = useState(getTodayDateInputValue());
   const [navigationContext] = useState<{ cardId: string; dueMonth: string } | null>(() => {
     const raw = sessionStorage.getItem("cards:navigation-context");
     if (!raw) {
@@ -231,6 +242,20 @@ export default function CardsPage() {
     [categories, selectedCard, selectedDueMonth, selectedInvoiceSummary],
   );
 
+  function openInvoiceAdjustment(invoice: { cardId: string; cardName: string; total: string }) {
+    setSelectedInvoiceCardId(invoice.cardId);
+    setAdjustmentTarget({
+      cardId: invoice.cardId,
+      cardName: invoice.cardName,
+      total: invoice.total,
+      dueMonth: selectedDueMonth,
+    });
+    setAdjustmentRealTotal(formatCurrencyInputBRL(invoice.total));
+    setAdjustmentDueMonth(selectedDueMonth);
+    setAdjustmentOccurredAt(getTodayDateInputValue());
+    setAdjustmentSheetOpen(true);
+  }
+
   return (
     <main className="space-y-4">
       <section className="section-reveal flex items-center justify-between gap-3">
@@ -299,7 +324,7 @@ export default function CardsPage() {
                               <span className="rounded-full border border-slate-300 px-2 py-0.5 dark:border-slate-700">Nao paga</span>
                             )}
                           </div>
-                          <div className="mt-2">
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
                             {invoice.paid ? (
                               <Button
                                 type="button"
@@ -322,7 +347,7 @@ export default function CardsPage() {
                                 Desfazer pagamento
                               </Button>
                             ) : (
-                              <div className="flex flex-wrap items-center gap-2">
+                              <>
                                 <select
                                   aria-label={`Conta pagamento ${invoice.cardName}`}
                                   defaultValue={checkingAccounts[0]?.id ?? ""}
@@ -376,8 +401,19 @@ export default function CardsPage() {
                                 >
                                   Marcar paga
                                 </Button>
-                              </div>
+                              </>
                             )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openInvoiceAdjustment(invoice);
+                              }}
+                              aria-label={`Reajustar fatura ${invoice.cardName}`}
+                            >
+                              Reajustar
+                            </Button>
                           </div>
                         </div>
                       </li>
@@ -609,6 +645,85 @@ export default function CardsPage() {
                 }}
               />
             </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={adjustmentSheetOpen}
+        onOpenChange={(open) => {
+          setAdjustmentSheetOpen(open);
+          if (!open) {
+            setAdjustmentTarget(null);
+          }
+        }}
+      >
+        <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[88vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
+          <SheetHeader>
+            <SheetTitle>Reajustar fatura</SheetTitle>
+            <SheetDescription>
+              {adjustmentTarget
+                ? `${adjustmentTarget.cardName} - ${formatMonthLabelBR(adjustmentDueMonth)}`
+                : "Selecione uma fatura para lancar um reajuste."}
+            </SheetDescription>
+          </SheetHeader>
+
+          {adjustmentTarget ? (
+            <form
+              className="mt-4 grid gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                try {
+                  invoicesController.createCreditCardAdjustment({
+                    householdId,
+                    cardId: adjustmentTarget.cardId,
+                    realInvoiceTotal: currencyInputToDecimal(adjustmentRealTotal),
+                    dueMonth: adjustmentDueMonth,
+                    occurredAt: `${adjustmentOccurredAt}T12:00:00.000Z`,
+                  });
+                  setRefreshKey((prev) => prev + 1);
+                  setAdjustmentSheetOpen(false);
+                  setAdjustmentTarget(null);
+                  notify({ message: "Reajuste de fatura lancado com sucesso.", tone: "success" });
+                } catch {
+                  notify({ message: "Nao foi possivel lancar o reajuste da fatura.", tone: "error" });
+                }
+              }}
+            >
+              <p className="rounded-xl bg-slate-100/80 p-3 text-sm text-slate-600 dark:bg-slate-900/70 dark:text-slate-300">
+                Total atual no app: <strong>{formatCurrencyBR(adjustmentTarget.total)}</strong>
+              </p>
+
+              <label>
+                Valor real da fatura
+                <input
+                  aria-label="Valor real da fatura"
+                  value={adjustmentRealTotal}
+                  onChange={(event) => setAdjustmentRealTotal(formatCurrencyInputBRL(event.target.value))}
+                />
+              </label>
+
+              <label>
+                Mes da fatura
+                <input
+                  aria-label="Mes da fatura"
+                  value={adjustmentDueMonth}
+                  onChange={(event) => setAdjustmentDueMonth(event.target.value)}
+                />
+              </label>
+
+              <label>
+                Data do reajuste
+                <input
+                  aria-label="Data do reajuste"
+                  type="date"
+                  value={adjustmentOccurredAt}
+                  onChange={(event) => setAdjustmentOccurredAt(event.target.value)}
+                />
+              </label>
+
+              <Button type="submit">Salvar reajuste</Button>
+            </form>
           ) : null}
         </SheetContent>
       </Sheet>
