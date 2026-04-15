@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Reajuste de Conta e Cartao
 status: phase_in_progress
-last_updated: "2026-04-15T19:57:25.000Z"
+last_updated: "2026-04-15T20:05:32.000Z"
 progress:
   total_phases: 27
-  completed_phases: 22
+  completed_phases: 23
   total_plans: 77
-  completed_plans: 70
+  completed_plans: 71
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Phase: 24 - reajuste de saldo em conta
-Plan: 24-01 and 24-02 completed; 24-03 next
-Status: Phase 24 in progress; domain/service and API/runtime paths for account balance adjustment completed.
-Last activity: 2026-04-15 — Executed 24-02 with local runtime facade, authenticated Vite API endpoint, API runtime call, tests, and summary.
+Phase: 25 - reajuste de fatura de cartao
+Plan: 25-01 next
+Status: Phase 24 completed; ready to start credit-card invoice adjustment planning/execution.
+Last activity: 2026-04-15 — Executed 24-03 with per-account UI entry point, adjustment sheet, runtime submit, e2e coverage, tests, and summary.
 
-Progress: [██░░░░░░░░] 22% do milestone v1.8
+Progress: [███░░░░░░░] 33% do milestone v1.8
 
 ## Accumulated Context
 
@@ -57,6 +57,8 @@ Progress: [██░░░░░░░░] 22% do milestone v1.8
 - `AccountsController.createAccountAdjustment` depende opcionalmente de `AccountAdjustmentsService` para preservar compatibilidade de callers existentes.
 - Runtime local e runtime de API expoem `accountsController.createAccountAdjustment` como contrato unico para a UI.
 - Endpoint `POST /api/accounts/adjustment` ignora `householdId` do cliente e usa sempre o household autenticado da sessao.
+- Tela de contas agora expoe `Reajustar` por conta, coleta valor real/mes/data em Sheet e atualiza saldo via runtime.
+- Fluxo e2e de contas prova reajuste positivo criando transacao `REAJUSTE` `INCOME` paga no mes/data escolhidos.
 
 ### Roadmap Evolution
 
@@ -77,20 +79,21 @@ Progress: [██░░░░░░░░] 22% do milestone v1.8
 - Phase 24 plan split: dominio/testes, API/runtime, UI/teste e2e.
 - Phase 24-01 completed: snapshot de saldo, servico de reajuste de conta, contrato no controller e testes de dominio.
 - Phase 24-02 completed: contrato de runtime, rota Vite autenticada e runtime API para criar reajuste de conta.
+- Phase 24-03 completed: entrada visual por conta, Sheet de reajuste, submit pelo runtime e teste e2e do fluxo positivo.
 
 ### Pending Todos
 
 - Verificar Phases 22 e 23 assim que `node`/`npm` estiverem disponiveis no ambiente.
 - Avaliar fechamento formal do milestone v1.7 apos verificacao.
-- Executar Phase 24-03 para ligar a UI ao reajuste de conta.
+- Executar Phase 25 para reajuste de fatura de cartao.
 
 ### Blockers/Concerns
 
-- `npm run lint` ainda bloqueado por tipagens preexistentes fora de 24-01: `virtual:pwa-register` em `src/main.tsx`, route typing em `tests/e2e/foundation-flow.spec.ts`, e fixtures/unions em `tests/modules/schedule-management.test.ts`.
+- `npm run lint` ainda bloqueado por tipagens preexistentes fora de 24-03: `virtual:pwa-register` em `src/main.tsx` e fixtures/unions em `tests/modules/schedule-management.test.ts`.
 - v1.7 permanece implementado, mas sem arquivamento formal em `MILESTONES.md`.
 
 ## Session Continuity
 
 Last session: 2026-04-15
-Stopped at: 24-02 concluido; pronto para 24-03
-Resume file: .planning/phases/24-reajuste-de-saldo-em-conta/24-03-PLAN.md
+Stopped at: 24-03 concluido; Phase 24 completa
+Resume file: .planning/ROADMAP.md
