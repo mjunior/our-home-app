@@ -21,7 +21,7 @@
 - [ ] **Phase 22: Objetivos por Conta de Investimento** - Adicionar meta opcional para contas `INVESTMENT` com persistencia, calculo de progresso e leitura de quanto falta. (implemented 2026-03-09; verification pending)
 - [ ] **Phase 23: Feedback Operacional no Cashflow** - Melhorar navegacao mensal e feedback visual de acoes de cadastro para reduzir ambiguidade de interacao. (implemented 2026-03-09; verification pending)
 - [x] **Phase 24: Reajuste de Saldo em Conta** - Permitir que o usuario informe o saldo real de uma conta e gerar automaticamente um lancamento `REAJUSTE` positivo ou negativo para igualar o app. (completed 2026-04-15)
-- [ ] **Phase 25: Reajuste de Fatura de Cartao** - Permitir que o usuario informe o valor real de uma fatura de cartao e gerar automaticamente uma transacao `REAJUSTE` na fatura correta. (planned)
+- [ ] **Phase 25: Reajuste de Fatura de Cartao** - Permitir que o usuario informe o valor real de uma fatura de cartao e gerar automaticamente uma transacao `REAJUSTE` na fatura correta. (in progress; 1/3 plans complete)
 - [ ] **Phase 26: Preview, Auditoria e Salvaguardas de Reajuste** - Consolidar preview, caso sem diferenca, identificacao de reajustes e protecoes de propriedade antes da gravacao. (planned)
 
 ## Phase Details
@@ -152,4 +152,4 @@ Success criteria:
 | v1.5 UX de Faturas em Cartoes | 18 | 3/3 | Complete | 2026-03-07 |
 | v1.6 Controle de Pagamentos e Saldo Atual | 19-21.1 | 10/10 | Complete | 2026-03-07 |
 | v1.7 Objetivos de Investimento e Feedback Operacional | 22-23 | 6/6 | Implementation Complete | — |
-| v1.8 Reajuste de Conta e Cartao | 24-26 | 3/9 | In Progress | — |
+| v1.8 Reajuste de Conta e Cartao | 24-26 | 4/9 | In Progress | — |
