@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Reajuste de Conta e Cartao
 status: phase_in_progress
-last_updated: "2026-04-15T19:51:49.000Z"
+last_updated: "2026-04-15T19:57:25.000Z"
 progress:
   total_phases: 27
   completed_phases: 22
   total_plans: 77
-  completed_plans: 69
+  completed_plans: 70
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Phase: 24 - reajuste de saldo em conta
-Plan: 24-01 completed; 24-02 next; 24-03 planned
-Status: Phase 24 in progress; domain/service base for account balance adjustment completed.
-Last activity: 2026-04-15 — Executed 24-01 with account balance snapshot, account adjustment service, controller contract, tests, and summary.
+Plan: 24-01 and 24-02 completed; 24-03 next
+Status: Phase 24 in progress; domain/service and API/runtime paths for account balance adjustment completed.
+Last activity: 2026-04-15 — Executed 24-02 with local runtime facade, authenticated Vite API endpoint, API runtime call, tests, and summary.
 
-Progress: [█░░░░░░░░░] 11% do milestone v1.8
+Progress: [██░░░░░░░░] 22% do milestone v1.8
 
 ## Accumulated Context
 
@@ -55,6 +55,8 @@ Progress: [█░░░░░░░░░] 11% do milestone v1.8
 - Reajuste de conta agora usa snapshot de saldo de `AccountsService` para manter paridade com o saldo consolidado.
 - Categoria sistemica `Reajuste` e criada/reutilizada por household antes de gravar transacao `REAJUSTE`.
 - `AccountsController.createAccountAdjustment` depende opcionalmente de `AccountAdjustmentsService` para preservar compatibilidade de callers existentes.
+- Runtime local e runtime de API expoem `accountsController.createAccountAdjustment` como contrato unico para a UI.
+- Endpoint `POST /api/accounts/adjustment` ignora `householdId` do cliente e usa sempre o household autenticado da sessao.
 
 ### Roadmap Evolution
 
@@ -74,12 +76,13 @@ Progress: [█░░░░░░░░░] 11% do milestone v1.8
 - Phase 26 planned: preview, auditoria e salvaguardas de reajuste.
 - Phase 24 plan split: dominio/testes, API/runtime, UI/teste e2e.
 - Phase 24-01 completed: snapshot de saldo, servico de reajuste de conta, contrato no controller e testes de dominio.
+- Phase 24-02 completed: contrato de runtime, rota Vite autenticada e runtime API para criar reajuste de conta.
 
 ### Pending Todos
 
 - Verificar Phases 22 e 23 assim que `node`/`npm` estiverem disponiveis no ambiente.
 - Avaliar fechamento formal do milestone v1.7 apos verificacao.
-- Executar Phase 24-02 para conectar API/runtime ao reajuste de conta.
+- Executar Phase 24-03 para ligar a UI ao reajuste de conta.
 
 ### Blockers/Concerns
 
@@ -89,5 +92,5 @@ Progress: [█░░░░░░░░░] 11% do milestone v1.8
 ## Session Continuity
 
 Last session: 2026-04-15
-Stopped at: 24-01 concluido; pronto para 24-02
-Resume file: .planning/phases/24-reajuste-de-saldo-em-conta/24-02-PLAN.md
+Stopped at: 24-02 concluido; pronto para 24-03
+Resume file: .planning/phases/24-reajuste-de-saldo-em-conta/24-03-PLAN.md
