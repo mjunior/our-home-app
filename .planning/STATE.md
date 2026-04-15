@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Reajuste de Conta e Cartao
-status: roadmap_created
+status: phase_planned
 last_updated: "2026-04-15T00:00:00.000Z"
 progress:
   total_phases: 27
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Phase: 24 - reajuste de saldo em conta
-Plan: —
-Status: Roadmap created; ready to discuss or plan Phase 24.
-Last activity: 2026-04-15 — Milestone v1.8 roadmap created with phases 24-26.
+Plan: 24-01, 24-02, 24-03 planned
+Status: Phase 24 planned; ready for execution.
+Last activity: 2026-04-15 — Phase 24 planned with 3 sequential plans for account balance adjustment.
 
 Progress: [░░░░░░░░░░] 0% do milestone v1.8
 
@@ -69,12 +69,13 @@ Progress: [░░░░░░░░░░] 0% do milestone v1.8
 - Phase 24 planned: reajuste de saldo em conta.
 - Phase 25 planned: reajuste de fatura de cartao.
 - Phase 26 planned: preview, auditoria e salvaguardas de reajuste.
+- Phase 24 plan split: dominio/testes, API/runtime, UI/teste e2e.
 
 ### Pending Todos
 
 - Verificar Phases 22 e 23 assim que `node`/`npm` estiverem disponiveis no ambiente.
 - Avaliar fechamento formal do milestone v1.7 apos verificacao.
-- Discutir ou planejar Phase 24 do milestone v1.8.
+- Executar Phase 24 do milestone v1.8.
 
 ### Blockers/Concerns
 
@@ -84,5 +85,5 @@ Progress: [░░░░░░░░░░] 0% do milestone v1.8
 ## Session Continuity
 
 Last session: 2026-04-15
-Stopped at: milestone v1.8 inicializado; pronto para Phase 24
-Resume file: .planning/ROADMAP.md
+Stopped at: Phase 24 planejada; pronto para execucao
+Resume file: .planning/phases/24-reajuste-de-saldo-em-conta/24-01-PLAN.md
