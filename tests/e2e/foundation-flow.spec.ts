@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -137,7 +137,7 @@ describe("foundation flow", () => {
     render(React.createElement(ShellHarness));
 
     await user.click(screen.getByRole("button", { name: "Reajustar saldo da Conta Ajuste" }));
-    expect(screen.getByText("Conta Ajuste")).toBeInTheDocument();
+    expect(screen.getAllByText("Conta Ajuste").length).toBeGreaterThan(0);
     expect(screen.getByText("Saldo atual no app: R$ 500.00")).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText("Valor real"));
@@ -279,7 +279,7 @@ describe("foundation flow", () => {
     await user.click(screen.getByRole("button", { name: "Adicionar lancamento" }));
 
     expect(account.id).toBeDefined();
-    expect(screen.getByText("Fatura Visa Navegacao")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Fatura Visa Navegacao")).toBeInTheDocument());
 
     await user.click(screen.getByText("Fatura Visa Navegacao"));
 

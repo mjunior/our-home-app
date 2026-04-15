@@ -8,12 +8,28 @@ import { useSnackbar } from "../../../components/ui/snackbar";
 import { currencyInputToDecimal, formatCurrencyInputBRL } from "../../../lib/utils";
 import { accountsController, getRuntimeHouseholdId } from "../runtime";
 
+function getTodayInputDefaults() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return {
+    month: `${year}-${month}`,
+    date: `${year}-${month}-${day}`,
+  };
+}
+
 export default function AccountsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [createAccountModalOpen, setCreateAccountModalOpen] = useState(false);
   const [editGoalModalOpen, setEditGoalModalOpen] = useState(false);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [goalAmountInput, setGoalAmountInput] = useState("");
+  const [adjustingAccountId, setAdjustingAccountId] = useState<string | null>(null);
+  const [adjustmentRealBalance, setAdjustmentRealBalance] = useState("");
+  const [adjustmentMonth, setAdjustmentMonth] = useState(() => getTodayInputDefaults().month);
+  const [adjustmentDate, setAdjustmentDate] = useState(() => getTodayInputDefaults().date);
   const { notify } = useSnackbar();
   const householdId = getRuntimeHouseholdId();
   const consolidated = useMemo(() => accountsController.getConsolidatedBalance(householdId), [refreshKey, householdId]);
@@ -21,10 +37,30 @@ export default function AccountsPage() {
     () => consolidated.accounts.find((account) => account.id === editingAccountId) ?? null,
     [consolidated.accounts, editingAccountId],
   );
+  const adjustingAccount = useMemo(
+    () => consolidated.accounts.find((account) => account.id === adjustingAccountId) ?? null,
+    [consolidated.accounts, adjustingAccountId],
+  );
 
   useEffect(() => {
     setGoalAmountInput(editingAccount?.goalAmount ? formatCurrencyInputBRL(editingAccount.goalAmount) : "");
   }, [editingAccount]);
+
+  function resetAdjustmentState() {
+    const defaults = getTodayInputDefaults();
+    setAdjustingAccountId(null);
+    setAdjustmentRealBalance("");
+    setAdjustmentMonth(defaults.month);
+    setAdjustmentDate(defaults.date);
+  }
+
+  function startAdjustment(accountId: string) {
+    const defaults = getTodayInputDefaults();
+    setAdjustingAccountId(accountId);
+    setAdjustmentRealBalance("");
+    setAdjustmentMonth(defaults.month);
+    setAdjustmentDate(defaults.date);
+  }
 
   return (
     <main className="space-y-4">
@@ -46,6 +82,7 @@ export default function AccountsPage() {
           setEditingAccountId(accountId);
           setEditGoalModalOpen(true);
         }}
+        onAdjustAccount={startAdjustment}
       />
 
       <Sheet open={createAccountModalOpen} onOpenChange={setCreateAccountModalOpen}>
@@ -68,6 +105,84 @@ export default function AccountsPage() {
               }}
             />
           </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={adjustingAccount !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            resetAdjustmentState();
+          }
+        }}
+      >
+        <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[88vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
+          <SheetHeader>
+            <SheetTitle>Reajustar saldo</SheetTitle>
+            <SheetDescription>
+              {adjustingAccount ? `Informe o saldo real da conta ${adjustingAccount.name}.` : "Selecione uma conta para reajustar."}
+            </SheetDescription>
+          </SheetHeader>
+          {adjustingAccount ? (
+            <form
+              className="mt-4 grid gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                try {
+                  accountsController.createAccountAdjustment({
+                    householdId,
+                    accountId: adjustingAccount.id,
+                    realBalance: currencyInputToDecimal(adjustmentRealBalance),
+                    month: adjustmentMonth,
+                    occurredAt: `${adjustmentDate}T12:00:00.000Z`,
+                  });
+                  setRefreshKey((prev) => prev + 1);
+                  resetAdjustmentState();
+                  notify({ message: "Reajuste lancado com sucesso.", tone: "success" });
+                } catch {
+                  notify({ message: "Nao foi possivel lancar o reajuste.", tone: "error" });
+                }
+              }}
+            >
+              <div className="rounded-2xl border border-brand-teal/15 bg-brand-teal/5 p-4 text-sm dark:border-brand-lime/20 dark:bg-brand-lime/5">
+                <p className="font-semibold text-slate-900 dark:text-slate-100">{adjustingAccount.name}</p>
+                <p className="mt-1 text-slate-600 dark:text-slate-300">Saldo atual no app: R$ {adjustingAccount.balance}</p>
+              </div>
+
+              <label>
+                Valor real
+                <input
+                  aria-label="Valor real"
+                  inputMode="numeric"
+                  placeholder="Ex: 650,00"
+                  value={adjustmentRealBalance}
+                  onChange={(event) => setAdjustmentRealBalance(formatCurrencyInputBRL(event.target.value))}
+                />
+              </label>
+
+              <label>
+                Mes de competencia
+                <input
+                  aria-label="Mes de competencia"
+                  type="month"
+                  value={adjustmentMonth}
+                  onChange={(event) => setAdjustmentMonth(event.target.value)}
+                />
+              </label>
+
+              <label>
+                Data do reajuste
+                <input
+                  aria-label="Data do reajuste"
+                  type="date"
+                  value={adjustmentDate}
+                  onChange={(event) => setAdjustmentDate(event.target.value)}
+                />
+              </label>
+
+              <Button type="submit">Salvar reajuste</Button>
+            </form>
+          ) : null}
         </SheetContent>
       </Sheet>
 

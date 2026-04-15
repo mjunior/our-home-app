@@ -19,9 +19,16 @@ interface ConsolidatedBalanceCardProps {
     goalReached: boolean;
   }>;
   onEditInvestmentGoal?: (accountId: string) => void;
+  onAdjustAccount?: (accountId: string) => void;
 }
 
-export function ConsolidatedBalanceCard({ amount, byType, accounts, onEditInvestmentGoal }: ConsolidatedBalanceCardProps) {
+export function ConsolidatedBalanceCard({
+  amount,
+  byType,
+  accounts,
+  onEditInvestmentGoal,
+  onAdjustAccount,
+}: ConsolidatedBalanceCardProps) {
   return (
     <Card aria-label="Saldo consolidado" className="section-reveal">
       <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
@@ -55,19 +62,32 @@ export function ConsolidatedBalanceCard({ amount, byType, accounts, onEditInvest
                   : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/70"
               }`}
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <p className="truncate text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">{account.name}</p>
-                {account.type === "INVESTMENT" && onEditInvestmentGoal ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onEditInvestmentGoal(account.id)}
-                    aria-label={`Editar objetivo da ${account.name}`}
-                  >
-                    Editar objetivo
-                  </Button>
-                ) : null}
+                <div className="flex flex-wrap justify-end gap-2">
+                  {account.type === "INVESTMENT" && onEditInvestmentGoal ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEditInvestmentGoal(account.id)}
+                      aria-label={`Editar objetivo da ${account.name}`}
+                    >
+                      Editar objetivo
+                    </Button>
+                  ) : null}
+                  {onAdjustAccount ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onAdjustAccount(account.id)}
+                      aria-label={`Reajustar saldo da ${account.name}`}
+                    >
+                      Reajustar
+                    </Button>
+                  ) : null}
+                </div>
               </div>
               <p className={`mt-1 text-3xl font-black tracking-tight ${account.type === "INVESTMENT" ? "text-brand-teal dark:text-brand-lime" : ""}`}>
                 R$ {account.balance}
