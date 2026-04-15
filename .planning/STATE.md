@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Reajuste de Conta e Cartao
 status: phase_in_progress
-last_updated: "2026-04-15T20:10:49.000Z"
+last_updated: "2026-04-15T20:16:49.000Z"
 progress:
   total_phases: 27
   completed_phases: 23
   total_plans: 77
-  completed_plans: 72
+  completed_plans: 73
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Phase: 25 - reajuste de fatura de cartao
-Plan: 25-01 completed; 25-02 next
-Status: Phase 25 in progress; domain/service base for credit-card invoice adjustment completed.
-Last activity: 2026-04-15 — Executed 25-01 with credit-card adjustment service, invoice controller contract, tests, and summary.
+Plan: 25-01 and 25-02 completed; 25-03 next
+Status: Phase 25 in progress; domain, API and runtime base for credit-card invoice adjustment completed.
+Last activity: 2026-04-15 — Executed 25-02 with local runtime wiring, authenticated Vite API endpoint, API runtime facade, tests, and summary.
 
-Progress: [████░░░░░░] 44% do milestone v1.8
+Progress: [█████░░░░░] 56% do milestone v1.8
 
 ## Accumulated Context
 
@@ -61,6 +61,8 @@ Progress: [████░░░░░░] 44% do milestone v1.8
 - Fluxo e2e de contas prova reajuste positivo criando transacao `REAJUSTE` `INCOME` paga no mes/data escolhidos.
 - Reajuste de fatura usa transacao de cartao `EXPENSE` com amount assinado para aumentar ou reduzir o total da fatura.
 - `InvoicesController.createCreditCardAdjustment` depende opcionalmente de `CreditCardAdjustmentsService` para preservar compatibilidade.
+- Runtime local e runtime de API expoem `invoicesController.createCreditCardAdjustment` como contrato unico para a UI.
+- Endpoint `POST /api/invoices/adjustment` ignora `householdId` do cliente e usa sempre o household autenticado da sessao.
 
 ### Roadmap Evolution
 
@@ -83,12 +85,13 @@ Progress: [████░░░░░░] 44% do milestone v1.8
 - Phase 24-02 completed: contrato de runtime, rota Vite autenticada e runtime API para criar reajuste de conta.
 - Phase 24-03 completed: entrada visual por conta, Sheet de reajuste, submit pelo runtime e teste e2e do fluxo positivo.
 - Phase 25-01 completed: servico de reajuste de fatura, contrato no controller e testes de dominio.
+- Phase 25-02 completed: runtime local, endpoint Vite autenticado e runtime API para criar reajuste de fatura.
 
 ### Pending Todos
 
 - Verificar Phases 22 e 23 assim que `node`/`npm` estiverem disponiveis no ambiente.
 - Avaliar fechamento formal do milestone v1.7 apos verificacao.
-- Executar Phase 25-02 para conectar API/runtime ao reajuste de fatura.
+- Executar Phase 25-03 para conectar a tela de cartoes ao reajuste de fatura.
 
 ### Blockers/Concerns
 
@@ -98,5 +101,5 @@ Progress: [████░░░░░░] 44% do milestone v1.8
 ## Session Continuity
 
 Last session: 2026-04-15
-Stopped at: 25-01 concluido; pronto para 25-02
-Resume file: .planning/phases/25-reajuste-de-fatura-de-cartao/25-02-PLAN.md
+Stopped at: 25-02 concluido; pronto para 25-03
+Resume file: .planning/phases/25-reajuste-de-fatura-de-cartao/25-03-PLAN.md
