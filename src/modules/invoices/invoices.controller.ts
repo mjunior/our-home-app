@@ -5,10 +5,14 @@ import type {
   MonthlyInvoicesInput,
   MonthlyCashflowInput,
 } from "./invoices.service";
+import { CreditCardAdjustmentsService, type CreateCreditCardAdjustmentInput } from "./credit-card-adjustments.service";
 import { InvoicesService } from "./invoices.service";
 
 export class InvoicesController {
-  constructor(private readonly service: InvoicesService) {}
+  constructor(
+    private readonly service: InvoicesService,
+    private readonly adjustmentService?: CreditCardAdjustmentsService,
+  ) {}
 
   getCardInvoices(payload: CardInvoicesInput) {
     return this.service.getCardCurrentAndNext(payload);
@@ -43,5 +47,13 @@ export class InvoicesController {
 
   unsettleInvoice(payload: { householdId: string; cardId: string; dueMonth: string }) {
     return this.service.unsettleInvoice(payload);
+  }
+
+  createCreditCardAdjustment(payload: CreateCreditCardAdjustmentInput) {
+    if (!this.adjustmentService) {
+      throw new Error("CREDIT_CARD_ADJUSTMENT_SERVICE_NOT_CONFIGURED");
+    }
+
+    return this.adjustmentService.createCreditCardAdjustment(payload);
   }
 }
