@@ -1,73 +1,70 @@
 # Requirements: Nosso Lar Financeiro
 
-**Defined:** 2026-03-09
+**Defined:** 2026-04-15
 **Core Value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
 
 ## v1 Requirements
 
-### Investment Goals
+### Account Adjustment
 
-- [ ] **INVG-01**: Usuario pode informar uma meta financeira opcional ao criar conta do tipo `INVESTMENT`.
-- [ ] **INVG-02**: Usuario pode editar a meta de uma conta de investimento existente.
-- [ ] **INVG-03**: Sistema persiste a meta separadamente do saldo inicial e do saldo calculado da conta.
-- [ ] **INVG-04**: Card/listagem de conta investimento exibe meta, saldo atual e quanto falta para atingir o objetivo.
-- [ ] **INVG-05**: Sistema mostra progresso percentual da meta sem exibir valor faltante negativo quando o objetivo ja foi atingido.
+- [ ] **ACADJ-01**: Usuario pode iniciar um reajuste para uma conta informando conta, valor real, data do lancamento e mes de competencia.
+- [ ] **ACADJ-02**: Sistema calcula a diferenca entre o saldo da conta no app e o valor real informado pelo usuario.
+- [ ] **ACADJ-03**: Sistema cria um lancamento unico `REAJUSTE` positivo quando o valor real for maior que o saldo do app.
+- [ ] **ACADJ-04**: Sistema cria um lancamento unico `REAJUSTE` negativo quando o valor real for menor que o saldo do app.
+- [ ] **ACADJ-05**: Reajuste de conta impacta saldo atual e saldo previsto de forma consistente com a data escolhida e o status operacional do lancamento.
 
-### Cashflow Month Navigation
+### Credit Card Adjustment
 
-- [ ] **NAV-01**: Usuario consegue avancar e voltar meses no cashflow por controles explicitos de navegacao.
-- [ ] **NAV-02**: Mes ativo no seletor mensal fica visualmente destacado de forma inequívoca.
-- [ ] **NAV-03**: Itens e controles de navegacao mensal possuem estados visuais de hover, foco e pressed/coleta de clique.
+- [ ] **CCADJ-01**: Usuario pode iniciar um reajuste para cartao informando cartao, mes da fatura, data do lancamento e valor real da fatura.
+- [ ] **CCADJ-02**: Sistema calcula a diferenca entre o total atual da fatura no app e o valor real informado pelo usuario.
+- [ ] **CCADJ-03**: Sistema cria uma transacao de cartao `REAJUSTE` positiva quando o valor real da fatura for maior que o total no app.
+- [ ] **CCADJ-04**: Sistema cria uma transacao de cartao `REAJUSTE` negativa quando o valor real da fatura for menor que o total no app.
+- [ ] **CCADJ-05**: Reajuste de cartao e lancado na fatura do mes informado e aparece no modulo de cartoes e no cashflow consolidado dessa fatura.
 
-### Transaction Submission Feedback
+### Adjustment Safety and Audit
 
-- [ ] **TXF-01**: Ao enviar novo lancamento, formulario mostra estado visual de processamento ate a conclusao.
-- [ ] **TXF-02**: Acao primaria de cadastro de lancamento evita duplo clique/submissao duplicada enquanto processa.
-- [ ] **TXF-03**: Botoes e CTAs do fluxo de lancamento comunicam clicabilidade com estados coerentes de hover, foco e clique.
+- [ ] **ADJ-01**: Usuario ve preview antes de salvar com valor no app, valor real informado, diferenca calculada e sinal do lancamento.
+- [ ] **ADJ-02**: Sistema trata diferenca zero como caso sem lancamento necessario e nao cria transacao vazia.
+- [ ] **ADJ-03**: Reajustes ficam identificados como `REAJUSTE` no historico para auditoria, edicao/exclusao e entendimento futuro.
+- [ ] **ADJ-04**: Sistema valida que conta/cartao, fatura e lancamento pertencem ao usuario autenticado antes de calcular ou gravar o reajuste.
 
 ## v2 Requirements
 
-### Investment Goal Extensions
+### Reconciliation Extensions
 
-- **IGX-01**: Definir aporte mensal recomendado para atingir a meta em uma data alvo.
-- **IGX-02**: Mostrar historico/evolucao temporal do progresso da meta.
-- **IGX-03**: Permitir mais de uma meta por conta de investimento.
+- **REC-01**: Usuario pode importar extrato e reconciliar divergencias linha a linha.
+- **REC-02**: Sistema sugere categorias ou transacoes candidatas que explicam a diferenca.
+- **REC-03**: Usuario pode executar reajuste em lote para multiplas contas/cartoes.
+- **REC-04**: Sistema mostra historico agrupado de reajustes por periodo e origem.
 
-### Interaction Hardening
+### Bank Integration
 
-- **UXH-01**: Padronizar loading/sucesso/erro para todos os formularios da fundacao.
-- **UXH-02**: Adicionar feedback visual consistente para acoes operacionais fora do cashflow (cartoes, categorias, contas).
+- **BNK-01**: Sistema pode integrar com APIs bancarias/Open Finance para obter saldo real automaticamente.
+- **BNK-02**: Sistema pode avisar quando saldo/fatura real divergir do app acima de um limite configurado.
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Meta por transacao individual de investimento | O pedido e por conta de investimento, nao por aporte |
-| Recomendacao automatica de quanto investir por mes | Exige modelagem adicional de prazo e simulacao |
-| Redesign geral do cashflow | Escopo deste milestone e feedback/interacao, nao reestruturacao total da tela |
-| Notificacoes de meta atingida | Valor adicional menor que a base de meta + progresso neste ciclo |
+| Sincronizacao automatica com banco/Open Finance | O objetivo deste milestone e sincronizacao manual informando o valor real |
+| Importacao de extrato para reconciliacao linha a linha | E um fluxo maior que exige parser, matching e revisao manual |
+| Distribuir a diferenca entre categorias ou compras originais | O reajuste representa correcao explicita, nao investigacao da origem da divergencia |
+| Reajuste em lote para varias contas/cartoes | A primeira entrega deve validar o fluxo individual com menor risco |
+| Alterar limite do cartao | O pedido e sincronizar valor real da fatura, nao limite/credito disponivel |
+| Reabrir ou recalcular faturas fora do mes escolhido | O usuario deve controlar exatamente o mes/fatura que esta ajustando |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INVG-01 | Phase 22 | In Progress |
-| INVG-02 | Phase 22 | In Progress |
-| INVG-03 | Phase 22 | In Progress |
-| INVG-04 | Phase 22 | In Progress |
-| INVG-05 | Phase 22 | In Progress |
-| NAV-01 | Phase 23 | In Progress |
-| NAV-02 | Phase 23 | In Progress |
-| NAV-03 | Phase 23 | In Progress |
-| TXF-01 | Phase 23 | In Progress |
-| TXF-02 | Phase 23 | In Progress |
-| TXF-03 | Phase 23 | In Progress |
 
 **Coverage:**
-- v1 requirements: 11 total
-- Mapped to phases: 11
-- Unmapped: 0 ✓
+- v1 requirements: 14 total
+- Mapped to phases: 0
+- Unmapped: 14 ⚠️
 
 ---
-*Requirements defined: 2026-03-09*
-*Last updated: 2026-03-09 after v1.7 milestone definition*
+*Requirements defined: 2026-04-15*
+*Last updated: 2026-04-15 after v1.8 requirements definition*

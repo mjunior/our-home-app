@@ -37,15 +37,18 @@ Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar fica
 
 - [ ] ACADJ-01: Usuario pode iniciar reajuste para uma conta informando conta, valor real, data e mes de competencia.
 - [ ] ACADJ-02: Sistema calcula a diferenca entre saldo da conta no app e valor real informado.
-- [ ] ACADJ-03: Sistema cria lancamento unico `REAJUSTE` positivo ou negativo na data escolhida para igualar a conta ao valor real.
-- [ ] ACADJ-04: Reajuste de conta impacta saldo atual/previsto de forma consistente com a data e o status operacional do lancamento.
+- [ ] ACADJ-03: Sistema cria lancamento unico `REAJUSTE` positivo quando o valor real for maior que o saldo do app.
+- [ ] ACADJ-04: Sistema cria lancamento unico `REAJUSTE` negativo quando o valor real for menor que o saldo do app.
+- [ ] ACADJ-05: Reajuste de conta impacta saldo atual/previsto de forma consistente com a data e o status operacional do lancamento.
 - [ ] CCADJ-01: Usuario pode iniciar reajuste para um cartao informando cartao, mes da fatura, data do lancamento e valor real da fatura.
 - [ ] CCADJ-02: Sistema compara o total atual da fatura no app com o valor real informado.
-- [ ] CCADJ-03: Sistema cria lancamento unico `REAJUSTE` positivo ou negativo na fatura correta para igualar a fatura ao valor real.
-- [ ] CCADJ-04: Reajuste de cartao respeita a competencia da fatura informada e aparece no modulo de cartoes e no cashflow consolidado.
+- [ ] CCADJ-03: Sistema cria transacao de cartao `REAJUSTE` positiva quando o valor real da fatura for maior que o total no app.
+- [ ] CCADJ-04: Sistema cria transacao de cartao `REAJUSTE` negativa quando o valor real da fatura for menor que o total no app.
+- [ ] CCADJ-05: Reajuste de cartao respeita a competencia da fatura informada e aparece no modulo de cartoes e no cashflow consolidado.
 - [ ] ADJ-01: Usuario ve preview antes de salvar com valor no app, valor real informado e diferenca calculada.
 - [ ] ADJ-02: Sistema trata diferenca zero como caso sem lancamento necessario.
 - [ ] ADJ-03: Reajustes ficam identificaveis como `REAJUSTE` para auditoria, edicao/exclusao e entendimento futuro.
+- [ ] ADJ-04: Sistema valida que conta/cartao, fatura e lancamento pertencem ao usuario autenticado antes de calcular ou gravar o reajuste.
 
 ### Out of Scope
 
