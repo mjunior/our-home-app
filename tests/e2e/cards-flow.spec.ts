@@ -236,4 +236,56 @@ describe("cards flow", () => {
     expect(await screen.findByText("Compra rapida")).toBeInTheDocument();
     expect(screen.getAllByText(/R\$\s*170[,.]00/).length).toBeGreaterThan(0);
   });
+
+  it("adjusts a card invoice to the real invoice total", async () => {
+    const user = userEvent.setup();
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+
+    const card = new CardsController(new CardsService(cardsRepo)).listCards(householdId)[0]!;
+    const category = new CategoriesController(new CategoriesService(categoriesRepo)).listCategories(householdId)[0]!;
+    const transactions = new TransactionsController(new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo));
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra base",
+      amount: "100.00",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    render(React.createElement(CardsPage));
+
+    await user.click(await screen.findByRole("button", { name: `Reajustar fatura ${card.name}` }));
+    expect(screen.getByText("Reajustar fatura")).toBeInTheDocument();
+    expect(screen.getByText(`${card.name} - Mar/26`)).toBeInTheDocument();
+    expect(screen.getByText(/Total atual no app/)).toHaveTextContent(/R\$\s*100[,.]00/);
+
+    await user.clear(screen.getByLabelText("Valor real da fatura"));
+    await user.type(screen.getByLabelText("Valor real da fatura"), "13500");
+    await user.clear(screen.getByLabelText("Data do reajuste"));
+    await user.type(screen.getByLabelText("Data do reajuste"), "2026-03-15");
+    await user.click(screen.getByRole("button", { name: "Salvar reajuste" }));
+
+    expect(await screen.findByText("Reajuste de fatura lancado com sucesso.")).toBeInTheDocument();
+    expect(screen.getAllByText(/R\$\s*135[,.]00/).length).toBeGreaterThan(0);
+    expect(await screen.findByText("REAJUSTE")).toBeInTheDocument();
+
+    const adjustment = transactions
+      .listTransactionsByMonth({ householdId, month: "2026-03", creditCardId: card.id })
+      .find((item) => item.description === "REAJUSTE");
+
+    expect(adjustment).toMatchObject({
+      householdId,
+      kind: "EXPENSE",
+      amount: "35.00",
+      creditCardId: card.id,
+      invoiceMonthKey: "2026-03",
+      settlementStatus: null,
+    });
+  });
 });
