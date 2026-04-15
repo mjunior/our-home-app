@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Reajuste de Conta e Cartao
-status: phase_planned
-last_updated: "2026-04-15T00:00:00.000Z"
+status: phase_in_progress
+last_updated: "2026-04-15T19:51:49.000Z"
 progress:
   total_phases: 27
   completed_phases: 22
   total_plans: 77
-  completed_plans: 68
+  completed_plans: 69
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Phase: 24 - reajuste de saldo em conta
-Plan: 24-01, 24-02, 24-03 planned
-Status: Phase 24 planned; ready for execution.
-Last activity: 2026-04-15 — Phase 24 planned with 3 sequential plans for account balance adjustment.
+Plan: 24-01 completed; 24-02 next; 24-03 planned
+Status: Phase 24 in progress; domain/service base for account balance adjustment completed.
+Last activity: 2026-04-15 — Executed 24-01 with account balance snapshot, account adjustment service, controller contract, tests, and summary.
 
-Progress: [░░░░░░░░░░] 0% do milestone v1.8
+Progress: [█░░░░░░░░░] 11% do milestone v1.8
 
 ## Accumulated Context
 
@@ -52,6 +52,9 @@ Progress: [░░░░░░░░░░] 0% do milestone v1.8
 - Reajuste deve ser lancamento explicito `REAJUSTE`, nao alteracao invisivel de saldo.
 - Reajuste de cartao deve comparar contra a fatura do mes informado e lancar na data escolhida.
 - Reajuste de conta deve comparar contra a conta escolhida e lancar na data escolhida.
+- Reajuste de conta agora usa snapshot de saldo de `AccountsService` para manter paridade com o saldo consolidado.
+- Categoria sistemica `Reajuste` e criada/reutilizada por household antes de gravar transacao `REAJUSTE`.
+- `AccountsController.createAccountAdjustment` depende opcionalmente de `AccountAdjustmentsService` para preservar compatibilidade de callers existentes.
 
 ### Roadmap Evolution
 
@@ -70,20 +73,21 @@ Progress: [░░░░░░░░░░] 0% do milestone v1.8
 - Phase 25 planned: reajuste de fatura de cartao.
 - Phase 26 planned: preview, auditoria e salvaguardas de reajuste.
 - Phase 24 plan split: dominio/testes, API/runtime, UI/teste e2e.
+- Phase 24-01 completed: snapshot de saldo, servico de reajuste de conta, contrato no controller e testes de dominio.
 
 ### Pending Todos
 
 - Verificar Phases 22 e 23 assim que `node`/`npm` estiverem disponiveis no ambiente.
 - Avaliar fechamento formal do milestone v1.7 apos verificacao.
-- Executar Phase 24 do milestone v1.8.
+- Executar Phase 24-02 para conectar API/runtime ao reajuste de conta.
 
 ### Blockers/Concerns
 
-- `npm run lint` ainda bloqueado por tipagem PWA preexistente (`virtual:pwa-register` em `src/main.tsx`).
+- `npm run lint` ainda bloqueado por tipagens preexistentes fora de 24-01: `virtual:pwa-register` em `src/main.tsx`, route typing em `tests/e2e/foundation-flow.spec.ts`, e fixtures/unions em `tests/modules/schedule-management.test.ts`.
 - v1.7 permanece implementado, mas sem arquivamento formal em `MILESTONES.md`.
 
 ## Session Continuity
 
 Last session: 2026-04-15
-Stopped at: Phase 24 planejada; pronto para execucao
-Resume file: .planning/phases/24-reajuste-de-saldo-em-conta/24-01-PLAN.md
+Stopped at: 24-01 concluido; pronto para 24-02
+Resume file: .planning/phases/24-reajuste-de-saldo-em-conta/24-02-PLAN.md

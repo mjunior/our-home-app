@@ -8,10 +8,10 @@
 ### Account Adjustment
 
 - [ ] **ACADJ-01**: Usuario pode iniciar um reajuste para uma conta informando conta, valor real, data do lancamento e mes de competencia.
-- [ ] **ACADJ-02**: Sistema calcula a diferenca entre o saldo da conta no app e o valor real informado pelo usuario.
-- [ ] **ACADJ-03**: Sistema cria um lancamento unico `REAJUSTE` positivo quando o valor real for maior que o saldo do app.
-- [ ] **ACADJ-04**: Sistema cria um lancamento unico `REAJUSTE` negativo quando o valor real for menor que o saldo do app.
-- [ ] **ACADJ-05**: Reajuste de conta impacta saldo atual e saldo previsto de forma consistente com a data escolhida e o status operacional do lancamento.
+- [x] **ACADJ-02**: Sistema calcula a diferenca entre o saldo da conta no app e o valor real informado pelo usuario.
+- [x] **ACADJ-03**: Sistema cria um lancamento unico `REAJUSTE` positivo quando o valor real for maior que o saldo do app.
+- [x] **ACADJ-04**: Sistema cria um lancamento unico `REAJUSTE` negativo quando o valor real for menor que o saldo do app.
+- [x] **ACADJ-05**: Reajuste de conta impacta saldo atual e saldo previsto de forma consistente com a data escolhida e o status operacional do lancamento.
 
 ### Credit Card Adjustment
 
@@ -26,7 +26,7 @@
 - [ ] **ADJ-01**: Usuario ve preview antes de salvar com valor no app, valor real informado, diferenca calculada e sinal do lancamento.
 - [ ] **ADJ-02**: Sistema trata diferenca zero como caso sem lancamento necessario e nao cria transacao vazia.
 - [ ] **ADJ-03**: Reajustes ficam identificados como `REAJUSTE` no historico para auditoria, edicao/exclusao e entendimento futuro.
-- [ ] **ADJ-04**: Sistema valida que conta/cartao, fatura e lancamento pertencem ao usuario autenticado antes de calcular ou gravar o reajuste.
+- [x] **ADJ-04**: Sistema valida que conta/cartao, fatura e lancamento pertencem ao usuario autenticado antes de calcular ou gravar o reajuste.
 
 ## v2 Requirements
 
@@ -60,10 +60,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | ACADJ-01 | Phase 24 | Pending |
-| ACADJ-02 | Phase 24 | Pending |
-| ACADJ-03 | Phase 24 | Pending |
-| ACADJ-04 | Phase 24 | Pending |
-| ACADJ-05 | Phase 24 | Pending |
+| ACADJ-02 | Phase 24 | Complete |
+| ACADJ-03 | Phase 24 | Complete |
+| ACADJ-04 | Phase 24 | Complete |
+| ACADJ-05 | Phase 24 | Complete |
 | CCADJ-01 | Phase 25 | Pending |
 | CCADJ-02 | Phase 25 | Pending |
 | CCADJ-03 | Phase 25 | Pending |
@@ -72,7 +72,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADJ-01 | Phase 26 | Pending |
 | ADJ-02 | Phase 26 | Pending |
 | ADJ-03 | Phase 26 | Pending |
-| ADJ-04 | Phase 24 | Pending |
+| ADJ-04 | Phase 24 | Complete |
 
 **Coverage:**
 - v1 requirements: 14 total
