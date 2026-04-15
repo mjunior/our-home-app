@@ -357,6 +357,8 @@ function createApiRuntime(): Runtime {
   type SettleInvoiceOutput = MethodReturn<Runtime["invoicesController"]["settleInvoice"]>;
   type UnsettleInvoiceInput = MethodArgs<Runtime["invoicesController"]["unsettleInvoice"]>[0];
   type UnsettleInvoiceOutput = MethodReturn<Runtime["invoicesController"]["unsettleInvoice"]>;
+  type CreditCardAdjustmentInput = MethodArgs<Runtime["invoicesController"]["createCreditCardAdjustment"]>[0];
+  type CreditCardAdjustmentOutput = MethodReturn<Runtime["invoicesController"]["createCreditCardAdjustment"]>;
 
   type FreeBalanceInput = MethodArgs<Runtime["freeBalanceController"]["getFreeBalance"]>[0];
   type FreeBalanceOutput = MethodReturn<Runtime["freeBalanceController"]["getFreeBalance"]>;
@@ -542,6 +544,13 @@ function createApiRuntime(): Runtime {
         requestSync<SettleInvoiceOutput>("POST", "/api/invoices/settle", input),
       unsettleInvoice: (input: UnsettleInvoiceInput): UnsettleInvoiceOutput =>
         requestSync<UnsettleInvoiceOutput>("POST", "/api/invoices/unsettle", input),
+      createCreditCardAdjustment: (input: CreditCardAdjustmentInput): CreditCardAdjustmentOutput =>
+        requestSync<CreditCardAdjustmentOutput>("POST", "/api/invoices/adjustment", {
+          cardId: input.cardId,
+          realInvoiceTotal: input.realInvoiceTotal,
+          dueMonth: input.dueMonth,
+          occurredAt: input.occurredAt,
+        }),
     },
     freeBalanceController: {
       getFreeBalance: (input: FreeBalanceInput): FreeBalanceOutput =>
