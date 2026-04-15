@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { Account } from "../../domain/accounts/account.entity";
-import { AccountsRepository } from "./accounts.repository";
+import { type AccountRecord, AccountsRepository } from "./accounts.repository";
 import { TransactionsRepository } from "../transactions/transactions.repository";
 
 interface InvoiceSettlementLike {
@@ -38,6 +38,11 @@ const accountGoalUpdateSchema = z.object({
   goalAmount: z.string().min(1).nullable(),
 });
 
+const accountBalanceSnapshotSchema = z.object({
+  householdId: z.string().min(1),
+  accountId: z.string().min(1),
+});
+
 export interface CreateAccountInput {
   householdId: string;
   name: string;
@@ -52,11 +57,28 @@ export interface UpdateAccountGoalInput {
   goalAmount: string | null;
 }
 
+export interface GetAccountBalanceSnapshotInput {
+  householdId: string;
+  accountId: string;
+}
+
 interface AccountGoalSnapshot {
   goalAmount: string | null;
   goalProgressPercent: number | null;
   remainingToGoal: string | null;
   goalReached: boolean;
+}
+
+interface AccountBalanceRow extends AccountGoalSnapshot {
+  id: string;
+  name: string;
+  type: "CHECKING" | "INVESTMENT";
+  balance: string;
+}
+
+export interface AccountBalanceSnapshot {
+  account: AccountRecord;
+  balance: string;
 }
 
 function buildAccountGoalSnapshot(input: {
@@ -136,24 +158,28 @@ export class AccountsService {
     });
   }
 
-  consolidatedBalance(householdId: string): {
-    amount: string;
-    byType: { CHECKING: string; INVESTMENT: string };
-    accounts: Array<{
-      id: string;
-      name: string;
-      type: "CHECKING" | "INVESTMENT";
-      balance: string;
-      goalAmount: string | null;
-      goalProgressPercent: number | null;
-      remainingToGoal: string | null;
-      goalReached: boolean;
-    }>;
-  } {
-    const accounts = this.list(householdId);
-    const transactions = this.transactionsRepository?.listByHousehold(householdId) ?? [];
+  getAccountBalanceSnapshot(input: GetAccountBalanceSnapshotInput): AccountBalanceSnapshot {
+    const parsed = accountBalanceSnapshotSchema.parse(input);
+    const account = this.repository.findById(parsed.accountId);
+    if (!account || account.householdId !== parsed.householdId) {
+      throw new Error("ACCOUNT_NOT_FOUND");
+    }
 
+    const row = this.buildAccountBalanceRows(parsed.householdId).find((item) => item.id === parsed.accountId);
+    if (!row) {
+      throw new Error("ACCOUNT_NOT_FOUND");
+    }
+
+    return {
+      account,
+      balance: row.balance,
+    };
+  }
+
+  private buildNetByAccountId(householdId: string): Map<string, number> {
+    const transactions = this.transactionsRepository?.listByHousehold(householdId) ?? [];
     const netByAccountId = new Map<string, number>();
+
     for (const item of transactions) {
       if (!item.accountId) continue;
       if ((item.settlementStatus ?? "PAID") !== "PAID") continue;
@@ -177,7 +203,13 @@ export class AccountsService {
       netByAccountId.set(instance.accountId, (netByAccountId.get(instance.accountId) ?? 0) + signed);
     }
 
-    const accountRows = accounts.map((item) => {
+    return netByAccountId;
+  }
+
+  private buildAccountBalanceRows(householdId: string): AccountBalanceRow[] {
+    const netByAccountId = this.buildNetByAccountId(householdId);
+
+    return this.list(householdId).map((item) => {
       const opening = Number(item.openingBalance);
       const movement = netByAccountId.get(item.id) ?? 0;
       const balance = (opening + movement).toFixed(2);
@@ -194,6 +226,23 @@ export class AccountsService {
         ...goalSnapshot,
       };
     });
+  }
+
+  consolidatedBalance(householdId: string): {
+    amount: string;
+    byType: { CHECKING: string; INVESTMENT: string };
+    accounts: Array<{
+      id: string;
+      name: string;
+      type: "CHECKING" | "INVESTMENT";
+      balance: string;
+      goalAmount: string | null;
+      goalProgressPercent: number | null;
+      remainingToGoal: string | null;
+      goalReached: boolean;
+    }>;
+  } {
+    const accountRows = this.buildAccountBalanceRows(householdId);
 
     const total = accountRows.reduce((acc, item) => acc + Number(item.balance), 0);
     const checking = accountRows
