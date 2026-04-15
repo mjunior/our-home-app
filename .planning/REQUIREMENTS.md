@@ -15,11 +15,11 @@
 
 ### Credit Card Adjustment
 
-- [ ] **CCADJ-01**: Usuario pode iniciar um reajuste para cartao informando cartao, mes da fatura, data do lancamento e valor real da fatura.
-- [ ] **CCADJ-02**: Sistema calcula a diferenca entre o total atual da fatura no app e o valor real informado pelo usuario.
-- [ ] **CCADJ-03**: Sistema cria uma transacao de cartao `REAJUSTE` positiva quando o valor real da fatura for maior que o total no app.
-- [ ] **CCADJ-04**: Sistema cria uma transacao de cartao `REAJUSTE` negativa quando o valor real da fatura for menor que o total no app.
-- [ ] **CCADJ-05**: Reajuste de cartao e lancado na fatura do mes informado e aparece no modulo de cartoes e no cashflow consolidado dessa fatura.
+- [x] **CCADJ-01**: Usuario pode iniciar um reajuste para cartao informando cartao, mes da fatura, data do lancamento e valor real da fatura.
+- [x] **CCADJ-02**: Sistema calcula a diferenca entre o total atual da fatura no app e o valor real informado pelo usuario.
+- [x] **CCADJ-03**: Sistema cria uma transacao de cartao `REAJUSTE` positiva quando o valor real da fatura for maior que o total no app.
+- [x] **CCADJ-04**: Sistema cria uma transacao de cartao `REAJUSTE` negativa quando o valor real da fatura for menor que o total no app.
+- [x] **CCADJ-05**: Reajuste de cartao e lancado na fatura do mes informado e aparece no modulo de cartoes e no cashflow consolidado dessa fatura.
 
 ### Adjustment Safety and Audit
 
@@ -64,11 +64,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ACADJ-03 | Phase 24 | Complete |
 | ACADJ-04 | Phase 24 | Complete |
 | ACADJ-05 | Phase 24 | Complete |
-| CCADJ-01 | Phase 25 | Pending |
-| CCADJ-02 | Phase 25 | Pending |
-| CCADJ-03 | Phase 25 | Pending |
-| CCADJ-04 | Phase 25 | Pending |
-| CCADJ-05 | Phase 25 | Pending |
+| CCADJ-01 | Phase 25 | Complete |
+| CCADJ-02 | Phase 25 | Complete |
+| CCADJ-03 | Phase 25 | Complete |
+| CCADJ-04 | Phase 25 | Complete |
+| CCADJ-05 | Phase 25 | Complete |
 | ADJ-01 | Phase 26 | Pending |
 | ADJ-02 | Phase 26 | Pending |
 | ADJ-03 | Phase 26 | Pending |
