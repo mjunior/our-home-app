@@ -1,3 +1,4 @@
+import { AccountAdjustmentsService } from "../../modules/accounts/account-adjustments.service";
 import { AccountsController } from "../../modules/accounts/accounts.controller";
 import { AccountsRepository } from "../../modules/accounts/accounts.repository";
 import { AccountsService } from "../../modules/accounts/accounts.service";
@@ -26,7 +27,10 @@ import { TransactionsService } from "../../modules/transactions/transactions.ser
 
 type MethodArgs<T> = T extends (...args: infer A) => unknown ? A : never;
 type MethodReturn<T> = T extends (...args: any[]) => infer R ? R : never;
-type AccountsControllerContract = Pick<AccountsController, "createAccount" | "updateAccountGoal" | "listAccounts" | "getConsolidatedBalance">;
+type AccountsControllerContract = Pick<
+  AccountsController,
+  "createAccount" | "updateAccountGoal" | "listAccounts" | "getConsolidatedBalance" | "createAccountAdjustment"
+>;
 type CardsControllerContract = Pick<CardsController, "createCard" | "listCards" | "updateCard" | "deleteCard">;
 type CategoriesControllerContract = Pick<CategoriesController, "createCategory" | "listCategories">;
 type GoalMetricType = "PERCENTAGE" | "QUANTITY" | "OCCURRENCE";
@@ -182,9 +186,9 @@ function createLocalRuntime(): Runtime {
   const invoiceSettlementRepository = new InvoiceSettlementRepository();
   const scheduleEngine = new ScheduleEngineService();
 
-  const accountsController = new AccountsController(
-    new AccountsService(accountsRepository, transactionsRepository, invoiceSettlementRepository, scheduleRepository),
-  );
+  const accountsService = new AccountsService(accountsRepository, transactionsRepository, invoiceSettlementRepository, scheduleRepository);
+  const accountAdjustmentsService = new AccountAdjustmentsService(accountsService, transactionsRepository, categoriesRepository);
+  const accountsController = new AccountsController(accountsService, accountAdjustmentsService);
   const cardsModuleController = new CardsController(new CardsService(cardsRepository));
   const categoriesController = new CategoriesController(new CategoriesService(categoriesRepository));
   const transactionsController = new TransactionsController(
