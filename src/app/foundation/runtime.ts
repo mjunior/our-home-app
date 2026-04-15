@@ -11,6 +11,7 @@ import { CategoriesService } from "../../modules/categories/categories.service";
 import { FreeBalanceController } from "../../modules/free-balance/free-balance.controller";
 import { FreeBalancePolicy } from "../../modules/free-balance/free-balance.policy";
 import { FreeBalanceService } from "../../modules/free-balance/free-balance.service";
+import { CreditCardAdjustmentsService } from "../../modules/invoices/credit-card-adjustments.service";
 import { InvoiceCycleService } from "../../modules/invoices/invoice-cycle.service";
 import { InvoicesController } from "../../modules/invoices/invoices.controller";
 import { InvoiceSettlementRepository } from "../../modules/invoices/invoice-settlement.repository";
@@ -91,6 +92,7 @@ type InvoicesControllerContract = Pick<
   | "getCardInvoiceEntriesByDueMonth"
   | "settleInvoice"
   | "unsettleInvoice"
+  | "createCreditCardAdjustment"
 >;
 type FreeBalanceControllerContract = Pick<FreeBalanceController, "getFreeBalance">;
 type ScheduleManagementControllerContract = Pick<
@@ -194,15 +196,15 @@ function createLocalRuntime(): Runtime {
   const transactionsController = new TransactionsController(
     new TransactionsService(transactionsRepository, accountsRepository, cardsRepository, categoriesRepository),
   );
-  const invoicesController = new InvoicesController(
-    new InvoicesService(
-      transactionsRepository,
-      cardsRepository,
-      new InvoiceCycleService(),
-      scheduleRepository,
-      invoiceSettlementRepository,
-    ),
+  const invoicesService = new InvoicesService(
+    transactionsRepository,
+    cardsRepository,
+    new InvoiceCycleService(),
+    scheduleRepository,
+    invoiceSettlementRepository,
   );
+  const creditCardAdjustmentsService = new CreditCardAdjustmentsService(invoicesService, transactionsRepository, categoriesRepository);
+  const invoicesController = new InvoicesController(invoicesService, creditCardAdjustmentsService);
   const freeBalanceController = new FreeBalanceController(
     new FreeBalanceService(
       accountsRepository,
