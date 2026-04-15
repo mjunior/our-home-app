@@ -1507,6 +1507,65 @@ export function installViteApi(server: MiddlewareServer) {
         return;
       }
 
+      if (req.method === "POST" && path === "/api/invoices/adjustment") {
+        const householdId = authHouseholdId;
+        const body = await readJsonBody(req);
+        const cardId = String(body.cardId ?? "");
+        const dueMonth = String(body.dueMonth ?? "");
+
+        const card = await prisma.creditCard.findUnique({ where: { id: cardId } });
+        if (!card || card.householdId !== householdId) {
+          sendJson(res, 404, { message: "CARD_NOT_FOUND" });
+          return;
+        }
+
+        const { invoicesService } = await loadServices();
+        const invoice = invoicesService.getCardInvoiceEntriesByDueMonth({ householdId, cardId, dueMonth });
+        const previousInvoiceTotal = new Decimal(invoice.total);
+        const realInvoiceTotal = new Decimal(String(body.realInvoiceTotal));
+        const difference = realInvoiceTotal.minus(previousInvoiceTotal);
+        const normalized = normalizeName("Reajuste");
+        const category = await prisma.category.upsert({
+          where: {
+            householdId_normalized: {
+              householdId,
+              normalized,
+            },
+          },
+          create: {
+            householdId,
+            name: "Reajuste",
+            normalized,
+          },
+          update: {},
+        });
+
+        const transaction = await prisma.transaction.create({
+          data: {
+            householdId,
+            kind: "EXPENSE",
+            description: "REAJUSTE",
+            amount: difference.toFixed(2),
+            occurredAt: new Date(body.occurredAt),
+            accountId: null,
+            creditCardId: card.id,
+            categoryId: category.id,
+            invoiceMonthKey: dueMonth,
+            invoiceDueDate: new Date(invoice.dueDate),
+            settlementStatus: null,
+            transferGroupId: null,
+          },
+        });
+
+        sendJson(res, 200, {
+          previousInvoiceTotal: previousInvoiceTotal.toFixed(2),
+          realInvoiceTotal: realInvoiceTotal.toFixed(2),
+          difference: difference.toFixed(2),
+          transaction: toTransactionDto(transaction),
+        });
+        return;
+      }
+
       if (req.method === "POST" && path === "/api/invoices/settle") {
         const householdId = authHouseholdId;
         const body = await readJsonBody(req);
