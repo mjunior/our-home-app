@@ -1,3 +1,5 @@
+import Decimal from "decimal.js";
+
 import { InvoiceCycleService } from "../modules/invoices/invoice-cycle.service";
 import { InvoicesService } from "../modules/invoices/invoices.service";
 import { FreeBalancePolicy } from "../modules/free-balance/free-balance.policy";
@@ -394,6 +396,46 @@ function toTransactionDto(row: any) {
     transferGroupId: row.transferGroupId ?? null,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+async function calculatePersistedAccountBalance(input: { householdId: string; accountId: string; openingBalance: string }) {
+  let balance = new Decimal(input.openingBalance);
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      householdId: input.householdId,
+      accountId: input.accountId,
+    },
+  });
+  const invoiceSettlements = await prisma.invoiceSettlement.findMany({
+    where: {
+      householdId: input.householdId,
+      paymentAccountId: input.accountId,
+    },
+  });
+  const scheduledInstances = await prisma.scheduledInstance.findMany({
+    where: {
+      householdId: input.householdId,
+      accountId: input.accountId,
+    },
+  });
+
+  for (const item of transactions) {
+    if ((item.settlementStatus ?? "PAID") !== "PAID") continue;
+    const amount = new Decimal(item.amount.toString());
+    balance = item.kind === "INCOME" ? balance.plus(amount) : balance.minus(amount);
+  }
+
+  for (const settlement of invoiceSettlements) {
+    balance = balance.minus(new Decimal(settlement.paidAmount.toString()));
+  }
+
+  for (const instance of scheduledInstances) {
+    if ((instance.settlementStatus ?? "PAID") !== "PAID") continue;
+    const amount = new Decimal(instance.amount.toString());
+    balance = instance.kind === "INCOME" ? balance.plus(amount) : balance.minus(amount);
+  }
+
+  return balance.toFixed(2);
 }
 
 function assertInvestmentTypes(source: any, destination: any) {
@@ -810,6 +852,71 @@ export function installViteApi(server: MiddlewareServer) {
             INVESTMENT: investment.toFixed(2),
           },
           accounts,
+        });
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/accounts/adjustment") {
+        const body = await readJsonBody(req);
+        const account = await prisma.account.findUnique({ where: { id: body.accountId } });
+        if (!account || account.householdId !== authHouseholdId) {
+          sendJson(res, 404, { message: "ACCOUNT_NOT_FOUND" });
+          return;
+        }
+
+        if (String(body.occurredAt ?? "").slice(0, 7) !== body.month) {
+          sendJson(res, 400, { message: "ACCOUNT_ADJUSTMENT_MONTH_MISMATCH" });
+          return;
+        }
+
+        const previousBalance = new Decimal(
+          await calculatePersistedAccountBalance({
+            householdId: authHouseholdId,
+            accountId: account.id,
+            openingBalance: account.openingBalance.toString(),
+          }),
+        );
+        const realBalance = new Decimal(String(body.realBalance));
+        const difference = realBalance.minus(previousBalance);
+        const kind = difference.isNegative() ? "EXPENSE" : "INCOME";
+        const normalized = normalizeName("Reajuste");
+        const category = await prisma.category.upsert({
+          where: {
+            householdId_normalized: {
+              householdId: authHouseholdId,
+              normalized,
+            },
+          },
+          create: {
+            householdId: authHouseholdId,
+            name: "Reajuste",
+            normalized,
+          },
+          update: {},
+        });
+
+        const transaction = await prisma.transaction.create({
+          data: {
+            householdId: authHouseholdId,
+            kind,
+            description: "REAJUSTE",
+            amount: difference.abs().toFixed(2),
+            occurredAt: new Date(body.occurredAt),
+            accountId: account.id,
+            creditCardId: null,
+            categoryId: category.id,
+            invoiceMonthKey: null,
+            invoiceDueDate: null,
+            settlementStatus: "PAID",
+            transferGroupId: null,
+          },
+        });
+
+        sendJson(res, 200, {
+          previousBalance: previousBalance.toFixed(2),
+          realBalance: realBalance.toFixed(2),
+          difference: difference.toFixed(2),
+          transaction: toTransactionDto(transaction),
         });
         return;
       }
