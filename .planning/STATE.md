@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7
-milestone_name: Objetivos de Investimento e Feedback Operacional
-status: milestone_implementation_pending_verification
-last_updated: "2026-03-09T17:05:00.000Z"
+milestone: v1.8
+milestone_name: Reajuste de Conta e Cartao
+status: defining_requirements
+last_updated: "2026-04-15T00:00:00.000Z"
 progress:
-  total_phases: 24
+  total_phases: 27
   completed_phases: 22
   total_plans: 68
   completed_plans: 68
@@ -15,19 +15,19 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-09)
+See: .planning/PROJECT.md (updated 2026-04-15)
 
 **Core value:** Mostrar com clareza o saldo livre do mes atual e do proximo mes para evitar ficar no negativo.
-**Current focus:** milestone v1.7 definido para metas de investimento e feedback operacional do cashflow.
+**Current focus:** milestone v1.8 definido para reajuste manual de conta e cartao a partir do valor real informado pelo usuario.
 
 ## Current Position
 
-Phase: 23 - feedback operacional no cashflow
-Plan: 23-01, 23-02, 23-03 implementados
-Status: Milestone v1.7 implementado; verificacao automatizada pendente por ausencia de `node`/`npm` no ambiente atual.
-Last activity: 2026-03-09 — feedback operacional do cashflow implementado em navegacao mensal, modal de lancamento e testes e2e.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-15 — Milestone v1.8 started for manual balance/invoice adjustment.
 
-Progress: [██████████] 100% da implementacao do milestone v1.7
+Progress: [░░░░░░░░░░] 0% do milestone v1.8
 
 ## Accumulated Context
 
@@ -48,6 +48,10 @@ Progress: [██████████] 100% da implementacao do milestone v1
 - Verificacao automatizada da fase ficou bloqueada porque o ambiente atual nao possui `node`/`npm` no PATH.
 - Phase 23 adicionou botoes explicitos de navegacao mensal e reforcou estados visuais do rail do cashflow.
 - Modal de novo lancamento agora mostra `Salvando...`, desabilita tabs/campos durante envio e evita submit duplicado.
+- Reajuste manual deve receber o valor real final e calcular automaticamente a diferenca positiva/negativa.
+- Reajuste deve ser lancamento explicito `REAJUSTE`, nao alteracao invisivel de saldo.
+- Reajuste de cartao deve comparar contra a fatura do mes informado e lancar na data escolhida.
+- Reajuste de conta deve comparar contra a conta escolhida e lancar na data escolhida.
 
 ### Roadmap Evolution
 
@@ -55,24 +59,27 @@ Progress: [██████████] 100% da implementacao do milestone v1
 - Milestone v1.5 archived: `.planning/milestones/v1.5-ROADMAP.md`
 - Milestone v1.6 initialized: phases 19-21 em `.planning/ROADMAP.md`
 - Phase 19 completed: modelo de quitacao para lancamentos em conta
-- Phase 20 completed: quitacao de fatura consolidada por conta de pagamento
+- Phase 20 completed: quitacao de fatura consolidada de cartao
 - Phase 21 completed: saldo atual x previsto e composicao por conta
 - Phase 21.1 completed: fechamento do gap BAL-03 (gatilho de drill-down no saldo)
 - Milestone v1.7 initialized: phases 22-23 em `.planning/ROADMAP.md`
 - Phase 22 implemented: goalAmount em contas de investimento com create/edit/read e visualizacao de progresso
 - Phase 23 implemented: navegacao mensal explicita e feedback operacional no cadastro de lancamentos
+- Milestone v1.8 initialized: reajuste manual de conta e cartao para sincronizar app com carteira real.
 
 ### Pending Todos
 
 - Verificar Phases 22 e 23 assim que `node`/`npm` estiverem disponiveis no ambiente.
 - Avaliar fechamento formal do milestone v1.7 apos verificacao.
+- Planejar e executar Phase 24 do milestone v1.8.
 
 ### Blockers/Concerns
 
 - `npm run lint` ainda bloqueado por tipagem PWA preexistente (`virtual:pwa-register` em `src/main.tsx`).
+- v1.7 permanece implementado, mas sem arquivamento formal em `MILESTONES.md`.
 
 ## Session Continuity
 
-Last session: 2026-03-09
-Stopped at: milestone v1.7 implementado; aguardando verificacao automatizada
-Resume file: .planning/phases/23-feedback-operacional-no-cashflow/23-03-SUMMARY.md
+Last session: 2026-04-15
+Stopped at: milestone v1.8 iniciado; requisitos e roadmap em definicao
+Resume file: .planning/ROADMAP.md
