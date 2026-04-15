@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { accountsController as runtimeAccountsController } from "../../src/app/foundation/runtime";
 import { AccountAdjustmentsService } from "../../src/modules/accounts/account-adjustments.service";
 import { AccountsController } from "../../src/modules/accounts/accounts.controller";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository";
@@ -241,5 +242,29 @@ describe("account adjustments", () => {
         occurredAt: "2026-04-25T12:00:00.000Z",
       }),
     ).toThrow("ACCOUNT_ADJUSTMENT_SERVICE_NOT_CONFIGURED");
+  });
+
+  it("creates an account adjustment through the local runtime facade and updates consolidated balance", () => {
+    const account = runtimeAccountsController.createAccount({
+      householdId,
+      name: "Conta Runtime",
+      type: "CHECKING",
+      openingBalance: "800.00",
+    });
+
+    const result = runtimeAccountsController.createAccountAdjustment({
+      householdId,
+      accountId: account.id,
+      realBalance: "925.40",
+      month: "2026-04",
+      occurredAt: "2026-04-18T12:00:00.000Z",
+    });
+
+    expect(result.previousBalance).toBe("800.00");
+    expect(result.difference).toBe("125.40");
+    expect(runtimeAccountsController.getConsolidatedBalance(householdId).accounts.find((item) => item.id === account.id)).toMatchObject({
+      id: account.id,
+      balance: "925.40",
+    });
   });
 });
