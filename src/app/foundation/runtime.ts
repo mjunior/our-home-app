@@ -307,6 +307,8 @@ function createApiRuntime(): Runtime {
   type AccountsUpdateGoalOutput = MethodReturn<Runtime["accountsController"]["updateAccountGoal"]>;
   type AccountsListOutput = MethodReturn<Runtime["accountsController"]["listAccounts"]>;
   type AccountsConsolidatedOutput = MethodReturn<Runtime["accountsController"]["getConsolidatedBalance"]>;
+  type AccountsAdjustmentInput = MethodArgs<Runtime["accountsController"]["createAccountAdjustment"]>[0];
+  type AccountsAdjustmentOutput = MethodReturn<Runtime["accountsController"]["createAccountAdjustment"]>;
 
   type CardsCreateInput = MethodArgs<Runtime["cardsController"]["createCard"]>[0];
   type CardsCreateOutput = MethodReturn<Runtime["cardsController"]["createCard"]>;
@@ -399,6 +401,13 @@ function createApiRuntime(): Runtime {
         requestSync<AccountsListOutput>("GET", "/api/accounts"),
       getConsolidatedBalance: (_householdId: string): AccountsConsolidatedOutput =>
         requestSync<AccountsConsolidatedOutput>("GET", "/api/accounts/consolidated"),
+      createAccountAdjustment: (input: AccountsAdjustmentInput): AccountsAdjustmentOutput =>
+        requestSync<AccountsAdjustmentOutput>("POST", "/api/accounts/adjustment", {
+          accountId: input.accountId,
+          realBalance: input.realBalance,
+          month: input.month,
+          occurredAt: input.occurredAt,
+        }),
     },
     cardsController: {
       createCard: (input: CardsCreateInput): CardsCreateOutput =>
