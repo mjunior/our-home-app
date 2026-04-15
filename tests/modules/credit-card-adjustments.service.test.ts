@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import {
+  cardsController as runtimeCardsController,
+  categoriesController as runtimeCategoriesController,
+  invoicesController as runtimeInvoicesController,
+  transactionsController as runtimeTransactionsController,
+} from "../../src/app/foundation/runtime";
 import { CardsController } from "../../src/modules/cards/cards.controller";
 import { CardsRepository } from "../../src/modules/cards/cards.repository";
 import { CardsService } from "../../src/modules/cards/cards.service";
@@ -188,5 +194,41 @@ describe("credit card adjustments", () => {
         occurredAt: "2026-05-15T12:00:00.000Z",
       }),
     ).toThrow("CREDIT_CARD_ADJUSTMENT_SERVICE_NOT_CONFIGURED");
+  });
+
+  it("creates a credit card adjustment through the local runtime facade and updates monthly invoices", () => {
+    const card = runtimeCardsController.createCard({ householdId, name: "Runtime Card", closeDay: 5, dueDay: 12 });
+    const category = runtimeCategoriesController.createCategory({ householdId, name: "Compras Runtime" });
+    runtimeTransactionsController.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra runtime",
+      amount: "100.00",
+      occurredAt: "2026-06-01T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    const result = runtimeInvoicesController.createCreditCardAdjustment({
+      householdId,
+      cardId: card.id,
+      realInvoiceTotal: "142.00",
+      dueMonth: "2026-06",
+      occurredAt: "2026-06-15T12:00:00.000Z",
+    });
+
+    expect(result.previousInvoiceTotal).toBe("100.00");
+    expect(result.difference).toBe("42.00");
+    expect(runtimeInvoicesController.getMonthlyInvoices({ householdId, month: "2026-06" }).cards.find((item) => item.cardId === card.id)?.total).toBe(
+      "142.00",
+    );
+    expect(runtimeInvoicesController.getCardInvoiceEntriesByDueMonth({ householdId, cardId: card.id, dueMonth: "2026-06" }).entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          description: "REAJUSTE",
+          amount: "42.00",
+        }),
+      ]),
+    );
   });
 });
