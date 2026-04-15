@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { AccountAdjustmentsService } from "../../src/modules/accounts/account-adjustments.service";
+import { AccountsController } from "../../src/modules/accounts/accounts.controller";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository";
 import { AccountsService } from "../../src/modules/accounts/accounts.service";
 import { CategoriesRepository } from "../../src/modules/categories/categories.repository";
@@ -14,6 +15,7 @@ const categoriesRepo = new CategoriesRepository();
 const transactionsRepo = new TransactionsRepository();
 const accountsService = new AccountsService(accountsRepo, transactionsRepo);
 const adjustmentsService = new AccountAdjustmentsService(accountsService, transactionsRepo, categoriesRepo);
+const accountsController = new AccountsController(accountsService, adjustmentsService);
 
 describe("account adjustments", () => {
   beforeEach(() => {
@@ -198,5 +200,46 @@ describe("account adjustments", () => {
     ).toThrow("ACCOUNT_NOT_FOUND");
     expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(0);
     expect(transactionsRepo.listByHousehold(otherHouseholdId)).toHaveLength(0);
+  });
+
+  it("delegates account adjustment creation through the accounts controller", () => {
+    const account = accountsController.createAccount({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+
+    const result = accountsController.createAccountAdjustment({
+      householdId,
+      accountId: account.id,
+      realBalance: "1100.00",
+      month: "2026-04",
+      occurredAt: "2026-04-25T12:00:00.000Z",
+    });
+
+    expect(result.previousBalance).toBe("1000.00");
+    expect(result.realBalance).toBe("1100.00");
+    expect(result.difference).toBe("100.00");
+    expect(result.transaction).toMatchObject({
+      kind: "INCOME",
+      description: "REAJUSTE",
+      amount: "100.00",
+      accountId: account.id,
+    });
+  });
+
+  it("fails clearly when account adjustment controller contract is called without the service", () => {
+    const controller = new AccountsController(accountsService);
+
+    expect(() =>
+      controller.createAccountAdjustment({
+        householdId,
+        accountId: "account-id",
+        realBalance: "1100.00",
+        month: "2026-04",
+        occurredAt: "2026-04-25T12:00:00.000Z",
+      }),
+    ).toThrow("ACCOUNT_ADJUSTMENT_SERVICE_NOT_CONFIGURED");
   });
 });
