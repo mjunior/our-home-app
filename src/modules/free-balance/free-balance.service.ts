@@ -46,6 +46,14 @@ interface CardCharge {
   amount: Decimal;
 }
 
+interface CardObligation {
+  monthKey: string;
+  cardId: string;
+  cardName: string;
+  amount: Decimal;
+  settled: boolean;
+}
+
 interface MonthComputation {
   breakdown: FreeBalanceMonthBreakdown;
   driverSeeds: DriverSeed[];
@@ -91,6 +99,7 @@ export class FreeBalanceService {
       transactions,
       scheduleInstances,
       cardCharges,
+      invoiceSettlements,
       checkingAccountIds,
     );
 
@@ -102,6 +111,7 @@ export class FreeBalanceService {
       transactions,
       scheduleInstances,
       cardCharges,
+      invoiceSettlements,
       checkingAccountIds,
     );
     currentComputation.breakdown.pendingOutflows = this.collectPendingOutflows(
@@ -126,6 +136,7 @@ export class FreeBalanceService {
       transactions,
       scheduleInstances,
       cardCharges,
+      invoiceSettlements,
       checkingAccountIds,
     );
 
@@ -171,6 +182,7 @@ export class FreeBalanceService {
     transactions: ReturnType<TransactionsRepository["listByHousehold"]>,
     scheduleInstances: ReturnType<ScheduleRepository["listInstancesByHousehold"]>,
     cardCharges: CardCharge[],
+    invoiceSettlements: InvoiceSettlementRecord[],
     checkingAccountIds: Set<string>,
   ): Decimal {
     const accountIncomesBefore = sumDecimals(
@@ -227,7 +239,9 @@ export class FreeBalanceService {
     );
 
     const invoicesDueBefore = sumDecimals(
-      cardCharges.filter((item) => item.monthKey < month).map((item) => item.amount),
+      this.collectCardObligations(cardCharges, invoiceSettlements)
+        .filter((item) => item.monthKey < month)
+        .map((item) => item.amount),
     );
 
     return openingBalance
@@ -276,6 +290,44 @@ export class FreeBalanceService {
     }
 
     return charges;
+  }
+
+  private collectCardObligations(cardCharges: CardCharge[], invoiceSettlements: InvoiceSettlementRecord[]): CardObligation[] {
+    const chargesByKey = new Map<string, { monthKey: string; cardId: string; cardName: string; amount: Decimal }>();
+    for (const charge of cardCharges) {
+      const key = `${charge.cardId}:${charge.monthKey}`;
+      const current = chargesByKey.get(key) ?? {
+        monthKey: charge.monthKey,
+        cardId: charge.cardId,
+        cardName: charge.cardName,
+        amount: new Decimal(0),
+      };
+      current.amount = current.amount.plus(charge.amount);
+      chargesByKey.set(key, current);
+    }
+
+    const obligations = new Map<string, CardObligation>();
+    for (const [key, charge] of chargesByKey.entries()) {
+      obligations.set(key, {
+        ...charge,
+        settled: false,
+      });
+    }
+
+    for (const settlement of invoiceSettlements) {
+      const key = `${settlement.cardId}:${settlement.dueMonth}`;
+      const existing = obligations.get(key);
+      const card = existing ? null : this.cardsRepository.findById(settlement.cardId);
+      obligations.set(key, {
+        monthKey: settlement.dueMonth,
+        cardId: settlement.cardId,
+        cardName: existing?.cardName ?? card?.name ?? "Cartao",
+        amount: new Decimal(settlement.paidAmount),
+        settled: true,
+      });
+    }
+
+    return Array.from(obligations.values());
   }
 
   private collectPendingOutflows(
@@ -433,6 +485,7 @@ export class FreeBalanceService {
     transactions: ReturnType<TransactionsRepository["listByHousehold"]>,
     scheduleInstances: ReturnType<ScheduleRepository["listInstancesByHousehold"]>,
     cardCharges: CardCharge[],
+    invoiceSettlements: InvoiceSettlementRecord[],
     checkingAccountIds: Set<string>,
   ): MonthComputation {
     const incomeTransactions = sumDecimals(
@@ -519,7 +572,11 @@ export class FreeBalanceService {
         .map((item) => new Decimal(item.amount)),
     );
 
-    const cardInvoiceDue = sumDecimals(cardCharges.filter((item) => item.monthKey === month).map((item) => item.amount));
+    const cardInvoiceDue = sumDecimals(
+      this.collectCardObligations(cardCharges, invoiceSettlements)
+        .filter((item) => item.monthKey === month)
+        .map((item) => item.amount),
+    );
 
     const income = incomeTransactions.plus(incomeRecurring);
     const gastosOperacionais = oneOffExpenses.plus(cardInvoiceDue).plus(installments).plus(recurrences).plus(lateCarry);

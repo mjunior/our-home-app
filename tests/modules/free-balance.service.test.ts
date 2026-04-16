@@ -349,4 +349,39 @@ describe("free balance service", () => {
 
     expect(result.breakdown.current.pendingOutflows).toEqual([]);
   });
+
+  it("uses settled invoice paid amount instead of projected card charges in current balance", () => {
+    const account = accounts.createAccount({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const card = cards.createCard({ householdId, name: "Visa Casa", closeDay: 5, dueDay: 12 });
+    const category = categories.createCategory({ householdId, name: "Cartao" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra cartao",
+      amount: "231.50",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+    invoiceSettlementRepo.upsert({
+      householdId,
+      cardId: card.id,
+      dueMonth: "2026-03",
+      paymentAccountId: account.id,
+      paidAt: "2026-03-12T12:00:00.000Z",
+      paidAmount: "220.00",
+    });
+
+    const result = freeBalance.getFreeBalance({ householdId, month: "2026-03" });
+
+    expect(result.freeBalanceCurrent).toBe("780.00");
+    expect(result.breakdown.current.components.cardInvoiceDue).toBe("220.00");
+    expect(result.breakdown.current.pendingOutflows).toEqual([]);
+  });
 });
