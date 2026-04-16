@@ -590,6 +590,7 @@ async function loadServices() {
       scheduleRepo as any,
       cycleService,
       new FreeBalancePolicy(),
+      invoiceSettlementRepo as any,
     ),
   };
 }

@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import CashflowPage from "../../src/app/foundation/cashflow/page";
 import { AccountsController } from "../../src/modules/accounts/accounts.controller";
@@ -18,15 +18,20 @@ import { CategoriesRepository } from "../../src/modules/categories/categories.re
 import { CategoriesService } from "../../src/modules/categories/categories.service";
 import { ScheduleRepository } from "../../src/modules/scheduling/schedule.repository";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
+import { InvoiceSettlementRepository } from "../../src/modules/invoices/invoice-settlement.repository";
 
 const householdId = "household-main";
 
 describe("free balance dashboard", () => {
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-04-15T12:00:00.000Z"));
+
     const accountsRepo = new AccountsRepository();
     const cardsRepo = new CardsRepository();
     const categoriesRepo = new CategoriesRepository();
@@ -37,6 +42,7 @@ describe("free balance dashboard", () => {
     categoriesRepo.clearAll();
     scheduleRepo.clearAll();
     new TransactionsRepository().clearAll();
+    new InvoiceSettlementRepository().clearAll();
 
     const accounts = new AccountsController(new AccountsService(accountsRepo));
     const cards = new CardsController(new CardsService(cardsRepo));
@@ -50,10 +56,11 @@ describe("free balance dashboard", () => {
   it("shows clean dashboard with semaphore and statement only", async () => {
     const user = userEvent.setup();
     render(React.createElement(CashflowPage));
-    await user.click(screen.getByRole("button", { name: "Ir para proximo mes" }));
     expect(screen.getByRole("tab", { name: "Abr/26", selected: true })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ir para proximo mes" }));
+    expect(screen.getByRole("tab", { name: "Mai/26", selected: true })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Ir para mes anterior" }));
-    expect(screen.getByRole("tab", { name: "Mar/26", selected: true })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Abr/26", selected: true })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
     await user.type(screen.getByLabelText("Descricao da transacao"), "Salario");
@@ -61,6 +68,7 @@ describe("free balance dashboard", () => {
     await user.type(screen.getByLabelText("Valor da transacao"), "3000.00");
     await user.click(screen.getAllByRole("button", { name: "Adicionar lancamento" })[0]!);
     expect(screen.getByRole("button", { name: "Salvando..." })).toBeDisabled();
+    expect(await screen.findByText("Salario")).toBeInTheDocument();
 
     expect(screen.getByLabelText("Semaforo saldo livre")).toBeInTheDocument();
     expect(screen.getByTestId("free-balance-current")).toHaveTextContent("R$");
@@ -93,9 +101,10 @@ describe("free balance dashboard", () => {
     await user.clear(valor);
     await user.type(valor, "1900.00");
     await user.clear(data);
-    await user.type(data, "2026-03-04");
+    await user.type(data, "2026-04-04");
     await user.click(screen.getAllByRole("button", { name: "Adicionar lancamento" })[0]!);
 
+    expect(await screen.findByText("Fatura Visa Casa")).toBeInTheDocument();
     expect(screen.getAllByTestId("free-balance-risk")[0]).toHaveTextContent("Risco");
   });
 });

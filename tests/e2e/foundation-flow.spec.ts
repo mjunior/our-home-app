@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RouteKey } from "../../src/app/routes";
 import { AppShell } from "../../src/components/layout/app-shell";
@@ -13,18 +13,24 @@ import { AccountsRepository } from "../../src/modules/accounts/accounts.reposito
 import { CardsRepository } from "../../src/modules/cards/cards.repository";
 import { CategoriesRepository } from "../../src/modules/categories/categories.repository";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
+import { InvoiceSettlementRepository } from "../../src/modules/invoices/invoice-settlement.repository";
 
 describe("foundation flow", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-04-15T12:00:00.000Z"));
+
     new AccountsRepository().clearAll();
     new CardsRepository().clearAll();
     new CategoriesRepository().clearAll();
     new TransactionsRepository().clearAll();
+    new InvoiceSettlementRepository().clearAll();
     document.documentElement.classList.add("dark");
   });
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     document.body.removeAttribute("data-scroll-locked");
     document.body.style.pointerEvents = "";
   });
@@ -275,7 +281,7 @@ describe("foundation flow", () => {
     await user.selectOptions(screen.getByLabelText("Opcao de destino"), card.id);
     await user.selectOptions(screen.getByLabelText("Categoria da transacao"), category.id);
     await user.clear(screen.getByLabelText("Data da transacao"));
-    await user.type(screen.getByLabelText("Data da transacao"), "2026-03-01");
+    await user.type(screen.getByLabelText("Data da transacao"), "2026-04-01");
     await user.click(screen.getByRole("button", { name: "Adicionar lancamento" }));
 
     expect(account.id).toBeDefined();
@@ -284,7 +290,7 @@ describe("foundation flow", () => {
     await user.click(screen.getByText("Fatura Visa Navegacao"));
 
     expect(screen.getAllByText("Cartoes cadastrados").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Faturas do mes 2026-03").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Faturas do mes 2026-04").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Cinema").length).toBeGreaterThan(0);
 
     await user.click(screen.getAllByText("Cinema")[0]!);

@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import CashflowPage from "../../src/app/foundation/cashflow/page";
 import { AccountsController } from "../../src/modules/accounts/accounts.controller";
@@ -22,6 +22,9 @@ import { ScheduleEngineService } from "../../src/modules/scheduling/schedule-eng
 import { ScheduleManagementService } from "../../src/modules/scheduling/schedule-management.service";
 import { ScheduleRepository } from "../../src/modules/scheduling/schedule.repository";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
+import { TransactionsController } from "../../src/modules/transactions/transactions.controller";
+import { TransactionsService } from "../../src/modules/transactions/transactions.service";
+import { InvoiceSettlementRepository } from "../../src/modules/invoices/invoice-settlement.repository";
 
 const householdId = "household-main";
 
@@ -36,9 +39,13 @@ function getTodayDateInputValue() {
 describe("cashflow flow", () => {
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-04-15T12:00:00.000Z"));
+
     const accountsRepo = new AccountsRepository();
     const cardsRepo = new CardsRepository();
     const categoriesRepo = new CategoriesRepository();
@@ -50,6 +57,7 @@ describe("cashflow flow", () => {
     categoriesRepo.clearAll();
     transactionsRepo.clearAll();
     scheduleRepo.clearAll();
+    new InvoiceSettlementRepository().clearAll();
 
     const accounts = new AccountsController(new AccountsService(accountsRepo));
     const cards = new CardsController(new CardsService(cardsRepo));
@@ -65,11 +73,11 @@ describe("cashflow flow", () => {
     const user = userEvent.setup();
 
     render(React.createElement(CashflowPage));
-    expect(screen.getByRole("tab", { name: "Mar/26", selected: true })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Ir para proximo mes" }));
     expect(screen.getByRole("tab", { name: "Abr/26", selected: true })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ir para proximo mes" }));
+    expect(screen.getByRole("tab", { name: "Mai/26", selected: true })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Ir para mes anterior" }));
-    expect(screen.getByRole("tab", { name: "Mar/26", selected: true })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Abr/26", selected: true })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
     expect(screen.getByLabelText("Data da transacao")).toHaveValue(getTodayDateInputValue());
@@ -87,8 +95,10 @@ describe("cashflow flow", () => {
     await user.clear(screen.getByLabelText("Valor da transacao"));
     await user.type(screen.getByLabelText("Valor da transacao"), "200.00");
     await user.selectOptions(screen.getByLabelText("Destino da transacao"), "card");
+    await user.clear(screen.getByLabelText("Data da transacao"));
+    await user.type(screen.getByLabelText("Data da transacao"), "2026-04-04");
     await user.click(screen.getByRole("button", { name: "Adicionar lancamento" }));
-    expect(await screen.findByText("Fatura Visa Casa")).toBeInTheDocument();
+    expect((await screen.findAllByText("Fatura Visa Casa")).length).toBeGreaterThan(0);
     expect(screen.queryByText("Supermercado cartao")).not.toBeInTheDocument();
     expect(screen.getAllByText("Mercado").length).toBeGreaterThan(0);
     expect(screen.getByText("Entrada")).toBeInTheDocument();
@@ -97,7 +107,7 @@ describe("cashflow flow", () => {
     expect(screen.getByText("Saldo previsto")).toBeInTheDocument();
     expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 6.000,00");
 
-    const invoiceRow = screen.getByText("Fatura Visa Casa").closest("tr");
+    const invoiceRow = screen.getAllByText("Fatura Visa Casa").find((item) => item.closest("tr"))?.closest("tr") ?? null;
     const salaryRow = screen.getByText("Salario").closest("tr");
     expect(invoiceRow).not.toBeNull();
     expect(salaryRow).not.toBeNull();
@@ -114,6 +124,8 @@ describe("cashflow flow", () => {
     expect(screen.getByText("Detalhamento do saldo atual - Mes atual")).toBeInTheDocument();
     expect(screen.getByText("Conta Casa")).toBeInTheDocument();
     expect(screen.queryByText("Reserva Invest")).not.toBeInTheDocument();
+    expect(screen.getByText("Saidas futuras nao pagas")).toBeInTheDocument();
+    expect(screen.getAllByText("Fatura Visa Casa").length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(screen.getByText("Fatura Visa Casa")).toBeInTheDocument();
@@ -128,6 +140,37 @@ describe("cashflow flow", () => {
     await user.click(screen.getAllByRole("button", { name: "Editar lancamento" })[0]!);
     await user.click(screen.getByRole("button", { name: "Excluir" }));
     expect(screen.queryByText("Salario ajustado")).not.toBeInTheDocument();
+  });
+
+  it("lists unpaid current month outflows in the current balance details", async () => {
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+
+    const account = new AccountsController(new AccountsService(accountsRepo)).listAccounts(householdId)[0]!;
+    const category = new CategoriesController(new CategoriesService(categoriesRepo)).listCategories(householdId)[0]!;
+    const transactions = new TransactionsController(new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo));
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Boleto pendente",
+      amount: "123.45",
+      occurredAt: "2026-04-20T12:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+      settlementStatus: "UNPAID",
+    });
+
+    const user = userEvent.setup();
+    render(React.createElement(CashflowPage));
+
+    await user.click(screen.getByRole("button", { name: "Abrir composicao do saldo atual" }));
+
+    expect(screen.getByText("Saidas futuras nao pagas")).toBeInTheDocument();
+    expect(screen.getAllByText("Boleto pendente").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/R\$\s*123[,.]45/).length).toBeGreaterThan(0);
   });
 
   it("creates, edits and deletes investment as linked transfer pair", async () => {
@@ -190,7 +233,7 @@ describe("cashflow flow", () => {
     expect(screen.getByText("Conta Casa")).toBeInTheDocument();
     expect(screen.queryByText("Reserva Invest")).not.toBeInTheDocument();
     expect(screen.getByText("Saldo atual em contas")).toBeInTheDocument();
-    expect(screen.getByText("R$ 1.000,00")).toBeInTheDocument();
+    expect(screen.getAllByText("R$ 1.000,00").length).toBeGreaterThan(0);
   });
 
   it("edits recurring entries only for the selected month", async () => {

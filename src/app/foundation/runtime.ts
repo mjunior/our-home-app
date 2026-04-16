@@ -213,6 +213,7 @@ function createLocalRuntime(): Runtime {
       scheduleRepository,
       new InvoiceCycleService(),
       new FreeBalancePolicy(),
+      invoiceSettlementRepository,
     ),
   );
   const scheduleManagementController = new ScheduleManagementController(

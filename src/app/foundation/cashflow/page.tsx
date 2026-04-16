@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui
 import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
 import { launchConfettiCanvas, playCashRegisterSound, playCheerSound } from "../../../lib/celebration";
-import { formatCurrencyBR, formatMonthLabelBR } from "../../../lib/utils";
+import { formatCurrencyBR, formatMonthLabelBR, getCurrentMonthKeyLocal } from "../../../lib/utils";
 import type { RecurringEditScope } from "../../../modules/scheduling/schedule-management.service";
 import {
   accountsController,
@@ -35,6 +35,13 @@ const breakdownLabels: Record<string, string> = {
   lateCarry: "Atrasos carregados",
 };
 
+const pendingOutflowLabels: Record<string, string> = {
+  ONE_OFF: "Despesa avulsa",
+  INSTALLMENT: "Parcela",
+  RECURRING: "Recorrencia",
+  CARD_INVOICE: "Fatura",
+};
+
 function addMonths(monthKey: string, count: number): string {
   const [year, month] = monthKey.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1 + count, 1));
@@ -55,16 +62,16 @@ export default function CashflowPage() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailMonthKey, setDetailMonthKey] = useState<"current" | "next">("current");
-  const [month, setMonth] = useState("2026-03");
+  const [month, setMonth] = useState(() => getCurrentMonthKeyLocal());
   const [editMode, setEditMode] = useState<"ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT" | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
   const [editingTransferGroupId, setEditingTransferGroupId] = useState<string | null>(null);
-  const [editingSourceMonth, setEditingSourceMonth] = useState<string>("2026-03");
+  const [editingSourceMonth, setEditingSourceMonth] = useState<string>(() => getCurrentMonthKeyLocal());
   const [editKind, setEditKind] = useState<"INCOME" | "EXPENSE">("INCOME");
   const [editDescription, setEditDescription] = useState("");
   const [editAmount, setEditAmount] = useState("");
-  const [editOccurredAt, setEditOccurredAt] = useState("2026-03-01");
+  const [editOccurredAt, setEditOccurredAt] = useState(() => `${getCurrentMonthKeyLocal()}-01`);
   const [editTarget, setEditTarget] = useState<"account" | "card">("account");
   const [editTargetId, setEditTargetId] = useState("");
   const [editInvestmentSourceId, setEditInvestmentSourceId] = useState("");
@@ -622,6 +629,43 @@ export default function CashflowPage() {
                 <div className="mt-2 flex items-center justify-between rounded-xl border border-slate-200 px-2 py-1.5 text-xs dark:border-slate-700">
                   <span className="text-slate-500 dark:text-slate-300">Saldo previsto do mes atual</span>
                   <strong>{formatCurrencyBR(freeBalance.freeBalanceCurrent)}</strong>
+                </div>
+              ) : null}
+              {detailMonthKey === "current" ? (
+                <div className="mt-4 space-y-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold">Saidas futuras nao pagas</h3>
+                    {freeBalance.breakdown.current.pendingOutflows.length > 0 ? (
+                      <strong className="text-sm">
+                        {formatCurrencyBR(
+                          freeBalance.breakdown.current.pendingOutflows
+                            .reduce((acc, item) => acc + Number(item.amount), 0)
+                            .toFixed(2),
+                        )}
+                      </strong>
+                    ) : null}
+                  </div>
+                  {freeBalance.breakdown.current.pendingOutflows.length > 0 ? (
+                    <div className="space-y-1">
+                      {freeBalance.breakdown.current.pendingOutflows.map((item) => (
+                        <div key={item.id} className="row-animate flex items-start justify-between gap-3 rounded-lg px-2 py-1.5 text-xs">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-slate-800 dark:text-slate-100">{item.description}</p>
+                            <p className="text-slate-500 dark:text-slate-300">
+                              {pendingOutflowLabels[item.sourceType] ?? item.sourceType}
+                              {item.accountName ? ` - ${item.accountName}` : ""}
+                              {item.cardName ? ` - ${item.cardName}` : ""}
+                            </p>
+                          </div>
+                          <strong className="shrink-0">{formatCurrencyBR(item.amount)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500 dark:text-slate-300">
+                      Nenhuma saida futura nao paga esta abatendo o saldo previsto deste mes.
+                    </p>
+                  )}
                 </div>
               ) : null}
             </CardContent>

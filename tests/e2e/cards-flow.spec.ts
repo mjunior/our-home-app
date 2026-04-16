@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import CardsPage from "../../src/app/foundation/cards/page";
 import { SnackbarProvider } from "../../src/components/ui/snackbar";
@@ -22,6 +22,7 @@ import { RecurrenceService } from "../../src/modules/scheduling/recurrence.servi
 import { ScheduleEngineService } from "../../src/modules/scheduling/schedule-engine.service";
 import { ScheduleManagementService } from "../../src/modules/scheduling/schedule-management.service";
 import { ScheduleRepository } from "../../src/modules/scheduling/schedule.repository";
+import { InvoiceSettlementRepository } from "../../src/modules/invoices/invoice-settlement.repository";
 import { TransactionsController } from "../../src/modules/transactions/transactions.controller";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
 import { TransactionsService } from "../../src/modules/transactions/transactions.service";
@@ -32,9 +33,13 @@ describe("cards flow", () => {
   afterEach(() => {
     cleanup();
     sessionStorage.clear();
+    vi.useRealTimers();
   });
 
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-04-15T12:00:00.000Z"));
+
     const accountsRepo = new AccountsRepository();
     const cardsRepo = new CardsRepository();
     const categoriesRepo = new CategoriesRepository();
@@ -46,6 +51,7 @@ describe("cards flow", () => {
     categoriesRepo.clearAll();
     transactionsRepo.clearAll();
     scheduleRepo.clearAll();
+    new InvoiceSettlementRepository().clearAll();
 
     const accounts = new AccountsController(new AccountsService(accountsRepo));
     const cards = new CardsController(new CardsService(cardsRepo));
@@ -54,6 +60,89 @@ describe("cards flow", () => {
     accounts.createAccount({ householdId, name: "Conta Casa", type: "CHECKING", openingBalance: "1000.00" });
     cards.createCard({ householdId, name: "Visa Casa", closeDay: 5, dueDay: 12 });
     categories.createCategory({ householdId, name: "Mercado" });
+  });
+
+  it("opens on the current month and selects the unpaid invoice first", async () => {
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+    const settlementsRepo = new InvoiceSettlementRepository();
+
+    const account = new AccountsController(new AccountsService(accountsRepo)).listAccounts(householdId)[0]!;
+    const cards = new CardsController(new CardsService(cardsRepo));
+    const paidCard = cards.listCards(householdId)[0]!;
+    const unpaidCard = cards.createCard({ householdId, name: "Master Casa", closeDay: 5, dueDay: 12 });
+    const category = new CategoriesController(new CategoriesService(categoriesRepo)).listCategories(householdId)[0]!;
+    const transactions = new TransactionsController(new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo));
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra paga",
+      amount: "50.00",
+      occurredAt: "2026-04-01T12:00:00.000Z",
+      creditCardId: paidCard.id,
+      categoryId: category.id,
+    });
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra aberta",
+      amount: "90.00",
+      occurredAt: "2026-04-02T12:00:00.000Z",
+      creditCardId: unpaidCard.id,
+      categoryId: category.id,
+    });
+    settlementsRepo.upsert({
+      householdId,
+      cardId: paidCard.id,
+      dueMonth: "2026-04",
+      paymentAccountId: account.id,
+      paidAt: "2026-04-10T12:00:00.000Z",
+      paidAmount: "50.00",
+    });
+
+    render(React.createElement(CardsPage));
+
+    expect(screen.getByText("Faturas do mes 2026-04")).toBeInTheDocument();
+    expect(await screen.findByText("Detalhe da fatura: Master Casa")).toBeInTheDocument();
+  });
+
+  it("falls back to the first invoice when all current month invoices are paid", async () => {
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+    const settlementsRepo = new InvoiceSettlementRepository();
+
+    const account = new AccountsController(new AccountsService(accountsRepo)).listAccounts(householdId)[0]!;
+    const card = new CardsController(new CardsService(cardsRepo)).listCards(householdId)[0]!;
+    const category = new CategoriesController(new CategoriesService(categoriesRepo)).listCategories(householdId)[0]!;
+    const transactions = new TransactionsController(new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo));
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra paga",
+      amount: "50.00",
+      occurredAt: "2026-04-01T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+    settlementsRepo.upsert({
+      householdId,
+      cardId: card.id,
+      dueMonth: "2026-04",
+      paymentAccountId: account.id,
+      paidAt: "2026-04-10T12:00:00.000Z",
+      paidAmount: "50.00",
+    });
+
+    render(React.createElement(CardsPage));
+
+    expect(screen.getByText("Faturas do mes 2026-04")).toBeInTheDocument();
+    expect(await screen.findByText("Detalhe da fatura: Visa Casa")).toBeInTheDocument();
   });
 
   it("edits recurring invoice entries only for the selected occurrence", async () => {
@@ -79,7 +168,7 @@ describe("cards flow", () => {
       kind: "EXPENSE",
       description: "Streaming",
       amount: "90.00",
-      startMonth: "2026-03",
+      startMonth: "2026-04",
       categoryId: category.id,
       creditCardId: card.id,
     });
@@ -97,8 +186,8 @@ describe("cards flow", () => {
     await user.click(screen.getByRole("button", { name: "Salvar edicao" }));
 
     expect(await screen.findByText(/Streaming promo/)).toBeInTheDocument();
-    expect(scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-03")?.amount).toBe("120.00");
-    expect(scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-04")?.amount).toBe("90.00");
+    expect(scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-04")?.amount).toBe("120.00");
+    expect(scheduleRepo.findInstanceBySourceMonth("RECURRING", rule.id, "2026-05")?.amount).toBe("90.00");
     expect(scheduleRepo.findRecurringRuleById(rule.id)?.active).toBe(true);
   });
 
@@ -117,7 +206,7 @@ describe("cards flow", () => {
       kind: "EXPENSE",
       description: "Compra antiga",
       amount: "50.00",
-      occurredAt: "2026-03-01T12:00:00.000Z",
+      occurredAt: "2026-04-01T12:00:00.000Z",
       creditCardId: card.id,
       categoryId: category.id,
     });
@@ -126,7 +215,7 @@ describe("cards flow", () => {
       kind: "EXPENSE",
       description: "Compra recente",
       amount: "90.00",
-      occurredAt: "2026-03-04T12:00:00.000Z",
+      occurredAt: "2026-04-04T12:00:00.000Z",
       creditCardId: card.id,
       categoryId: category.id,
     });
@@ -163,7 +252,7 @@ describe("cards flow", () => {
       kind: "EXPENSE",
       description: "Compra avulsa",
       amount: "50.00",
-      occurredAt: "2026-03-02T12:00:00.000Z",
+      occurredAt: "2026-04-02T12:00:00.000Z",
       creditCardId: card.id,
       categoryId: category.id,
     });
@@ -181,7 +270,7 @@ describe("cards flow", () => {
       kind: "EXPENSE",
       description: "Streaming",
       amount: "90.00",
-      startMonth: "2026-03",
+      startMonth: "2026-04",
       categoryId: category.id,
       creditCardId: card.id,
     });
@@ -199,7 +288,7 @@ describe("cards flow", () => {
 
     await user.click(screen.getByText("Compra avulsa"));
     expect(screen.getByText("Editar item da fatura")).toBeInTheDocument();
-    expect(screen.getByLabelText("Editar data da transacao")).toHaveValue("2026-03-02");
+    expect(screen.getByLabelText("Editar data da transacao")).toHaveValue("2026-04-02");
   });
 
   it("adds a new expense directly to the selected card", async () => {
@@ -218,7 +307,7 @@ describe("cards flow", () => {
       kind: "EXPENSE",
       description: "Compra base",
       amount: "50.00",
-      occurredAt: "2026-03-01T12:00:00.000Z",
+      occurredAt: "2026-04-01T12:00:00.000Z",
       creditCardId: card.id,
       categoryId: category.id,
     });
@@ -254,7 +343,7 @@ describe("cards flow", () => {
       kind: "EXPENSE",
       description: "Compra base",
       amount: "100.00",
-      occurredAt: "2026-03-01T12:00:00.000Z",
+      occurredAt: "2026-04-01T12:00:00.000Z",
       creditCardId: card.id,
       categoryId: category.id,
     });
@@ -263,13 +352,13 @@ describe("cards flow", () => {
 
     await user.click(await screen.findByRole("button", { name: `Reajustar fatura ${card.name}` }));
     expect(screen.getByText("Reajustar fatura")).toBeInTheDocument();
-    expect(screen.getByText(`${card.name} - Mar/26`)).toBeInTheDocument();
+    expect(screen.getByText(`${card.name} - Abr/26`)).toBeInTheDocument();
     expect(screen.getByText(/Total atual no app/)).toHaveTextContent(/R\$\s*100[,.]00/);
 
     await user.clear(screen.getByLabelText("Valor real da fatura"));
     await user.type(screen.getByLabelText("Valor real da fatura"), "13500");
     await user.clear(screen.getByLabelText("Data do reajuste"));
-    await user.type(screen.getByLabelText("Data do reajuste"), "2026-03-15");
+    await user.type(screen.getByLabelText("Data do reajuste"), "2026-04-15");
     await user.click(screen.getByRole("button", { name: "Salvar reajuste" }));
 
     expect(await screen.findByText("Reajuste de fatura lancado com sucesso.")).toBeInTheDocument();
@@ -277,7 +366,7 @@ describe("cards flow", () => {
     expect(await screen.findByText("REAJUSTE")).toBeInTheDocument();
 
     const adjustment = transactions
-      .listTransactionsByMonth({ householdId, month: "2026-03", creditCardId: card.id })
+      .listTransactionsByMonth({ householdId, month: "2026-04", creditCardId: card.id })
       .find((item) => item.description === "REAJUSTE");
 
     expect(adjustment).toMatchObject({
@@ -285,7 +374,7 @@ describe("cards flow", () => {
       kind: "EXPENSE",
       amount: "35.00",
       creditCardId: card.id,
-      invoiceMonthKey: "2026-03",
+      invoiceMonthKey: "2026-04",
       settlementStatus: null,
     });
   });

@@ -9,7 +9,14 @@ import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
 import { sumMoney } from "../../../domain/shared/money";
 import { launchConfettiCanvas, playCheerSound } from "../../../lib/celebration";
-import { currencyInputToDecimal, formatCurrencyBR, formatCurrencyInputBRL, formatDateShortBR, formatMonthLabelBR } from "../../../lib/utils";
+import {
+  currencyInputToDecimal,
+  formatCurrencyBR,
+  formatCurrencyInputBRL,
+  formatDateShortBR,
+  formatMonthLabelBR,
+  getCurrentMonthKeyLocal,
+} from "../../../lib/utils";
 import type { RecurringEditScope } from "../../../modules/scheduling/schedule-management.service";
 import {
   accountsController,
@@ -124,7 +131,7 @@ export default function CardsPage() {
   const [adjustmentSheetOpen, setAdjustmentSheetOpen] = useState(false);
   const [adjustmentTarget, setAdjustmentTarget] = useState<InvoiceAdjustmentTarget | null>(null);
   const [adjustmentRealTotal, setAdjustmentRealTotal] = useState("");
-  const [adjustmentDueMonth, setAdjustmentDueMonth] = useState("2026-03");
+  const [adjustmentDueMonth, setAdjustmentDueMonth] = useState(() => getCurrentMonthKeyLocal());
   const [adjustmentOccurredAt, setAdjustmentOccurredAt] = useState(getTodayDateInputValue());
   const [navigationContext] = useState<{ cardId: string; dueMonth: string } | null>(() => {
     const raw = sessionStorage.getItem("cards:navigation-context");
@@ -144,16 +151,16 @@ export default function CardsPage() {
     }
   });
 
-  const [selectedDueMonth, setSelectedDueMonth] = useState(() => navigationContext?.dueMonth ?? "2026-03");
+  const [selectedDueMonth, setSelectedDueMonth] = useState(() => navigationContext?.dueMonth ?? getCurrentMonthKeyLocal());
   const [selectedInvoiceCardId, setSelectedInvoiceCardId] = useState(() => navigationContext?.cardId ?? "");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editMode, setEditMode] = useState<EditMode>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
-  const [editingSourceMonth, setEditingSourceMonth] = useState("2026-03");
+  const [editingSourceMonth, setEditingSourceMonth] = useState(() => getCurrentMonthKeyLocal());
   const [editDescription, setEditDescription] = useState("");
   const [editAmount, setEditAmount] = useState("");
-  const [editOccurredAt, setEditOccurredAt] = useState("2026-03-01");
+  const [editOccurredAt, setEditOccurredAt] = useState(() => `${getCurrentMonthKeyLocal()}-01`);
   const [editCategoryId, setEditCategoryId] = useState("");
   const [deleteScope, setDeleteScope] = useState<"CURRENT_AND_FUTURE" | "ALL">("CURRENT_AND_FUTURE");
   const [editRecurringScope, setEditRecurringScope] = useState<RecurringEditScope>("THIS_ONLY");
@@ -178,7 +185,7 @@ export default function CardsPage() {
     }
 
     if (!selectedInvoiceCardId || !monthlyInvoices.cards.some((item) => item.cardId === selectedInvoiceCardId)) {
-      setSelectedInvoiceCardId(monthlyInvoices.cards[0]!.cardId);
+      setSelectedInvoiceCardId((monthlyInvoices.cards.find((item) => !item.paid) ?? monthlyInvoices.cards[0]!).cardId);
     }
   }, [monthlyInvoices.cards, selectedInvoiceCardId]);
 

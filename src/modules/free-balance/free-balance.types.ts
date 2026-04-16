@@ -25,6 +25,21 @@ export interface FreeBalanceMonthComponents {
   lateCarry: string;
 }
 
+export type FreeBalancePendingOutflowSource = "ONE_OFF" | "INSTALLMENT" | "RECURRING" | "CARD_INVOICE";
+
+export interface FreeBalancePendingOutflow {
+  id: string;
+  description: string;
+  sourceType: FreeBalancePendingOutflowSource;
+  amount: string;
+  month: string;
+  occurredAt: string | null;
+  accountId: string | null;
+  accountName: string | null;
+  cardId: string | null;
+  cardName: string | null;
+}
+
 export interface FreeBalanceMonthBreakdown {
   month: string;
   startingBalance: string;
@@ -35,6 +50,7 @@ export interface FreeBalanceMonthBreakdown {
   totalSaidas: string;
   freeBalance: string;
   components: FreeBalanceMonthComponents;
+  pendingOutflows: FreeBalancePendingOutflow[];
 }
 
 export interface FreeBalanceResult {

@@ -9,10 +9,12 @@ import { TransactionsRepository } from "../transactions/transactions.repository"
 import { FreeBalancePolicy } from "./free-balance.policy";
 import type {
   FreeBalanceMonthBreakdown,
+  FreeBalancePendingOutflow,
   FreeBalanceResult,
   FreeBalanceTopDriver,
   GetFreeBalanceInput,
 } from "./free-balance.types";
+import type { InvoiceSettlementRecord } from "../invoices/invoice-settlement.repository";
 
 const inputSchema = z.object({
   householdId: z.string().min(1),
@@ -39,6 +41,8 @@ function sumDecimals(values: Decimal[]): Decimal {
 
 interface CardCharge {
   monthKey: string;
+  cardId: string;
+  cardName: string;
   amount: Decimal;
 }
 
@@ -55,6 +59,7 @@ export class FreeBalanceService {
     private readonly scheduleRepository: ScheduleRepository,
     private readonly cycleService: InvoiceCycleService,
     private readonly policy: FreeBalancePolicy,
+    private readonly invoiceSettlementRepository?: { listByHousehold(householdId: string): InvoiceSettlementRecord[] },
   ) {}
 
   getFreeBalance(input: GetFreeBalanceInput): FreeBalanceResult {
@@ -75,6 +80,7 @@ export class FreeBalanceService {
     );
 
     const cardCharges = this.collectCardCharges(parsed.householdId, transactions, scheduleInstances);
+    const invoiceSettlements = this.invoiceSettlementRepository?.listByHousehold(parsed.householdId) ?? [];
     const missingData = this.collectMissingData(parsed.householdId, currentMonth, nextMonth, transactions, scheduleInstances, checkingAccountIds);
     const confidence = missingData.length > 0 ? "LOW" : "HIGH";
 
@@ -97,6 +103,15 @@ export class FreeBalanceService {
       scheduleInstances,
       cardCharges,
       checkingAccountIds,
+    );
+    currentComputation.breakdown.pendingOutflows = this.collectPendingOutflows(
+      parsed.householdId,
+      currentMonth,
+      transactions,
+      scheduleInstances,
+      cardCharges,
+      checkingAccountIds,
+      invoiceSettlements,
     );
 
     const carryToNext = new Decimal(currentComputation.breakdown.freeBalance).lessThan(0)
@@ -244,7 +259,7 @@ export class FreeBalanceService {
         item.invoiceDueDate !== null
           ? monthFromIso(item.invoiceDueDate)
           : monthFromIso(this.cycleService.resolveExpenseCycle(item.occurredAt, card.closeDay, card.dueDay).dueDate);
-      charges.push({ monthKey: dueMonth, amount: new Decimal(item.amount) });
+      charges.push({ monthKey: dueMonth, cardId: card.id, cardName: card.name, amount: new Decimal(item.amount) });
     }
 
     for (const item of scheduleInstances) {
@@ -252,10 +267,115 @@ export class FreeBalanceService {
         continue;
       }
 
-      charges.push({ monthKey: item.monthKey, amount: new Decimal(item.amount) });
+      const card = this.cardsRepository.findById(item.creditCardId);
+      if (!card) {
+        continue;
+      }
+
+      charges.push({ monthKey: item.monthKey, cardId: card.id, cardName: card.name, amount: new Decimal(item.amount) });
     }
 
     return charges;
+  }
+
+  private collectPendingOutflows(
+    householdId: string,
+    month: string,
+    transactions: ReturnType<TransactionsRepository["listByHousehold"]>,
+    scheduleInstances: ReturnType<ScheduleRepository["listInstancesByHousehold"]>,
+    cardCharges: CardCharge[],
+    checkingAccountIds: Set<string>,
+    invoiceSettlements: InvoiceSettlementRecord[],
+  ): FreeBalancePendingOutflow[] {
+    const accountsById = new Map(this.accountsRepository.listByHousehold(householdId).map((item) => [item.id, item]));
+    const settlements = new Set(
+      invoiceSettlements
+        .filter((item) => item.householdId === householdId && item.dueMonth === month)
+        .map((item) => item.cardId),
+    );
+
+    const accountOutflows: FreeBalancePendingOutflow[] = transactions
+      .filter(
+        (item) =>
+          item.householdId === householdId &&
+          item.kind === "EXPENSE" &&
+          item.accountId !== null &&
+          checkingAccountIds.has(item.accountId) &&
+          item.transferGroupId === null &&
+          item.settlementStatus === "UNPAID" &&
+          monthFromIso(item.occurredAt) === month,
+      )
+      .map((item) => {
+        const account = item.accountId ? accountsById.get(item.accountId) : undefined;
+        return {
+          id: `transaction:${item.id}`,
+          description: item.description,
+          sourceType: "ONE_OFF" as const,
+          amount: new Decimal(item.amount).toFixed(2),
+          month,
+          occurredAt: item.occurredAt,
+          accountId: item.accountId,
+          accountName: account?.name ?? null,
+          cardId: null,
+          cardName: null,
+        };
+      });
+
+    const scheduledOutflows: FreeBalancePendingOutflow[] = scheduleInstances
+      .filter(
+        (item) =>
+          item.householdId === householdId &&
+          item.monthKey === month &&
+          item.kind === "EXPENSE" &&
+          item.accountId !== null &&
+          checkingAccountIds.has(item.accountId) &&
+          item.settlementStatus === "UNPAID",
+      )
+      .map((item) => {
+        const account = item.accountId ? accountsById.get(item.accountId) : undefined;
+        return {
+          id: `schedule:${item.id}`,
+          description: item.description,
+          sourceType: item.sourceType,
+          amount: new Decimal(item.amount).toFixed(2),
+          month,
+          occurredAt: item.occurredAt,
+          accountId: item.accountId,
+          accountName: account?.name ?? null,
+          cardId: null,
+          cardName: null,
+        };
+      });
+
+    const invoiceChargesByCard = new Map<string, { cardName: string; amount: Decimal }>();
+    for (const charge of cardCharges.filter((item) => item.monthKey === month)) {
+      const current = invoiceChargesByCard.get(charge.cardId) ?? { cardName: charge.cardName, amount: new Decimal(0) };
+      current.amount = current.amount.plus(charge.amount);
+      invoiceChargesByCard.set(charge.cardId, current);
+    }
+
+    const invoiceOutflows = Array.from(invoiceChargesByCard.entries())
+      .filter(([cardId, value]) => value.amount.greaterThan(0) && !settlements.has(cardId))
+      .map(([cardId, value]) => ({
+        id: `invoice:${cardId}:${month}`,
+        description: `Fatura ${value.cardName}`,
+        sourceType: "CARD_INVOICE" as const,
+        amount: value.amount.toFixed(2),
+        month,
+        occurredAt: null,
+        accountId: null,
+        accountName: null,
+        cardId,
+        cardName: value.cardName,
+      }));
+
+    return [...accountOutflows, ...scheduledOutflows, ...invoiceOutflows].sort((a, b) => {
+      const dateDiff = (a.occurredAt ?? `${a.month}-99`).localeCompare(b.occurredAt ?? `${b.month}-99`);
+      if (dateDiff !== 0) {
+        return dateDiff;
+      }
+      return a.description.localeCompare(b.description, "pt-BR");
+    });
   }
 
   private collectMissingData(
@@ -437,6 +557,7 @@ export class FreeBalanceService {
           recurrences: recurrences.toFixed(2),
           lateCarry: lateCarry.toFixed(2),
         },
+        pendingOutflows: [],
       },
       driverSeeds,
     };

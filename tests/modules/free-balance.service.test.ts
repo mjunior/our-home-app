@@ -12,6 +12,7 @@ import { CategoriesService } from "../../src/modules/categories/categories.servi
 import { FreeBalancePolicy } from "../../src/modules/free-balance/free-balance.policy";
 import { FreeBalanceService } from "../../src/modules/free-balance/free-balance.service";
 import { InvoiceCycleService } from "../../src/modules/invoices/invoice-cycle.service";
+import { InvoiceSettlementRepository } from "../../src/modules/invoices/invoice-settlement.repository";
 import { ScheduleRepository } from "../../src/modules/scheduling/schedule.repository";
 import { TransactionsController } from "../../src/modules/transactions/transactions.controller";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
@@ -24,6 +25,7 @@ const cardsRepo = new CardsRepository();
 const categoriesRepo = new CategoriesRepository();
 const transactionsRepo = new TransactionsRepository();
 const scheduleRepo = new ScheduleRepository();
+const invoiceSettlementRepo = new InvoiceSettlementRepository();
 
 const accounts = new AccountsController(new AccountsService(accountsRepo));
 const cards = new CardsController(new CardsService(cardsRepo));
@@ -39,6 +41,7 @@ const freeBalance = new FreeBalanceService(
   scheduleRepo,
   new InvoiceCycleService(),
   new FreeBalancePolicy(),
+  invoiceSettlementRepo,
 );
 
 describe("free balance service", () => {
@@ -48,6 +51,7 @@ describe("free balance service", () => {
     categoriesRepo.clearAll();
     transactionsRepo.clearAll();
     scheduleRepo.clearAll();
+    invoiceSettlementRepo.clearAll();
   });
 
   it("computes current and next month with explainable positive capacity", () => {
@@ -221,5 +225,128 @@ describe("free balance service", () => {
     expect(result.breakdown.current.totalSaidas).toBe("500.00");
     expect(result.breakdown.current.components.oneOffExpenses).toBe("200.00");
     expect(result.breakdown.current.components.investments).toBe("300.00");
+  });
+
+  it("lists unpaid current month account expenses as pending outflows", () => {
+    const account = accounts.createAccount({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const category = categories.createCategory({ householdId, name: "Casa" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Boleto pendente",
+      amount: "120.00",
+      occurredAt: "2026-03-10T12:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+      settlementStatus: "UNPAID",
+    });
+
+    const result = freeBalance.getFreeBalance({ householdId, month: "2026-03" });
+
+    expect(result.freeBalanceCurrent).toBe("880.00");
+    expect(result.breakdown.current.pendingOutflows).toMatchObject([
+      {
+        description: "Boleto pendente",
+        sourceType: "ONE_OFF",
+        amount: "120.00",
+        accountName: "Conta Principal",
+      },
+    ]);
+  });
+
+  it("does not list paid account expenses as pending outflows", () => {
+    const account = accounts.createAccount({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const category = categories.createCategory({ householdId, name: "Casa" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Boleto pago",
+      amount: "120.00",
+      occurredAt: "2026-03-10T12:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+      settlementStatus: "PAID",
+    });
+
+    const result = freeBalance.getFreeBalance({ householdId, month: "2026-03" });
+
+    expect(result.breakdown.current.pendingOutflows).toEqual([]);
+  });
+
+  it("lists unpaid current month card invoices as pending outflows", () => {
+    accounts.createAccount({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const card = cards.createCard({ householdId, name: "Visa Casa", closeDay: 5, dueDay: 12 });
+    const category = categories.createCategory({ householdId, name: "Cartao" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra cartao",
+      amount: "220.00",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    const result = freeBalance.getFreeBalance({ householdId, month: "2026-03" });
+
+    expect(result.breakdown.current.pendingOutflows).toMatchObject([
+      {
+        description: "Fatura Visa Casa",
+        sourceType: "CARD_INVOICE",
+        amount: "220.00",
+        cardName: "Visa Casa",
+      },
+    ]);
+  });
+
+  it("does not list settled current month card invoices as pending outflows", () => {
+    const account = accounts.createAccount({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const card = cards.createCard({ householdId, name: "Visa Casa", closeDay: 5, dueDay: 12 });
+    const category = categories.createCategory({ householdId, name: "Cartao" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra cartao",
+      amount: "220.00",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+    invoiceSettlementRepo.upsert({
+      householdId,
+      cardId: card.id,
+      dueMonth: "2026-03",
+      paymentAccountId: account.id,
+      paidAt: "2026-03-12T12:00:00.000Z",
+      paidAmount: "220.00",
+    });
+
+    const result = freeBalance.getFreeBalance({ householdId, month: "2026-03" });
+
+    expect(result.breakdown.current.pendingOutflows).toEqual([]);
   });
 });
