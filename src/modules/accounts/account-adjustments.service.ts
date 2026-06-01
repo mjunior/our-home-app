@@ -10,6 +10,7 @@ const accountAdjustmentInputSchema = z.object({
   householdId: z.string().min(1),
   accountId: z.string().min(1),
   realBalance: z.string().min(1),
+  comparisonBalance: z.string().min(1).optional(),
   month: z.string().regex(/^\d{4}-\d{2}$/),
   occurredAt: z.string().datetime(),
 });
@@ -18,6 +19,7 @@ export interface CreateAccountAdjustmentInput {
   householdId: string;
   accountId: string;
   realBalance: string;
+  comparisonBalance?: string;
   month: string;
   occurredAt: string;
 }
@@ -46,7 +48,7 @@ export class AccountAdjustmentsService {
       householdId: parsed.householdId,
       accountId: parsed.accountId,
     });
-    const previousBalance = new Decimal(snapshot.balance);
+    const previousBalance = new Decimal(parsed.comparisonBalance ?? snapshot.balance);
     const realBalance = new Decimal(parsed.realBalance);
     const difference = realBalance.minus(previousBalance);
     if (difference.isZero()) {

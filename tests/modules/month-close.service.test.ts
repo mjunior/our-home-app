@@ -132,7 +132,6 @@ describe("month close service", () => {
       month: "2026-04",
       realCardInvoiceTotals: {
         [aprilCard.id]: "120.00",
-        [mayCard.id]: "1.00",
       },
     });
 
@@ -224,5 +223,190 @@ describe("month close service", () => {
       accountId: checking.id,
     });
     expect(transactionsRepo.listByHousehold(householdId).filter((item) => item.description === "REAJUSTE")).toHaveLength(1);
+  });
+
+  it("previews account differences from month-end balances without future paid transactions", () => {
+    const checking = accountsService.create({
+      householdId,
+      name: "Conta Corrente",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const category = categoriesRepo.create({ householdId, name: "Salario", normalized: "salario" });
+    transactionsRepo.create({
+      householdId,
+      kind: "INCOME",
+      description: "Salario abril",
+      amount: "200.00",
+      occurredAt: "2026-04-15T12:00:00.000Z",
+      accountId: checking.id,
+      creditCardId: null,
+      categoryId: category.id,
+      invoiceMonthKey: null,
+      invoiceDueDate: null,
+      settlementStatus: "PAID",
+      transferGroupId: null,
+    });
+    transactionsRepo.create({
+      householdId,
+      kind: "EXPENSE",
+      description: "Despesa futura",
+      amount: "300.00",
+      occurredAt: "2026-05-01T12:00:00.000Z",
+      accountId: checking.id,
+      creditCardId: null,
+      categoryId: category.id,
+      invoiceMonthKey: null,
+      invoiceDueDate: null,
+      settlementStatus: "PAID",
+      transferGroupId: null,
+    });
+
+    const preview = monthCloseService.previewCloseMonth({
+      householdId,
+      month: "2026-04",
+      realAccountBalances: {
+        [checking.id]: "1250.00",
+      },
+    });
+
+    expect(preview.accounts[0]).toMatchObject({
+      accountId: checking.id,
+      appBalance: "1200.00",
+      realBalance: "1250.00",
+      difference: "50.00",
+      willCreateAdjustment: true,
+    });
+  });
+
+  it("confirms account adjustments from the month-end difference instead of the current balance", () => {
+    const checking = accountsService.create({
+      householdId,
+      name: "Conta Corrente",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+    const category = categoriesRepo.create({ householdId, name: "Movimentos", normalized: "movimentos" });
+    transactionsRepo.create({
+      householdId,
+      kind: "INCOME",
+      description: "Salario abril",
+      amount: "200.00",
+      occurredAt: "2026-04-15T12:00:00.000Z",
+      accountId: checking.id,
+      creditCardId: null,
+      categoryId: category.id,
+      invoiceMonthKey: null,
+      invoiceDueDate: null,
+      settlementStatus: "PAID",
+      transferGroupId: null,
+    });
+    transactionsRepo.create({
+      householdId,
+      kind: "EXPENSE",
+      description: "Despesa futura",
+      amount: "300.00",
+      occurredAt: "2026-05-01T12:00:00.000Z",
+      accountId: checking.id,
+      creditCardId: null,
+      categoryId: category.id,
+      invoiceMonthKey: null,
+      invoiceDueDate: null,
+      settlementStatus: "PAID",
+      transferGroupId: null,
+    });
+
+    const result = monthCloseService.confirmCloseMonth({
+      householdId,
+      month: "2026-04",
+      realAccountBalances: {
+        [checking.id]: "1250.00",
+      },
+    });
+
+    expect(result.applied.accountAdjustments[0].result).toMatchObject({
+      previousBalance: "1200.00",
+      realBalance: "1250.00",
+      difference: "50.00",
+    });
+    expect(result.applied.accountAdjustments[0].result.transaction).toMatchObject({
+      kind: "INCOME",
+      amount: "50.00",
+      accountId: checking.id,
+      occurredAt: "2026-04-30T12:00:00.000Z",
+    });
+  });
+
+  it("previews and confirms a zero-total card invoice into a non-zero adjustment", () => {
+    const card = cardsService.create({ householdId, name: "Cartao sem lancamentos", closeDay: 5, dueDay: 12 });
+
+    const result = monthCloseService.confirmCloseMonth({
+      householdId,
+      month: "2026-04",
+      realCardInvoiceTotals: {
+        [card.id]: "35.00",
+      },
+    });
+
+    expect(result.preview.cardInvoices).toEqual([
+      {
+        cardId: card.id,
+        cardName: "Cartao sem lancamentos",
+        appTotal: "0.00",
+        realTotal: "35.00",
+        difference: "35.00",
+        willCreateAdjustment: true,
+      },
+    ]);
+    expect(result.applied.cardInvoiceAdjustments).toHaveLength(1);
+    expect(result.applied.cardInvoiceAdjustments[0].result.transaction).toMatchObject({
+      householdId,
+      kind: "EXPENSE",
+      amount: "35.00",
+      creditCardId: card.id,
+      invoiceMonthKey: "2026-04",
+      invoiceDueDate: "2026-04-12T00:00:00.000Z",
+      occurredAt: "2026-04-30T12:00:00.000Z",
+    });
+  });
+
+  it("applies non-zero card invoice adjustments through month close", () => {
+    const card = cardsService.create({ householdId, name: "Visa", closeDay: 5, dueDay: 12 });
+    const category = categoriesRepo.create({ householdId, name: "Compras", normalized: "compras" });
+    transactionsRepo.create({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra",
+      amount: "100.00",
+      occurredAt: "2026-04-01T12:00:00.000Z",
+      accountId: null,
+      creditCardId: card.id,
+      categoryId: category.id,
+      invoiceMonthKey: "2026-04",
+      invoiceDueDate: "2026-04-12T00:00:00.000Z",
+      settlementStatus: null,
+      transferGroupId: null,
+    });
+
+    const result = monthCloseService.confirmCloseMonth({
+      householdId,
+      month: "2026-04",
+      realCardInvoiceTotals: {
+        [card.id]: "125.00",
+      },
+    });
+
+    expect(result.applied.cardInvoiceAdjustments).toHaveLength(1);
+    expect(result.applied.cardInvoiceAdjustments[0].result).toMatchObject({
+      previousInvoiceTotal: "100.00",
+      realInvoiceTotal: "125.00",
+      difference: "25.00",
+    });
+    expect(result.applied.cardInvoiceAdjustments[0].result.transaction).toMatchObject({
+      kind: "EXPENSE",
+      amount: "25.00",
+      creditCardId: card.id,
+      invoiceMonthKey: "2026-04",
+    });
   });
 });

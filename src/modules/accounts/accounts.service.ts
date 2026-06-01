@@ -76,6 +76,21 @@ interface AccountBalanceRow extends AccountGoalSnapshot {
   balance: string;
 }
 
+export interface ConsolidatedBalance {
+  amount: string;
+  byType: { CHECKING: string; INVESTMENT: string };
+  accounts: Array<{
+    id: string;
+    name: string;
+    type: "CHECKING" | "INVESTMENT";
+    balance: string;
+    goalAmount: string | null;
+    goalProgressPercent: number | null;
+    remainingToGoal: string | null;
+    goalReached: boolean;
+  }>;
+}
+
 export interface AccountBalanceSnapshot {
   account: AccountRecord;
   balance: string;
@@ -176,19 +191,21 @@ export class AccountsService {
     };
   }
 
-  private buildNetByAccountId(householdId: string): Map<string, number> {
+  private buildNetByAccountId(householdId: string, untilMonth?: string): Map<string, number> {
     const transactions = this.transactionsRepository?.listByHousehold(householdId) ?? [];
     const netByAccountId = new Map<string, number>();
 
     for (const item of transactions) {
       if (!item.accountId) continue;
       if ((item.settlementStatus ?? "PAID") !== "PAID") continue;
+      if (untilMonth && item.occurredAt.slice(0, 7) > untilMonth) continue;
       const signed = item.kind === "INCOME" ? Number(item.amount) : Number(item.amount) * -1;
       netByAccountId.set(item.accountId, (netByAccountId.get(item.accountId) ?? 0) + signed);
     }
 
     const settlements = this.invoiceSettlementRepository?.listByHousehold(householdId) ?? [];
     for (const settlement of settlements) {
+      if (untilMonth && settlement.paidAt.slice(0, 7) > untilMonth) continue;
       netByAccountId.set(
         settlement.paymentAccountId,
         (netByAccountId.get(settlement.paymentAccountId) ?? 0) - Number(settlement.paidAmount),
@@ -199,6 +216,7 @@ export class AccountsService {
     for (const instance of scheduledInstances) {
       if (!instance.accountId) continue;
       if ((instance.settlementStatus ?? "PAID") !== "PAID") continue;
+      if (untilMonth && instance.occurredAt.slice(0, 7) > untilMonth) continue;
       const signed = instance.kind === "INCOME" ? Number(instance.amount) : Number(instance.amount) * -1;
       netByAccountId.set(instance.accountId, (netByAccountId.get(instance.accountId) ?? 0) + signed);
     }
@@ -206,8 +224,8 @@ export class AccountsService {
     return netByAccountId;
   }
 
-  private buildAccountBalanceRows(householdId: string): AccountBalanceRow[] {
-    const netByAccountId = this.buildNetByAccountId(householdId);
+  private buildAccountBalanceRows(householdId: string, untilMonth?: string): AccountBalanceRow[] {
+    const netByAccountId = this.buildNetByAccountId(householdId, untilMonth);
 
     return this.list(householdId).map((item) => {
       const opening = Number(item.openingBalance);
@@ -228,21 +246,8 @@ export class AccountsService {
     });
   }
 
-  consolidatedBalance(householdId: string): {
-    amount: string;
-    byType: { CHECKING: string; INVESTMENT: string };
-    accounts: Array<{
-      id: string;
-      name: string;
-      type: "CHECKING" | "INVESTMENT";
-      balance: string;
-      goalAmount: string | null;
-      goalProgressPercent: number | null;
-      remainingToGoal: string | null;
-      goalReached: boolean;
-    }>;
-  } {
-    const accountRows = this.buildAccountBalanceRows(householdId);
+  private buildConsolidatedBalance(householdId: string, untilMonth?: string): ConsolidatedBalance {
+    const accountRows = this.buildAccountBalanceRows(householdId, untilMonth);
 
     const total = accountRows.reduce((acc, item) => acc + Number(item.balance), 0);
     const checking = accountRows
@@ -260,6 +265,14 @@ export class AccountsService {
       },
       accounts: accountRows,
     };
+  }
+
+  consolidatedBalance(householdId: string): ConsolidatedBalance {
+    return this.buildConsolidatedBalance(householdId);
+  }
+
+  consolidatedBalanceAtMonthEnd(householdId: string, month: string): ConsolidatedBalance {
+    return this.buildConsolidatedBalance(householdId, month);
   }
 
   clearAll() {

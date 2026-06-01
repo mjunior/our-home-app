@@ -91,7 +91,7 @@ export class MonthCloseService {
     const realCardInvoiceTotals = parsed.realCardInvoiceTotals ?? {};
 
     const accounts = this.accountsService
-      .consolidatedBalance(parsed.householdId)
+      .consolidatedBalanceAtMonthEnd(parsed.householdId, parsed.month)
       .accounts.filter((account) => account.type === "CHECKING")
       .filter((account) => Object.prototype.hasOwnProperty.call(realAccountBalances, account.id))
       .map((account): MonthCloseAccountRow => {
@@ -107,11 +107,11 @@ export class MonthCloseService {
         };
       });
 
-    const due = this.invoicesService.getDueObligationsByMonth({
+    const monthlyInvoices = this.invoicesService.getMonthlyInvoices({
       householdId: parsed.householdId,
-      dueMonth: parsed.month,
+      month: parsed.month,
     });
-    const cardInvoices = due.cards
+    const cardInvoices = monthlyInvoices.cards
       .filter((card) => Object.prototype.hasOwnProperty.call(realCardInvoiceTotals, card.cardId))
       .map((card): MonthCloseCardInvoiceRow => {
         const realTotal = new Decimal(realCardInvoiceTotals[card.cardId] ?? "0").toFixed(2);
@@ -145,6 +145,7 @@ export class MonthCloseService {
           householdId: input.householdId,
           accountId: row.accountId,
           realBalance: row.realBalance,
+          comparisonBalance: row.appBalance,
           month: preview.month,
           occurredAt: preview.adjustmentDate,
         }),
