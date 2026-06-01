@@ -48,6 +48,9 @@ const apiState = {
   householdCount: 0,
 };
 
+let transactionCreateCallCount = 0;
+let transactionCreateFailOnCall = 0;
+
 function decimal(value: string) {
   return { toString: () => value };
 }
@@ -132,6 +135,10 @@ vi.mock("../../src/modules/shared/persistence/prisma", () => {
         }),
       ),
       create: vi.fn(async ({ data }: any) => {
+        transactionCreateCallCount += 1;
+        if (transactionCreateFailOnCall > 0 && transactionCreateCallCount === transactionCreateFailOnCall) {
+          throw new Error("TRANSACTION_CREATE_FAILED");
+        }
         const created = {
           id: `tx-${apiState.transactions.length + 1}`,
           ...data,
@@ -178,11 +185,20 @@ vi.mock("../../src/modules/shared/persistence/prisma", () => {
       }),
     },
     $transaction: vi.fn(async (callback: any) => {
+      const snapshot = {
+        users: apiState.users.slice(),
+        accounts: apiState.accounts.slice(),
+        cards: apiState.cards.slice(),
+        categories: apiState.categories.slice(),
+        transactions: apiState.transactions.slice(),
+        invoiceSettlements: apiState.invoiceSettlements.slice(),
+      };
       const tx = {
         household: prisma.household,
         account: prisma.account,
         creditCard: prisma.creditCard,
         category: prisma.category,
+        transaction: prisma.transaction,
         user: {
           create: vi.fn(async ({ data }: any) => {
             const created = { id: `user-${apiState.users.length + 1}`, ...data };
@@ -191,7 +207,17 @@ vi.mock("../../src/modules/shared/persistence/prisma", () => {
           }),
         },
       };
-      return callback(tx);
+      try {
+        return await callback(tx);
+      } catch (error) {
+        apiState.users = snapshot.users;
+        apiState.accounts = snapshot.accounts;
+        apiState.cards = snapshot.cards;
+        apiState.categories = snapshot.categories;
+        apiState.transactions = snapshot.transactions;
+        apiState.invoiceSettlements = snapshot.invoiceSettlements;
+        throw error;
+      }
     }),
   };
 
@@ -286,6 +312,8 @@ async function registerApiUser(email: string) {
 
 describe("foundation api", () => {
   beforeEach(() => {
+    transactionCreateCallCount = 0;
+    transactionCreateFailOnCall = 0;
     accountsRepo.clearAll();
     cardsRepo.clearAll();
     categoriesRepo.clearAll();
@@ -832,6 +860,35 @@ describe("foundation api", () => {
         creditCardId: nonZeroCard.id,
       },
     ]);
+  });
+
+  it("month close API confirm rolls back all writes if a later adjustment fails", async () => {
+    const { householdId: apiHouseholdId, cookie } = await registerApiUser("month-close-rollback@home.app");
+    const account = apiState.accounts.find((item) => item.householdId === apiHouseholdId)!;
+    const card = apiState.cards.find((item) => item.householdId === apiHouseholdId)!;
+    const categoriesBefore = apiState.categories.length;
+    const transactionsBefore = apiState.transactions.length;
+    transactionCreateFailOnCall = 2;
+
+    const confirm = await apiRequest({
+      method: "POST",
+      url: "/api/month-close/confirm",
+      cookie,
+      body: {
+        month: "2026-04",
+        realAccountBalances: {
+          [account.id]: "25.00",
+        },
+        realCardInvoiceTotals: {
+          [card.id]: "15.00",
+        },
+      },
+    });
+
+    expect(confirm.status).toBe(500);
+    expect(confirm.body.message).toBe("TRANSACTION_CREATE_FAILED");
+    expect(apiState.categories).toHaveLength(categoriesBefore);
+    expect(apiState.transactions).toHaveLength(transactionsBefore);
   });
 
   it("account adjustment API returns a null transaction without writing when balance is unchanged", async () => {

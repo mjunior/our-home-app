@@ -641,7 +641,25 @@ function normalizeMonthCloseBody(body: any, householdId: string) {
   };
 }
 
-async function createPersistedMonthCloseAccountAdjustment(input: {
+type MonthCloseAdjustmentDb = {
+  account: {
+    findUnique(args: { where: { id: string } }): Promise<{ householdId: string } | null>;
+  };
+  category: {
+    upsert(args: {
+      where: { householdId_normalized: { householdId: string; normalized: string } };
+      create: { householdId: string; name: string; normalized: string };
+      update: Record<string, never>;
+    }): Promise<{ id: string }>;
+  };
+  transaction: {
+    create(args: { data: Record<string, unknown> }): Promise<any>;
+  };
+};
+
+async function createPersistedMonthCloseAccountAdjustment(
+  db: MonthCloseAdjustmentDb,
+  input: {
   householdId: string;
   accountId: string;
   appBalance: string;
@@ -649,8 +667,9 @@ async function createPersistedMonthCloseAccountAdjustment(input: {
   difference: string;
   month: string;
   occurredAt: string;
-}) {
-  const account = await prisma.account.findUnique({ where: { id: input.accountId } });
+},
+) {
+  const account = await db.account.findUnique({ where: { id: input.accountId } });
   if (!account || account.householdId !== input.householdId) {
     throw new Error("ACCOUNT_NOT_FOUND");
   }
@@ -666,7 +685,7 @@ async function createPersistedMonthCloseAccountAdjustment(input: {
   }
 
   const normalized = normalizeName("Reajuste");
-  const category = await prisma.category.upsert({
+  const category = await db.category.upsert({
     where: {
       householdId_normalized: {
         householdId: input.householdId,
@@ -681,7 +700,7 @@ async function createPersistedMonthCloseAccountAdjustment(input: {
     update: {},
   });
 
-  const transaction = await prisma.transaction.create({
+  const transaction = await db.transaction.create({
     data: {
       householdId: input.householdId,
       kind: difference.isNegative() ? "EXPENSE" : "INCOME",
@@ -706,7 +725,13 @@ async function createPersistedMonthCloseAccountAdjustment(input: {
   };
 }
 
-async function createPersistedMonthCloseCardAdjustment(input: {
+async function createPersistedMonthCloseCardAdjustment(
+  db: MonthCloseAdjustmentDb & {
+    creditCard: {
+      findUnique(args: { where: { id: string } }): Promise<{ householdId: string } | null>;
+    };
+  },
+  input: {
   householdId: string;
   cardId: string;
   appTotal: string;
@@ -715,8 +740,9 @@ async function createPersistedMonthCloseCardAdjustment(input: {
   dueMonth: string;
   dueDate: string;
   occurredAt: string;
-}) {
-  const card = await prisma.creditCard.findUnique({ where: { id: input.cardId } });
+},
+) {
+  const card = await db.creditCard.findUnique({ where: { id: input.cardId } });
   if (!card || card.householdId !== input.householdId) {
     throw new Error("CARD_NOT_FOUND");
   }
@@ -732,7 +758,7 @@ async function createPersistedMonthCloseCardAdjustment(input: {
   }
 
   const normalized = normalizeName("Reajuste");
-  const category = await prisma.category.upsert({
+  const category = await db.category.upsert({
     where: {
       householdId_normalized: {
         householdId: input.householdId,
@@ -747,7 +773,7 @@ async function createPersistedMonthCloseCardAdjustment(input: {
     update: {},
   });
 
-  const transaction = await prisma.transaction.create({
+  const transaction = await db.transaction.create({
     data: {
       householdId: input.householdId,
       kind: "EXPENSE",
@@ -1696,41 +1722,47 @@ export function installViteApi(server: MiddlewareServer) {
           month: preview.month,
         });
         const cardDueDates = new Map(monthlyInvoices.cards.map((item: any) => [item.cardId, item.dueDate]));
+        const accountRows = preview.accounts.filter((row) => row.willCreateAdjustment);
+        const cardRows = preview.cardInvoices.filter((row) => row.willCreateAdjustment);
 
         const accountAdjustments = [];
-        for (const row of preview.accounts) {
-          if (!row.willCreateAdjustment) continue;
-          accountAdjustments.push({
-            accountId: row.accountId,
-            result: await createPersistedMonthCloseAccountAdjustment({
-              householdId: authHouseholdId,
-              accountId: row.accountId,
-              appBalance: row.appBalance,
-              realBalance: row.realBalance,
-              difference: row.difference,
-              month: preview.month,
-              occurredAt: preview.adjustmentDate,
-            }),
-          });
-        }
-
         const cardInvoiceAdjustments = [];
-        for (const row of preview.cardInvoices) {
-          if (!row.willCreateAdjustment) continue;
-          cardInvoiceAdjustments.push({
-            cardId: row.cardId,
-            result: await createPersistedMonthCloseCardAdjustment({
-              householdId: authHouseholdId,
+        await prisma.$transaction(async (db) => {
+          for (const row of accountRows) {
+            accountAdjustments.push({
+              accountId: row.accountId,
+              result: await createPersistedMonthCloseAccountAdjustment(db as MonthCloseAdjustmentDb, {
+                householdId: authHouseholdId,
+                accountId: row.accountId,
+                appBalance: row.appBalance,
+                realBalance: row.realBalance,
+                difference: row.difference,
+                month: preview.month,
+                occurredAt: preview.adjustmentDate,
+              }),
+            });
+          }
+
+          for (const row of cardRows) {
+            cardInvoiceAdjustments.push({
               cardId: row.cardId,
-              appTotal: row.appTotal,
-              realTotal: row.realTotal,
-              difference: row.difference,
-              dueMonth: preview.month,
-              dueDate: String(cardDueDates.get(row.cardId) ?? preview.adjustmentDate),
-              occurredAt: preview.adjustmentDate,
-            }),
-          });
-        }
+              result: await createPersistedMonthCloseCardAdjustment(db as MonthCloseAdjustmentDb & {
+                creditCard: {
+                  findUnique(args: { where: { id: string } }): Promise<{ householdId: string } | null>;
+                };
+              }, {
+                householdId: authHouseholdId,
+                cardId: row.cardId,
+                appTotal: row.appTotal,
+                realTotal: row.realTotal,
+                difference: row.difference,
+                dueMonth: preview.month,
+                dueDate: String(cardDueDates.get(row.cardId) ?? preview.adjustmentDate),
+                occurredAt: preview.adjustmentDate,
+              }),
+            });
+          }
+        });
 
         sendJson(res, 200, {
           preview,
