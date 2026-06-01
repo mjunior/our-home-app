@@ -26,7 +26,7 @@ export interface CreditCardAdjustmentResult {
   previousInvoiceTotal: string;
   realInvoiceTotal: string;
   difference: string;
-  transaction: TransactionRecord;
+  transaction: TransactionRecord | null;
 }
 
 export class CreditCardAdjustmentsService {
@@ -46,6 +46,15 @@ export class CreditCardAdjustmentsService {
     const previousInvoiceTotal = new Decimal(invoice.total);
     const realInvoiceTotal = new Decimal(parsed.realInvoiceTotal);
     const difference = realInvoiceTotal.minus(previousInvoiceTotal);
+    if (difference.isZero()) {
+      return {
+        previousInvoiceTotal: previousInvoiceTotal.toFixed(2),
+        realInvoiceTotal: realInvoiceTotal.toFixed(2),
+        difference: "0.00",
+        transaction: null,
+      };
+    }
+
     const normalized = normalizeCategoryName("Reajuste");
     const category =
       this.categoriesRepository.findByNormalized(parsed.householdId, normalized) ??

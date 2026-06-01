@@ -879,6 +879,16 @@ export function installViteApi(server: MiddlewareServer) {
         );
         const realBalance = new Decimal(String(body.realBalance));
         const difference = realBalance.minus(previousBalance);
+        if (difference.isZero()) {
+          sendJson(res, 200, {
+            previousBalance: previousBalance.toFixed(2),
+            realBalance: realBalance.toFixed(2),
+            difference: "0.00",
+            transaction: null,
+          });
+          return;
+        }
+
         const kind = difference.isNegative() ? "EXPENSE" : "INCOME";
         const normalized = normalizeName("Reajuste");
         const category = await prisma.category.upsert({
@@ -1525,6 +1535,16 @@ export function installViteApi(server: MiddlewareServer) {
         const previousInvoiceTotal = new Decimal(invoice.total);
         const realInvoiceTotal = new Decimal(String(body.realInvoiceTotal));
         const difference = realInvoiceTotal.minus(previousInvoiceTotal);
+        if (difference.isZero()) {
+          sendJson(res, 200, {
+            previousInvoiceTotal: previousInvoiceTotal.toFixed(2),
+            realInvoiceTotal: realInvoiceTotal.toFixed(2),
+            difference: "0.00",
+            transaction: null,
+          });
+          return;
+        }
+
         const normalized = normalizeName("Reajuste");
         const category = await prisma.category.upsert({
           where: {

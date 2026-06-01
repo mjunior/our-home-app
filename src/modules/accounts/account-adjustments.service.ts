@@ -26,7 +26,7 @@ export interface AccountAdjustmentResult {
   previousBalance: string;
   realBalance: string;
   difference: string;
-  transaction: TransactionRecord;
+  transaction: TransactionRecord | null;
 }
 
 export class AccountAdjustmentsService {
@@ -49,6 +49,15 @@ export class AccountAdjustmentsService {
     const previousBalance = new Decimal(snapshot.balance);
     const realBalance = new Decimal(parsed.realBalance);
     const difference = realBalance.minus(previousBalance);
+    if (difference.isZero()) {
+      return {
+        previousBalance: previousBalance.toFixed(2),
+        realBalance: realBalance.toFixed(2),
+        difference: "0.00",
+        transaction: null,
+      };
+    }
+
     const kind: TransactionKind = difference.isNegative() ? "EXPENSE" : "INCOME";
     const normalized = normalizeCategoryName("Reajuste");
     const category =

@@ -162,6 +162,32 @@ describe("account adjustments", () => {
     expect(categoriesRepo.listByHousehold(householdId)).toHaveLength(1);
   });
 
+  it("returns a null transaction without writing when real balance matches current balance", () => {
+    const account = accountsService.create({
+      householdId,
+      name: "Conta Principal",
+      type: "CHECKING",
+      openingBalance: "1000.00",
+    });
+
+    const result = adjustmentsService.createAccountAdjustment({
+      householdId,
+      accountId: account.id,
+      realBalance: "1000.00",
+      month: "2026-04",
+      occurredAt: "2026-04-20T12:00:00.000Z",
+    });
+
+    expect(result).toEqual({
+      previousBalance: "1000.00",
+      realBalance: "1000.00",
+      difference: "0.00",
+      transaction: null,
+    });
+    expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(0);
+    expect(categoriesRepo.listByHousehold(householdId)).toHaveLength(0);
+  });
+
   it("rejects adjustment dates outside the informed competence month", () => {
     const account = accountsService.create({
       householdId,

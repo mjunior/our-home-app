@@ -129,6 +129,43 @@ describe("credit card adjustments", () => {
     expect(invoicesService.getCardInvoiceEntriesByDueMonth({ householdId, cardId: card.id, dueMonth: "2026-04" }).total).toBe("175.50");
   });
 
+  it("returns a null transaction without writing when real invoice total matches the current total", () => {
+    const card = cards.createCard({ householdId, name: "Visa Casa", closeDay: 5, dueDay: 12 });
+    const category = categoriesRepo.create({ householdId, name: "Mercado", normalized: "mercado" });
+    transactionsRepo.create({
+      householdId,
+      kind: "EXPENSE",
+      description: "Compra",
+      amount: "100.00",
+      occurredAt: "2026-03-01T12:00:00.000Z",
+      accountId: null,
+      creditCardId: card.id,
+      categoryId: category.id,
+      invoiceMonthKey: "2026-03",
+      invoiceDueDate: "2026-03-12T00:00:00.000Z",
+      settlementStatus: null,
+      transferGroupId: null,
+    });
+
+    const result = adjustmentsService.createCreditCardAdjustment({
+      householdId,
+      cardId: card.id,
+      realInvoiceTotal: "100.00",
+      dueMonth: "2026-03",
+      occurredAt: "2026-03-15T12:00:00.000Z",
+    });
+
+    expect(result).toEqual({
+      previousInvoiceTotal: "100.00",
+      realInvoiceTotal: "100.00",
+      difference: "0.00",
+      transaction: null,
+    });
+    expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(1);
+    expect(categoriesRepo.listByHousehold(householdId)).toEqual([category]);
+    expect(invoicesService.getCardInvoiceEntriesByDueMonth({ householdId, cardId: card.id, dueMonth: "2026-03" }).total).toBe("100.00");
+  });
+
   it("rejects adjustments for cards outside the household without creating transactions", () => {
     const card = cards.createCard({ householdId: otherHouseholdId, name: "Outro Cartao", closeDay: 5, dueDay: 12 });
 
