@@ -17,6 +17,7 @@ export interface TransactionRecord {
   invoiceDueDate: string | null;
   settlementStatus: SettlementStatus | null;
   transferGroupId: string | null;
+  systemTag?: "MONTH_CLOSE" | null;
   createdAt: string;
 }
 

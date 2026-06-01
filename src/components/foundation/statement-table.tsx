@@ -25,6 +25,7 @@ export interface StatementEntry {
   monthKey?: string;
   sequence?: number;
   settlementStatus?: "PAID" | "UNPAID" | null;
+  systemTag?: "MONTH_CLOSE" | null;
 }
 
 interface StatementTableProps {
@@ -55,6 +56,15 @@ function KindPill({ kind, isInvestment }: { kind: StatementEntry["kind"]; isInve
 }
 
 function TypeOriginCell({ entry }: { entry: StatementEntry }) {
+  if (entry.systemTag === "MONTH_CLOSE") {
+    return (
+      <Badge variant="secondary" className="inline-flex items-center gap-1">
+        <Check className="h-3.5 w-3.5" />
+        Fechamento
+      </Badge>
+    );
+  }
+
   const isInvestment = Boolean(entry.transferGroupId);
   const isRecurring = entry.sourceType === "RECURRING";
   const isInstallment = entry.sourceType === "INSTALLMENT";
@@ -85,6 +95,7 @@ function TypeOriginCell({ entry }: { entry: StatementEntry }) {
 }
 
 function compactTypeLabel(entry: StatementEntry) {
+  if (entry.systemTag === "MONTH_CLOSE") return "Fechamento";
   if (entry.transferGroupId) return "Invest.";
   if (entry.sourceType === "RECURRING") return entry.kind === "INCOME" ? "Entrada recorr." : "Saida recorr.";
   if (entry.sourceType === "INSTALLMENT") return "Parcela";
@@ -93,6 +104,7 @@ function compactTypeLabel(entry: StatementEntry) {
 }
 
 function compactTypeTone(entry: StatementEntry) {
+  if (entry.systemTag === "MONTH_CLOSE") return "text-brand-teal";
   if (entry.sourceType === "INVOICE") return "text-rose-400";
   return entry.kind === "INCOME" ? "text-lime-300" : "text-rose-400";
 }

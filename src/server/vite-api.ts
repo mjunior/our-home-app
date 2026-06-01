@@ -398,6 +398,7 @@ function toTransactionDto(row: any) {
     invoiceDueDate: row.invoiceDueDate ? row.invoiceDueDate.toISOString() : null,
     settlementStatus: row.settlementStatus ?? null,
     transferGroupId: row.transferGroupId ?? null,
+    systemTag: row.systemTag ?? null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -714,6 +715,7 @@ async function createPersistedMonthCloseAccountAdjustment(
       invoiceDueDate: null,
       settlementStatus: "PAID",
       transferGroupId: null,
+      systemTag: "MONTH_CLOSE",
     },
   });
 

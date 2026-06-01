@@ -126,6 +126,7 @@ describe("free balance dashboard", () => {
     await user.click(screen.getByRole("button", { name: "Confirmar fechamento" }));
 
     expect(await screen.findByText("REAJUSTE")).toBeInTheDocument();
+    expect(await screen.findByText("Fechamento")).toBeInTheDocument();
     expect(await screen.findByText("Mes fechado com sucesso.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Confirmar fechamento" })).not.toBeInTheDocument();
   });

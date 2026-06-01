@@ -710,6 +710,7 @@ describe("foundation api", () => {
       kind: "INCOME",
       amount: "25.00",
       accountId: account.id,
+      systemTag: "MONTH_CLOSE",
     });
   });
 

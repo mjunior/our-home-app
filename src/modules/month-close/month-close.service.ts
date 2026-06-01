@@ -116,6 +116,7 @@ export class MonthCloseService {
           comparisonBalance: row.appBalance,
           month: preview.month,
           occurredAt: preview.adjustmentDate,
+          systemTag: "MONTH_CLOSE",
         }),
       }));
 

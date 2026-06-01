@@ -201,6 +201,7 @@ describe("month close service", () => {
       amount: "50.00",
       accountId: checking.id,
       occurredAt: "2026-04-30T12:00:00.000Z",
+      systemTag: "MONTH_CLOSE",
     });
   });
 });

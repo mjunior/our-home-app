@@ -13,6 +13,7 @@ const accountAdjustmentInputSchema = z.object({
   comparisonBalance: z.string().min(1).optional(),
   month: z.string().regex(/^\d{4}-\d{2}$/),
   occurredAt: z.string().datetime(),
+  systemTag: z.enum(["MONTH_CLOSE"]).optional(),
 });
 
 export interface CreateAccountAdjustmentInput {
@@ -22,6 +23,7 @@ export interface CreateAccountAdjustmentInput {
   comparisonBalance?: string;
   month: string;
   occurredAt: string;
+  systemTag?: "MONTH_CLOSE" | null;
 }
 
 export interface AccountAdjustmentResult {
@@ -83,6 +85,7 @@ export class AccountAdjustmentsService {
       invoiceDueDate: null,
       settlementStatus: "PAID",
       transferGroupId: null,
+      systemTag: parsed.systemTag ?? null,
     });
 
     return {
