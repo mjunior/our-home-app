@@ -701,25 +701,15 @@ describe("foundation api", () => {
       realAccountBalances: {
         [account.id]: "225.00",
       },
-      realCardInvoiceTotals: {
-        [card.id]: "55.00",
-      },
     });
 
     expect(result.applied.accountAdjustments).toHaveLength(1);
-    expect(result.applied.cardInvoiceAdjustments).toHaveLength(1);
+    expect(result.applied.cardInvoiceAdjustments).toEqual([]);
     expect(result.applied.accountAdjustments[0].result.transaction).toMatchObject({
       householdId,
       kind: "INCOME",
       amount: "25.00",
       accountId: account.id,
-    });
-    expect(result.applied.cardInvoiceAdjustments[0].result.transaction).toMatchObject({
-      householdId,
-      kind: "EXPENSE",
-      amount: "15.00",
-      creditCardId: card.id,
-      invoiceMonthKey: "2026-04",
     });
   });
 
@@ -728,8 +718,6 @@ describe("foundation api", () => {
     const attacker = await registerApiUser("month-close-attacker@home.app");
     const victimAccount = apiState.accounts.find((item) => item.householdId === victim.householdId)!;
     const attackerAccount = apiState.accounts.find((item) => item.householdId === attacker.householdId)!;
-    const victimCard = apiState.cards.find((item) => item.householdId === victim.householdId)!;
-    const attackerCard = apiState.cards.find((item) => item.householdId === attacker.householdId)!;
 
     const preview = await apiRequest({
       method: "POST",
@@ -742,16 +730,11 @@ describe("foundation api", () => {
           [victimAccount.id]: "25.00",
           [attackerAccount.id]: "999.00",
         },
-        realCardInvoiceTotals: {
-          [victimCard.id]: "15.00",
-          [attackerCard.id]: "999.00",
-        },
       },
     });
 
     expect(preview.status).toBe(200);
     expect(preview.body.accounts.map((row: any) => row.accountId)).toEqual([victimAccount.id]);
-    expect(preview.body.cardInvoices.map((row: any) => row.cardId)).toEqual([victimCard.id]);
 
     const confirm = await apiRequest({
       method: "POST",
@@ -764,24 +747,19 @@ describe("foundation api", () => {
           [victimAccount.id]: "25.00",
           [attackerAccount.id]: "999.00",
         },
-        realCardInvoiceTotals: {
-          [victimCard.id]: "15.00",
-          [attackerCard.id]: "999.00",
-        },
       },
     });
 
     expect(confirm.status).toBe(200);
     expect(confirm.body.applied.accountAdjustments).toHaveLength(1);
-    expect(confirm.body.applied.cardInvoiceAdjustments).toHaveLength(1);
-    expect(apiState.transactions.filter((item) => item.householdId === victim.householdId && item.description === "REAJUSTE")).toHaveLength(2);
+    expect(confirm.body.applied.cardInvoiceAdjustments).toEqual([]);
+    expect(apiState.transactions.filter((item) => item.householdId === victim.householdId && item.description === "REAJUSTE")).toHaveLength(1);
     expect(apiState.transactions.filter((item) => item.householdId === attacker.householdId && item.description === "REAJUSTE")).toHaveLength(0);
   });
 
-  it("month close API confirm creates only non-zero account and card adjustments", async () => {
+  it("month close API confirm creates only non-zero account adjustments", async () => {
     const { householdId: apiHouseholdId, cookie } = await registerApiUser("month-close-confirm@home.app");
     const zeroAccount = apiState.accounts.find((item) => item.householdId === apiHouseholdId)!;
-    const zeroCard = apiState.cards.find((item) => item.householdId === apiHouseholdId)!;
     const nonZeroAccountResponse = await apiRequest({
       method: "POST",
       url: "/api/accounts",
@@ -793,19 +771,7 @@ describe("foundation api", () => {
         openingBalance: "100.00",
       },
     });
-    const nonZeroCardResponse = await apiRequest({
-      method: "POST",
-      url: "/api/cards",
-      cookie,
-      body: {
-        householdId: "malicious-household",
-        name: "Cartao com diferenca",
-        closeDay: 5,
-        dueDay: 12,
-      },
-    });
     const nonZeroAccount = nonZeroAccountResponse.body;
-    const nonZeroCard = nonZeroCardResponse.body;
     const transactionCountBefore = apiState.transactions.length;
 
     const confirm = await apiRequest({
@@ -819,10 +785,6 @@ describe("foundation api", () => {
           [zeroAccount.id]: "0.00",
           [nonZeroAccount.id]: "125.00",
         },
-        realCardInvoiceTotals: {
-          [zeroCard.id]: "0.00",
-          [nonZeroCard.id]: "35.00",
-        },
       },
     });
 
@@ -831,13 +793,9 @@ describe("foundation api", () => {
       [zeroAccount.id, false],
       [nonZeroAccount.id, true],
     ]);
-    expect(confirm.body.preview.cardInvoices.map((row: any) => [row.cardId, row.willCreateAdjustment])).toEqual([
-      [zeroCard.id, false],
-      [nonZeroCard.id, true],
-    ]);
     expect(confirm.body.applied.accountAdjustments).toHaveLength(1);
-    expect(confirm.body.applied.cardInvoiceAdjustments).toHaveLength(1);
-    expect(apiState.transactions).toHaveLength(transactionCountBefore + 2);
+    expect(confirm.body.applied.cardInvoiceAdjustments).toEqual([]);
+    expect(apiState.transactions).toHaveLength(transactionCountBefore + 1);
     expect(apiState.transactions.slice(transactionCountBefore).map((item) => ({
       householdId: item.householdId,
       description: item.description,
@@ -852,20 +810,24 @@ describe("foundation api", () => {
         accountId: nonZeroAccount.id,
         creditCardId: null,
       },
-      {
-        householdId: apiHouseholdId,
-        description: "REAJUSTE",
-        amount: "35.00",
-        accountId: null,
-        creditCardId: nonZeroCard.id,
-      },
     ]);
   });
 
   it("month close API confirm rolls back all writes if a later adjustment fails", async () => {
     const { householdId: apiHouseholdId, cookie } = await registerApiUser("month-close-rollback@home.app");
     const account = apiState.accounts.find((item) => item.householdId === apiHouseholdId)!;
-    const card = apiState.cards.find((item) => item.householdId === apiHouseholdId)!;
+    const secondAccountResponse = await apiRequest({
+      method: "POST",
+      url: "/api/accounts",
+      cookie,
+      body: {
+        householdId: "malicious-household",
+        name: "Conta adicional",
+        type: "CHECKING",
+        openingBalance: "50.00",
+      },
+    });
+    const secondAccount = secondAccountResponse.body;
     const categoriesBefore = apiState.categories.length;
     const transactionsBefore = apiState.transactions.length;
     transactionCreateFailOnCall = 2;
@@ -878,9 +840,7 @@ describe("foundation api", () => {
         month: "2026-04",
         realAccountBalances: {
           [account.id]: "25.00",
-        },
-        realCardInvoiceTotals: {
-          [card.id]: "15.00",
+          [secondAccount.id]: "75.00",
         },
       },
     });

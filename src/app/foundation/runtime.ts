@@ -574,13 +574,11 @@ function createApiRuntime(): Runtime {
         requestSync<MonthClosePreviewOutput>("POST", "/api/month-close/preview", {
           month: input.month,
           realAccountBalances: input.realAccountBalances ?? {},
-          realCardInvoiceTotals: input.realCardInvoiceTotals ?? {},
         }),
       confirmCloseMonth: (input: MonthCloseConfirmInput): MonthCloseConfirmOutput =>
         requestSync<MonthCloseConfirmOutput>("POST", "/api/month-close/confirm", {
           month: input.month,
           realAccountBalances: input.realAccountBalances ?? {},
-          realCardInvoiceTotals: input.realCardInvoiceTotals ?? {},
         }),
     },
     scheduleManagementController: {

@@ -119,17 +119,13 @@ describe("free balance dashboard", () => {
 
     await user.click(screen.getByRole("button", { name: "Fechar mes" }));
     const accountInput = await screen.findByLabelText("Valor real - Conta Casa");
-    const cardInput = await screen.findByLabelText("Valor real - Visa Casa");
 
     await user.clear(accountInput);
     await user.type(accountInput, "102500");
-    await user.clear(cardInput);
-    await user.type(cardInput, "1500");
 
     await user.click(screen.getByRole("button", { name: "Confirmar fechamento" }));
 
     expect(await screen.findByText("REAJUSTE")).toBeInTheDocument();
-    expect(await screen.findByText("Fatura Visa Casa")).toBeInTheDocument();
     expect(await screen.findByText("Mes fechado com sucesso.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Confirmar fechamento" })).not.toBeInTheDocument();
   });

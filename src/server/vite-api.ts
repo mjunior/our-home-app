@@ -725,79 +725,6 @@ async function createPersistedMonthCloseAccountAdjustment(
   };
 }
 
-async function createPersistedMonthCloseCardAdjustment(
-  db: MonthCloseAdjustmentDb & {
-    creditCard: {
-      findUnique(args: { where: { id: string } }): Promise<{ householdId: string } | null>;
-    };
-  },
-  input: {
-  householdId: string;
-  cardId: string;
-  appTotal: string;
-  realTotal: string;
-  difference: string;
-  dueMonth: string;
-  dueDate: string;
-  occurredAt: string;
-},
-) {
-  const card = await db.creditCard.findUnique({ where: { id: input.cardId } });
-  if (!card || card.householdId !== input.householdId) {
-    throw new Error("CARD_NOT_FOUND");
-  }
-
-  const difference = new Decimal(input.difference);
-  if (difference.isZero()) {
-    return {
-      previousInvoiceTotal: new Decimal(input.appTotal).toFixed(2),
-      realInvoiceTotal: new Decimal(input.realTotal).toFixed(2),
-      difference: "0.00",
-      transaction: null,
-    };
-  }
-
-  const normalized = normalizeName("Reajuste");
-  const category = await db.category.upsert({
-    where: {
-      householdId_normalized: {
-        householdId: input.householdId,
-        normalized,
-      },
-    },
-    create: {
-      householdId: input.householdId,
-      name: "Reajuste",
-      normalized,
-    },
-    update: {},
-  });
-
-  const transaction = await db.transaction.create({
-    data: {
-      householdId: input.householdId,
-      kind: "EXPENSE",
-      description: "REAJUSTE",
-      amount: difference.toFixed(2),
-      occurredAt: new Date(input.occurredAt),
-      accountId: null,
-      creditCardId: input.cardId,
-      categoryId: category.id,
-      invoiceMonthKey: input.dueMonth,
-      invoiceDueDate: new Date(input.dueDate),
-      settlementStatus: null,
-      transferGroupId: null,
-    },
-  });
-
-  return {
-    previousInvoiceTotal: new Decimal(input.appTotal).toFixed(2),
-    realInvoiceTotal: new Decimal(input.realTotal).toFixed(2),
-    difference: difference.toFixed(2),
-    transaction: toTransactionDto(transaction),
-  };
-}
-
 type MiddlewareServer = {
   middlewares: {
     use: (handler: (req: any, res: any, next: () => void) => void | Promise<void>) => void;
@@ -1715,18 +1642,11 @@ export function installViteApi(server: MiddlewareServer) {
       if (req.method === "POST" && path === "/api/month-close/confirm") {
         const body = await readJsonBody(req);
         const input = normalizeMonthCloseBody(body, authHouseholdId);
-        const { invoicesService, monthCloseService } = await loadServices();
+        const { monthCloseService } = await loadServices();
         const preview = monthCloseService.previewCloseMonth(input);
-        const monthlyInvoices = invoicesService.getMonthlyInvoices({
-          householdId: authHouseholdId,
-          month: preview.month,
-        });
-        const cardDueDates = new Map(monthlyInvoices.cards.map((item: any) => [item.cardId, item.dueDate]));
         const accountRows = preview.accounts.filter((row) => row.willCreateAdjustment);
-        const cardRows = preview.cardInvoices.filter((row) => row.willCreateAdjustment);
 
         const accountAdjustments = [];
-        const cardInvoiceAdjustments = [];
         await prisma.$transaction(async (db) => {
           for (const row of accountRows) {
             accountAdjustments.push({
@@ -1742,33 +1662,13 @@ export function installViteApi(server: MiddlewareServer) {
               }),
             });
           }
-
-          for (const row of cardRows) {
-            cardInvoiceAdjustments.push({
-              cardId: row.cardId,
-              result: await createPersistedMonthCloseCardAdjustment(db as MonthCloseAdjustmentDb & {
-                creditCard: {
-                  findUnique(args: { where: { id: string } }): Promise<{ householdId: string } | null>;
-                };
-              }, {
-                householdId: authHouseholdId,
-                cardId: row.cardId,
-                appTotal: row.appTotal,
-                realTotal: row.realTotal,
-                difference: row.difference,
-                dueMonth: preview.month,
-                dueDate: String(cardDueDates.get(row.cardId) ?? preview.adjustmentDate),
-                occurredAt: preview.adjustmentDate,
-              }),
-            });
-          }
         });
 
         sendJson(res, 200, {
           preview,
           applied: {
             accountAdjustments,
-            cardInvoiceAdjustments,
+            cardInvoiceAdjustments: [],
           },
         });
         return;

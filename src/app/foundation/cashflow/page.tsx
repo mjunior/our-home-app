@@ -101,7 +101,6 @@ export default function CashflowPage() {
   const [monthCloseModalOpen, setMonthCloseModalOpen] = useState(false);
   const [monthCloseMonth, setMonthCloseMonth] = useState(month);
   const [monthCloseAccountInputs, setMonthCloseAccountInputs] = useState<Record<string, string>>({});
-  const [monthCloseCardInputs, setMonthCloseCardInputs] = useState<Record<string, string>>({});
   const [monthClosePreview, setMonthClosePreview] = useState<MonthClosePreview | null>(null);
   const [monthCloseSubmitting, setMonthCloseSubmitting] = useState(false);
   const { notify } = useSnackbar();
@@ -147,10 +146,6 @@ export default function CashflowPage() {
 
   const scheduleInstances = useMemo(
     () => scheduleManagementController.listMonthInstances({ householdId: householdId, month }),
-    [refreshKey, month, householdId],
-  );
-  const monthlyInvoices = useMemo(
-    () => invoicesController.getMonthlyInvoices({ householdId, month }),
     [refreshKey, month, householdId],
   );
   const dueObligations = useMemo(
@@ -312,10 +307,9 @@ export default function CashflowPage() {
         householdId,
         month: monthCloseMonth,
         realAccountBalances: toDecimalRecord(monthCloseAccountInputs),
-        realCardInvoiceTotals: toDecimalRecord(monthCloseCardInputs),
       }),
     );
-  }, [householdId, monthCloseAccountInputs, monthCloseCardInputs, monthCloseModalOpen, monthCloseMonth, refreshKey]);
+  }, [householdId, monthCloseAccountInputs, monthCloseModalOpen, monthCloseMonth, refreshKey]);
 
   function handleMonthNavigation(offset: number) {
     setMonth(addMonths(month, offset));
@@ -337,9 +331,6 @@ export default function CashflowPage() {
             .map((account) => ({ id: account.id, value: account.balance })),
         ),
       ),
-      realCardInvoiceTotals: toDecimalRecord(
-        toCurrencyDraftMap(monthlyInvoices.cards.map((item) => ({ id: item.cardId, value: item.total }))),
-      ),
     });
 
     setMonthCloseMonth(month);
@@ -347,9 +338,6 @@ export default function CashflowPage() {
       toCurrencyDraftMap(
         monthCloseSeedPreview.accounts.map((account) => ({ id: account.accountId, value: account.appBalance })),
       ),
-    );
-    setMonthCloseCardInputs(
-      toCurrencyDraftMap(monthCloseSeedPreview.cardInvoices.map((item) => ({ id: item.cardId, value: item.appTotal }))),
     );
     setMonthCloseModalOpen(true);
   }
@@ -361,13 +349,6 @@ export default function CashflowPage() {
     }));
   }
 
-  function handleCardCloseChange(cardId: string, value: string) {
-    setMonthCloseCardInputs((prev) => ({
-      ...prev,
-      [cardId]: formatCurrencyInputBRL(value, { allowNegative: true }),
-    }));
-  }
-
   async function handleConfirmMonthClose() {
     setMonthCloseSubmitting(true);
     try {
@@ -375,7 +356,6 @@ export default function CashflowPage() {
         householdId,
         month: monthCloseMonth,
         realAccountBalances: toDecimalRecord(monthCloseAccountInputs),
-        realCardInvoiceTotals: toDecimalRecord(monthCloseCardInputs),
       });
       setMonthCloseModalOpen(false);
       setRefreshKey((prev) => prev + 1);
@@ -628,7 +608,6 @@ export default function CashflowPage() {
         isSubmitting={monthCloseSubmitting}
         onOpenChange={setMonthCloseModalOpen}
         onAccountChange={handleAccountCloseChange}
-        onCardChange={handleCardCloseChange}
         onConfirm={handleConfirmMonthClose}
       />
 

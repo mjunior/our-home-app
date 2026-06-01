@@ -22,8 +22,7 @@ export interface CloseMonthInput {
    */
   realAccountBalances?: Record<string, string>;
   /**
-   * Only due-month card invoices with an entered real total are included in the preview.
-   * Missing card ids are treated as not entered and skipped.
+   * Legacy input accepted for compatibility. Month close no longer uses card invoices.
    */
   realCardInvoiceTotals?: Record<string, string>;
 }
@@ -37,20 +36,10 @@ export interface MonthCloseAccountRow {
   willCreateAdjustment: boolean;
 }
 
-export interface MonthCloseCardInvoiceRow {
-  cardId: string;
-  cardName: string;
-  appTotal: string;
-  realTotal: string;
-  difference: string;
-  willCreateAdjustment: boolean;
-}
-
 export interface MonthClosePreview {
   month: string;
   adjustmentDate: string;
   accounts: MonthCloseAccountRow[];
-  cardInvoices: MonthCloseCardInvoiceRow[];
 }
 
 export interface MonthCloseConfirmResult {
@@ -88,7 +77,6 @@ export class MonthCloseService {
     const parsed = monthCloseInputSchema.parse(input);
     const adjustmentDate = adjustmentDateForMonth(parsed.month);
     const realAccountBalances = parsed.realAccountBalances ?? {};
-    const realCardInvoiceTotals = parsed.realCardInvoiceTotals ?? {};
 
     const accounts = this.accountsService
       .consolidatedBalanceAtMonthEnd(parsed.householdId, parsed.month)
@@ -107,30 +95,10 @@ export class MonthCloseService {
         };
       });
 
-    const monthlyInvoices = this.invoicesService.getMonthlyInvoices({
-      householdId: parsed.householdId,
-      month: parsed.month,
-    });
-    const cardInvoices = monthlyInvoices.cards
-      .filter((card) => Object.prototype.hasOwnProperty.call(realCardInvoiceTotals, card.cardId))
-      .map((card): MonthCloseCardInvoiceRow => {
-        const realTotal = new Decimal(realCardInvoiceTotals[card.cardId] ?? "0").toFixed(2);
-        const difference = moneyDifference(realTotal, card.total);
-        return {
-          cardId: card.cardId,
-          cardName: card.cardName,
-          appTotal: new Decimal(card.total).toFixed(2),
-          realTotal,
-          difference,
-          willCreateAdjustment: !new Decimal(difference).isZero(),
-        };
-      });
-
     return {
       month: parsed.month,
       adjustmentDate,
       accounts,
-      cardInvoices,
     };
   }
 
@@ -151,24 +119,11 @@ export class MonthCloseService {
         }),
       }));
 
-    const cardInvoiceAdjustments = preview.cardInvoices
-      .filter((row) => row.willCreateAdjustment)
-      .map((row) => ({
-        cardId: row.cardId,
-        result: this.creditCardAdjustmentsService.createCreditCardAdjustment({
-          householdId: input.householdId,
-          cardId: row.cardId,
-          realInvoiceTotal: row.realTotal,
-          dueMonth: preview.month,
-          occurredAt: preview.adjustmentDate,
-        }),
-      }));
-
     return {
       preview,
       applied: {
         accountAdjustments,
-        cardInvoiceAdjustments,
+        cardInvoiceAdjustments: [],
       },
     };
   }
