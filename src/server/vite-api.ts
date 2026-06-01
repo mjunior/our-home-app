@@ -1,10 +1,14 @@
 import Decimal from "decimal.js";
 
+import { AccountsService } from "../modules/accounts/accounts.service";
 import { InvoiceCycleService } from "../modules/invoices/invoice-cycle.service";
 import { InvoicesService } from "../modules/invoices/invoices.service";
 import { FreeBalancePolicy } from "../modules/free-balance/free-balance.policy";
 import { FreeBalanceService } from "../modules/free-balance/free-balance.service";
 import { HOUSEHOLD_FINANCE_CATEGORIES } from "../modules/categories/bootstrap-categories";
+import type { AccountAdjustmentsService } from "../modules/accounts/account-adjustments.service";
+import type { CreditCardAdjustmentsService } from "../modules/invoices/credit-card-adjustments.service";
+import { MonthCloseService } from "../modules/month-close/month-close.service";
 import { AuthService } from "../modules/auth/auth.service";
 import { AuthError, isAuthError } from "../modules/auth/auth.errors";
 import { issueSessionToken, verifySessionToken } from "../modules/auth/session-token";
@@ -575,13 +579,23 @@ async function loadServices() {
 
   const cycleService = new InvoiceCycleService();
 
+  const accountsService = new AccountsService(accountRepo as any, transactionRepo as any, invoiceSettlementRepo as any, scheduleRepo as any);
+  const invoicesService = new InvoicesService(
+    transactionRepo as any,
+    cardRepo as any,
+    cycleService,
+    scheduleRepo as any,
+    invoiceSettlementRepo as any,
+  );
+
   return {
-    invoicesService: new InvoicesService(
-      transactionRepo as any,
-      cardRepo as any,
-      cycleService,
-      scheduleRepo as any,
-      invoiceSettlementRepo as any,
+    accountsService,
+    invoicesService,
+    monthCloseService: new MonthCloseService(
+      accountsService,
+      invoicesService,
+      {} as AccountAdjustmentsService,
+      {} as CreditCardAdjustmentsService,
     ),
     freeBalanceService: new FreeBalanceService(
       accountRepo as any,
@@ -610,6 +624,152 @@ async function ensureBootstrap(householdId: string) {
       await prisma.category.create({ data: { householdId, name: category, normalized } });
     }
   }
+}
+
+function normalizeMonthCloseBody(body: any, householdId: string) {
+  return {
+    householdId,
+    month: String(body.month ?? ""),
+    realAccountBalances:
+      body.realAccountBalances && typeof body.realAccountBalances === "object" && !Array.isArray(body.realAccountBalances)
+        ? body.realAccountBalances
+        : {},
+    realCardInvoiceTotals:
+      body.realCardInvoiceTotals && typeof body.realCardInvoiceTotals === "object" && !Array.isArray(body.realCardInvoiceTotals)
+        ? body.realCardInvoiceTotals
+        : {},
+  };
+}
+
+async function createPersistedMonthCloseAccountAdjustment(input: {
+  householdId: string;
+  accountId: string;
+  appBalance: string;
+  realBalance: string;
+  difference: string;
+  month: string;
+  occurredAt: string;
+}) {
+  const account = await prisma.account.findUnique({ where: { id: input.accountId } });
+  if (!account || account.householdId !== input.householdId) {
+    throw new Error("ACCOUNT_NOT_FOUND");
+  }
+
+  const difference = new Decimal(input.difference);
+  if (difference.isZero()) {
+    return {
+      previousBalance: new Decimal(input.appBalance).toFixed(2),
+      realBalance: new Decimal(input.realBalance).toFixed(2),
+      difference: "0.00",
+      transaction: null,
+    };
+  }
+
+  const normalized = normalizeName("Reajuste");
+  const category = await prisma.category.upsert({
+    where: {
+      householdId_normalized: {
+        householdId: input.householdId,
+        normalized,
+      },
+    },
+    create: {
+      householdId: input.householdId,
+      name: "Reajuste",
+      normalized,
+    },
+    update: {},
+  });
+
+  const transaction = await prisma.transaction.create({
+    data: {
+      householdId: input.householdId,
+      kind: difference.isNegative() ? "EXPENSE" : "INCOME",
+      description: "REAJUSTE",
+      amount: difference.abs().toFixed(2),
+      occurredAt: new Date(input.occurredAt),
+      accountId: input.accountId,
+      creditCardId: null,
+      categoryId: category.id,
+      invoiceMonthKey: null,
+      invoiceDueDate: null,
+      settlementStatus: "PAID",
+      transferGroupId: null,
+    },
+  });
+
+  return {
+    previousBalance: new Decimal(input.appBalance).toFixed(2),
+    realBalance: new Decimal(input.realBalance).toFixed(2),
+    difference: difference.toFixed(2),
+    transaction: toTransactionDto(transaction),
+  };
+}
+
+async function createPersistedMonthCloseCardAdjustment(input: {
+  householdId: string;
+  cardId: string;
+  appTotal: string;
+  realTotal: string;
+  difference: string;
+  dueMonth: string;
+  dueDate: string;
+  occurredAt: string;
+}) {
+  const card = await prisma.creditCard.findUnique({ where: { id: input.cardId } });
+  if (!card || card.householdId !== input.householdId) {
+    throw new Error("CARD_NOT_FOUND");
+  }
+
+  const difference = new Decimal(input.difference);
+  if (difference.isZero()) {
+    return {
+      previousInvoiceTotal: new Decimal(input.appTotal).toFixed(2),
+      realInvoiceTotal: new Decimal(input.realTotal).toFixed(2),
+      difference: "0.00",
+      transaction: null,
+    };
+  }
+
+  const normalized = normalizeName("Reajuste");
+  const category = await prisma.category.upsert({
+    where: {
+      householdId_normalized: {
+        householdId: input.householdId,
+        normalized,
+      },
+    },
+    create: {
+      householdId: input.householdId,
+      name: "Reajuste",
+      normalized,
+    },
+    update: {},
+  });
+
+  const transaction = await prisma.transaction.create({
+    data: {
+      householdId: input.householdId,
+      kind: "EXPENSE",
+      description: "REAJUSTE",
+      amount: difference.toFixed(2),
+      occurredAt: new Date(input.occurredAt),
+      accountId: null,
+      creditCardId: input.cardId,
+      categoryId: category.id,
+      invoiceMonthKey: input.dueMonth,
+      invoiceDueDate: new Date(input.dueDate),
+      settlementStatus: null,
+      transferGroupId: null,
+    },
+  });
+
+  return {
+    previousInvoiceTotal: new Decimal(input.appTotal).toFixed(2),
+    realInvoiceTotal: new Decimal(input.realTotal).toFixed(2),
+    difference: difference.toFixed(2),
+    transaction: toTransactionDto(transaction),
+  };
 }
 
 type MiddlewareServer = {
@@ -1515,6 +1675,70 @@ export function installViteApi(server: MiddlewareServer) {
         const dueMonth = url.searchParams.get("dueMonth") ?? "";
         const { invoicesService } = await loadServices();
         sendJson(res, 200, invoicesService.getCardInvoiceEntriesByDueMonth({ householdId, cardId, dueMonth }));
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/month-close/preview") {
+        const body = await readJsonBody(req);
+        const { monthCloseService } = await loadServices();
+        const preview = monthCloseService.previewCloseMonth(normalizeMonthCloseBody(body, authHouseholdId));
+        sendJson(res, 200, preview);
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/month-close/confirm") {
+        const body = await readJsonBody(req);
+        const input = normalizeMonthCloseBody(body, authHouseholdId);
+        const { invoicesService, monthCloseService } = await loadServices();
+        const preview = monthCloseService.previewCloseMonth(input);
+        const monthlyInvoices = invoicesService.getMonthlyInvoices({
+          householdId: authHouseholdId,
+          month: preview.month,
+        });
+        const cardDueDates = new Map(monthlyInvoices.cards.map((item: any) => [item.cardId, item.dueDate]));
+
+        const accountAdjustments = [];
+        for (const row of preview.accounts) {
+          if (!row.willCreateAdjustment) continue;
+          accountAdjustments.push({
+            accountId: row.accountId,
+            result: await createPersistedMonthCloseAccountAdjustment({
+              householdId: authHouseholdId,
+              accountId: row.accountId,
+              appBalance: row.appBalance,
+              realBalance: row.realBalance,
+              difference: row.difference,
+              month: preview.month,
+              occurredAt: preview.adjustmentDate,
+            }),
+          });
+        }
+
+        const cardInvoiceAdjustments = [];
+        for (const row of preview.cardInvoices) {
+          if (!row.willCreateAdjustment) continue;
+          cardInvoiceAdjustments.push({
+            cardId: row.cardId,
+            result: await createPersistedMonthCloseCardAdjustment({
+              householdId: authHouseholdId,
+              cardId: row.cardId,
+              appTotal: row.appTotal,
+              realTotal: row.realTotal,
+              difference: row.difference,
+              dueMonth: preview.month,
+              dueDate: String(cardDueDates.get(row.cardId) ?? preview.adjustmentDate),
+              occurredAt: preview.adjustmentDate,
+            }),
+          });
+        }
+
+        sendJson(res, 200, {
+          preview,
+          applied: {
+            accountAdjustments,
+            cardInvoiceAdjustments,
+          },
+        });
         return;
       }
 

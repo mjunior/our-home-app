@@ -16,6 +16,8 @@ import { InvoiceCycleService } from "../../modules/invoices/invoice-cycle.servic
 import { InvoicesController } from "../../modules/invoices/invoices.controller";
 import { InvoiceSettlementRepository } from "../../modules/invoices/invoice-settlement.repository";
 import { InvoicesService } from "../../modules/invoices/invoices.service";
+import { MonthCloseController } from "../../modules/month-close/month-close.controller";
+import { MonthCloseService } from "../../modules/month-close/month-close.service";
 import { InstallmentsService } from "../../modules/scheduling/installments.service";
 import { RecurrenceService } from "../../modules/scheduling/recurrence.service";
 import { ScheduleEngineService } from "../../modules/scheduling/schedule-engine.service";
@@ -95,6 +97,7 @@ type InvoicesControllerContract = Pick<
   | "createCreditCardAdjustment"
 >;
 type FreeBalanceControllerContract = Pick<FreeBalanceController, "getFreeBalance">;
+type MonthCloseControllerContract = Pick<MonthCloseController, "previewCloseMonth" | "confirmCloseMonth">;
 type ScheduleManagementControllerContract = Pick<
   ScheduleManagementController,
   | "createRecurringSchedule"
@@ -118,6 +121,7 @@ type Runtime = {
   transactionsController: TransactionsControllerContract;
   invoicesController: InvoicesControllerContract;
   freeBalanceController: FreeBalanceControllerContract;
+  monthCloseController: MonthCloseControllerContract;
   scheduleManagementController: ScheduleManagementControllerContract;
 };
 
@@ -205,6 +209,9 @@ function createLocalRuntime(): Runtime {
   );
   const creditCardAdjustmentsService = new CreditCardAdjustmentsService(invoicesService, transactionsRepository, categoriesRepository);
   const invoicesController = new InvoicesController(invoicesService, creditCardAdjustmentsService);
+  const monthCloseController = new MonthCloseController(
+    new MonthCloseService(accountsService, invoicesService, accountAdjustmentsService, creditCardAdjustmentsService),
+  );
   const freeBalanceController = new FreeBalanceController(
     new FreeBalanceService(
       accountsRepository,
@@ -299,6 +306,7 @@ function createLocalRuntime(): Runtime {
     transactionsController,
     invoicesController,
     freeBalanceController,
+    monthCloseController,
     scheduleManagementController,
   };
 }
@@ -363,6 +371,10 @@ function createApiRuntime(): Runtime {
 
   type FreeBalanceInput = MethodArgs<Runtime["freeBalanceController"]["getFreeBalance"]>[0];
   type FreeBalanceOutput = MethodReturn<Runtime["freeBalanceController"]["getFreeBalance"]>;
+  type MonthClosePreviewInput = MethodArgs<Runtime["monthCloseController"]["previewCloseMonth"]>[0];
+  type MonthClosePreviewOutput = MethodReturn<Runtime["monthCloseController"]["previewCloseMonth"]>;
+  type MonthCloseConfirmInput = MethodArgs<Runtime["monthCloseController"]["confirmCloseMonth"]>[0];
+  type MonthCloseConfirmOutput = MethodReturn<Runtime["monthCloseController"]["confirmCloseMonth"]>;
 
   type RecurringCreateInput = MethodArgs<Runtime["scheduleManagementController"]["createRecurringSchedule"]>[0];
   type RecurringCreateOutput = MethodReturn<Runtime["scheduleManagementController"]["createRecurringSchedule"]>;
@@ -557,6 +569,20 @@ function createApiRuntime(): Runtime {
       getFreeBalance: (input: FreeBalanceInput): FreeBalanceOutput =>
         requestSync<FreeBalanceOutput>("GET", `/api/free-balance?month=${encodeURIComponent(input.month)}`),
     },
+    monthCloseController: {
+      previewCloseMonth: (input: MonthClosePreviewInput): MonthClosePreviewOutput =>
+        requestSync<MonthClosePreviewOutput>("POST", "/api/month-close/preview", {
+          month: input.month,
+          realAccountBalances: input.realAccountBalances ?? {},
+          realCardInvoiceTotals: input.realCardInvoiceTotals ?? {},
+        }),
+      confirmCloseMonth: (input: MonthCloseConfirmInput): MonthCloseConfirmOutput =>
+        requestSync<MonthCloseConfirmOutput>("POST", "/api/month-close/confirm", {
+          month: input.month,
+          realAccountBalances: input.realAccountBalances ?? {},
+          realCardInvoiceTotals: input.realCardInvoiceTotals ?? {},
+        }),
+    },
     scheduleManagementController: {
       createRecurringSchedule: (input: RecurringCreateInput): RecurringCreateOutput =>
         requestSync<RecurringCreateOutput>("POST", "/api/schedules/recurring", {
@@ -619,6 +645,7 @@ export const goalsController = runtime.goalsController;
 export const transactionsController = runtime.transactionsController;
 export const invoicesController = runtime.invoicesController;
 export const freeBalanceController = runtime.freeBalanceController;
+export const monthCloseController = runtime.monthCloseController;
 export const scheduleManagementController = runtime.scheduleManagementController;
 
 const localUsers: Array<{ userId: string; email: string; password: string; householdId: string }> = [];

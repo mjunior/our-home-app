@@ -23,6 +23,13 @@ import { ScheduleRepository } from "../../src/modules/scheduling/schedule.reposi
 import { TransactionsController } from "../../src/modules/transactions/transactions.controller";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
 import { TransactionsService } from "../../src/modules/transactions/transactions.service";
+import {
+  accountsController as runtimeAccountsController,
+  cardsController as runtimeCardsController,
+  categoriesController as runtimeCategoriesController,
+  monthCloseController as runtimeMonthCloseController,
+  transactionsController as runtimeTransactionsController,
+} from "../../src/app/foundation/runtime";
 
 const apiState = {
   users: [] as Array<{ id: string; email: string; passwordHash: string; householdId: string }>,
@@ -37,6 +44,7 @@ const apiState = {
   cards: [] as Array<{ id: string; householdId: string; name: string; closeDay: number; dueDay: number }>,
   categories: [] as Array<{ id: string; householdId: string; name: string; normalized: string }>,
   transactions: [] as Array<any>,
+  invoiceSettlements: [] as Array<any>,
   householdCount: 0,
 };
 
@@ -139,7 +147,36 @@ vi.mock("../../src/modules/shared/persistence/prisma", () => {
     scheduledInstance: { findMany: vi.fn(async () => []) },
     installmentPlan: { findMany: vi.fn(async () => []) },
     recurringRule: { findMany: vi.fn(async () => []) },
-    invoiceSettlement: { findMany: vi.fn(async () => []) },
+    invoiceSettlement: {
+      findMany: vi.fn(async ({ where }: any = {}) =>
+        apiState.invoiceSettlements.filter((item) => !where?.householdId || item.householdId === where.householdId),
+      ),
+      upsert: vi.fn(async ({ where, create, update }: any) => {
+        const key = where.householdId_cardId_dueMonth;
+        const existing = apiState.invoiceSettlements.find(
+          (item) => item.householdId === key.householdId && item.cardId === key.cardId && item.dueMonth === key.dueMonth,
+        );
+        if (existing) {
+          Object.assign(existing, update);
+          return existing;
+        }
+        const created = { id: `settlement-${apiState.invoiceSettlements.length + 1}`, ...create };
+        apiState.invoiceSettlements.push(created);
+        return created;
+      }),
+      deleteMany: vi.fn(async ({ where }: any) => {
+        const before = apiState.invoiceSettlements.length;
+        for (let index = apiState.invoiceSettlements.length - 1; index >= 0; index -= 1) {
+          const item = apiState.invoiceSettlements[index];
+          if (!item) continue;
+          if (where.householdId && item.householdId !== where.householdId) continue;
+          if (where.cardId && item.cardId !== where.cardId) continue;
+          if (where.dueMonth && item.dueMonth !== where.dueMonth) continue;
+          apiState.invoiceSettlements.splice(index, 1);
+        }
+        return { count: before - apiState.invoiceSettlements.length };
+      }),
+    },
     $transaction: vi.fn(async (callback: any) => {
       const tx = {
         household: prisma.household,
@@ -259,6 +296,7 @@ describe("foundation api", () => {
     apiState.cards.length = 0;
     apiState.categories.length = 0;
     apiState.transactions.length = 0;
+    apiState.invoiceSettlements.length = 0;
     apiState.householdCount = 0;
   });
 
@@ -601,6 +639,197 @@ describe("foundation api", () => {
         goalProgressPercent: null,
         remainingToGoal: null,
         goalReached: false,
+      },
+    ]);
+  });
+
+  it("local runtime exposes month close controller and can confirm a close month", () => {
+    const account = runtimeAccountsController.createAccount({
+      householdId,
+      name: "Runtime Conta Fechamento",
+      type: "CHECKING",
+      openingBalance: "200.00",
+    });
+    const card = runtimeCardsController.createCard({
+      householdId,
+      name: "Runtime Cartao Fechamento",
+      closeDay: 5,
+      dueDay: 12,
+    });
+    const category = runtimeCategoriesController.createCategory({ householdId, name: "Runtime Compras Fechamento" });
+    runtimeTransactionsController.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Runtime compra",
+      amount: "40.00",
+      occurredAt: "2026-04-01T12:00:00.000Z",
+      creditCardId: card.id,
+      categoryId: category.id,
+    });
+
+    const result = runtimeMonthCloseController.confirmCloseMonth({
+      householdId,
+      month: "2026-04",
+      realAccountBalances: {
+        [account.id]: "225.00",
+      },
+      realCardInvoiceTotals: {
+        [card.id]: "55.00",
+      },
+    });
+
+    expect(result.applied.accountAdjustments).toHaveLength(1);
+    expect(result.applied.cardInvoiceAdjustments).toHaveLength(1);
+    expect(result.applied.accountAdjustments[0].result.transaction).toMatchObject({
+      householdId,
+      kind: "INCOME",
+      amount: "25.00",
+      accountId: account.id,
+    });
+    expect(result.applied.cardInvoiceAdjustments[0].result.transaction).toMatchObject({
+      householdId,
+      kind: "EXPENSE",
+      amount: "15.00",
+      creditCardId: card.id,
+      invoiceMonthKey: "2026-04",
+    });
+  });
+
+  it("month close API uses the authenticated household and ignores client household ids", async () => {
+    const victim = await registerApiUser("month-close-victim@home.app");
+    const attacker = await registerApiUser("month-close-attacker@home.app");
+    const victimAccount = apiState.accounts.find((item) => item.householdId === victim.householdId)!;
+    const attackerAccount = apiState.accounts.find((item) => item.householdId === attacker.householdId)!;
+    const victimCard = apiState.cards.find((item) => item.householdId === victim.householdId)!;
+    const attackerCard = apiState.cards.find((item) => item.householdId === attacker.householdId)!;
+
+    const preview = await apiRequest({
+      method: "POST",
+      url: "/api/month-close/preview",
+      cookie: victim.cookie,
+      body: {
+        householdId: attacker.householdId,
+        month: "2026-04",
+        realAccountBalances: {
+          [victimAccount.id]: "25.00",
+          [attackerAccount.id]: "999.00",
+        },
+        realCardInvoiceTotals: {
+          [victimCard.id]: "15.00",
+          [attackerCard.id]: "999.00",
+        },
+      },
+    });
+
+    expect(preview.status).toBe(200);
+    expect(preview.body.accounts.map((row: any) => row.accountId)).toEqual([victimAccount.id]);
+    expect(preview.body.cardInvoices.map((row: any) => row.cardId)).toEqual([victimCard.id]);
+
+    const confirm = await apiRequest({
+      method: "POST",
+      url: "/api/month-close/confirm",
+      cookie: victim.cookie,
+      body: {
+        householdId: attacker.householdId,
+        month: "2026-04",
+        realAccountBalances: {
+          [victimAccount.id]: "25.00",
+          [attackerAccount.id]: "999.00",
+        },
+        realCardInvoiceTotals: {
+          [victimCard.id]: "15.00",
+          [attackerCard.id]: "999.00",
+        },
+      },
+    });
+
+    expect(confirm.status).toBe(200);
+    expect(confirm.body.applied.accountAdjustments).toHaveLength(1);
+    expect(confirm.body.applied.cardInvoiceAdjustments).toHaveLength(1);
+    expect(apiState.transactions.filter((item) => item.householdId === victim.householdId && item.description === "REAJUSTE")).toHaveLength(2);
+    expect(apiState.transactions.filter((item) => item.householdId === attacker.householdId && item.description === "REAJUSTE")).toHaveLength(0);
+  });
+
+  it("month close API confirm creates only non-zero account and card adjustments", async () => {
+    const { householdId: apiHouseholdId, cookie } = await registerApiUser("month-close-confirm@home.app");
+    const zeroAccount = apiState.accounts.find((item) => item.householdId === apiHouseholdId)!;
+    const zeroCard = apiState.cards.find((item) => item.householdId === apiHouseholdId)!;
+    const nonZeroAccountResponse = await apiRequest({
+      method: "POST",
+      url: "/api/accounts",
+      cookie,
+      body: {
+        householdId: "malicious-household",
+        name: "Conta com diferenca",
+        type: "CHECKING",
+        openingBalance: "100.00",
+      },
+    });
+    const nonZeroCardResponse = await apiRequest({
+      method: "POST",
+      url: "/api/cards",
+      cookie,
+      body: {
+        householdId: "malicious-household",
+        name: "Cartao com diferenca",
+        closeDay: 5,
+        dueDay: 12,
+      },
+    });
+    const nonZeroAccount = nonZeroAccountResponse.body;
+    const nonZeroCard = nonZeroCardResponse.body;
+    const transactionCountBefore = apiState.transactions.length;
+
+    const confirm = await apiRequest({
+      method: "POST",
+      url: "/api/month-close/confirm",
+      cookie,
+      body: {
+        householdId: "malicious-household",
+        month: "2026-04",
+        realAccountBalances: {
+          [zeroAccount.id]: "0.00",
+          [nonZeroAccount.id]: "125.00",
+        },
+        realCardInvoiceTotals: {
+          [zeroCard.id]: "0.00",
+          [nonZeroCard.id]: "35.00",
+        },
+      },
+    });
+
+    expect(confirm.status).toBe(200);
+    expect(confirm.body.preview.accounts.map((row: any) => [row.accountId, row.willCreateAdjustment])).toEqual([
+      [zeroAccount.id, false],
+      [nonZeroAccount.id, true],
+    ]);
+    expect(confirm.body.preview.cardInvoices.map((row: any) => [row.cardId, row.willCreateAdjustment])).toEqual([
+      [zeroCard.id, false],
+      [nonZeroCard.id, true],
+    ]);
+    expect(confirm.body.applied.accountAdjustments).toHaveLength(1);
+    expect(confirm.body.applied.cardInvoiceAdjustments).toHaveLength(1);
+    expect(apiState.transactions).toHaveLength(transactionCountBefore + 2);
+    expect(apiState.transactions.slice(transactionCountBefore).map((item) => ({
+      householdId: item.householdId,
+      description: item.description,
+      amount: item.amount.toString(),
+      accountId: item.accountId,
+      creditCardId: item.creditCardId,
+    }))).toEqual([
+      {
+        householdId: apiHouseholdId,
+        description: "REAJUSTE",
+        amount: "25.00",
+        accountId: nonZeroAccount.id,
+        creditCardId: null,
+      },
+      {
+        householdId: apiHouseholdId,
+        description: "REAJUSTE",
+        amount: "35.00",
+        accountId: null,
+        creditCardId: nonZeroCard.id,
       },
     ]);
   });
