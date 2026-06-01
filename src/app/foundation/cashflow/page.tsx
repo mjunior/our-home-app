@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { FreeBalanceSemaphore } from "../../../components/foundation/free-balance-semaphore";
+import { MonthCloseSheet } from "../../../components/foundation/month-close-sheet";
 import { StatementTable } from "../../../components/foundation/statement-table";
 import { TransactionImportForm } from "../../../components/foundation/transaction-import-form";
 import { UnifiedLaunchForm } from "../../../components/foundation/unified-launch-form";
@@ -11,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui
 import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
 import { launchConfettiCanvas, playCashRegisterSound, playCheerSound } from "../../../lib/celebration";
-import { formatCurrencyBR, formatMonthLabelBR, getCurrentMonthKeyLocal } from "../../../lib/utils";
+import { currencyInputToDecimal, formatCurrencyBR, formatCurrencyInputBRL, formatMonthLabelBR, getCurrentMonthKeyLocal } from "../../../lib/utils";
 import type { RecurringEditScope } from "../../../modules/scheduling/schedule-management.service";
 import {
   accountsController,
@@ -19,10 +20,12 @@ import {
   categoriesController,
   freeBalanceController,
   invoicesController,
+  monthCloseController,
   scheduleManagementController,
   transactionsController,
   getRuntimeHouseholdId,
 } from "../runtime";
+import type { MonthClosePreview } from "../../../modules/month-close/month-close.service";
 
 const breakdownLabels: Record<string, string> = {
   accountStartingBalance: "Saldo de contas",
@@ -46,6 +49,18 @@ function addMonths(monthKey: string, count: number): string {
   const [year, month] = monthKey.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1 + count, 1));
   return `${date.getUTCFullYear().toString().padStart(4, "0")}-${(date.getUTCMonth() + 1).toString().padStart(2, "0")}`;
+}
+
+function toCurrencyDraftMap(entries: Array<{ id: string; value: string }>) {
+  return Object.fromEntries(entries.map((item) => [item.id, formatCurrencyInputBRL(item.value, { allowNegative: true })]));
+}
+
+function toDecimalRecord(values: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(values)
+      .filter(([, value]) => value.trim() !== "")
+      .map(([key, value]) => [key, currencyInputToDecimal(value, { allowNegative: true })]),
+  );
 }
 
 export default function CashflowPage() {
@@ -83,6 +98,12 @@ export default function CashflowPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteScope, setDeleteScope] = useState<"CURRENT_AND_FUTURE" | "ALL">("CURRENT_AND_FUTURE");
   const [editRecurringScope, setEditRecurringScope] = useState<RecurringEditScope>("THIS_ONLY");
+  const [monthCloseModalOpen, setMonthCloseModalOpen] = useState(false);
+  const [monthCloseMonth, setMonthCloseMonth] = useState(month);
+  const [monthCloseAccountInputs, setMonthCloseAccountInputs] = useState<Record<string, string>>({});
+  const [monthCloseCardInputs, setMonthCloseCardInputs] = useState<Record<string, string>>({});
+  const [monthClosePreview, setMonthClosePreview] = useState<MonthClosePreview | null>(null);
+  const [monthCloseSubmitting, setMonthCloseSubmitting] = useState(false);
   const { notify } = useSnackbar();
   const householdId = getRuntimeHouseholdId();
 
@@ -126,6 +147,10 @@ export default function CashflowPage() {
 
   const scheduleInstances = useMemo(
     () => scheduleManagementController.listMonthInstances({ householdId: householdId, month }),
+    [refreshKey, month, householdId],
+  );
+  const monthlyInvoices = useMemo(
+    () => invoicesController.getMonthlyInvoices({ householdId, month }),
     [refreshKey, month, householdId],
   );
   const dueObligations = useMemo(
@@ -276,6 +301,22 @@ export default function CashflowPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!monthCloseModalOpen) {
+      setMonthClosePreview(null);
+      return;
+    }
+
+    setMonthClosePreview(
+      monthCloseController.previewCloseMonth({
+        householdId,
+        month: monthCloseMonth,
+        realAccountBalances: toDecimalRecord(monthCloseAccountInputs),
+        realCardInvoiceTotals: toDecimalRecord(monthCloseCardInputs),
+      }),
+    );
+  }, [householdId, monthCloseAccountInputs, monthCloseCardInputs, monthCloseModalOpen, monthCloseMonth, refreshKey]);
+
   function handleMonthNavigation(offset: number) {
     setMonth(addMonths(month, offset));
   }
@@ -283,6 +324,67 @@ export default function CashflowPage() {
   function handleOpenTransactionModal() {
     setTransactionFormResetKey((prev) => prev + 1);
     setTransactionModalOpen(true);
+  }
+
+  function handleOpenMonthCloseModal() {
+    const monthCloseSeedPreview = monthCloseController.previewCloseMonth({
+      householdId,
+      month,
+      realAccountBalances: toDecimalRecord(
+        toCurrencyDraftMap(
+          consolidatedBalance.accounts
+            .filter((account) => account.type === "CHECKING")
+            .map((account) => ({ id: account.id, value: account.balance })),
+        ),
+      ),
+      realCardInvoiceTotals: toDecimalRecord(
+        toCurrencyDraftMap(monthlyInvoices.cards.map((item) => ({ id: item.cardId, value: item.total }))),
+      ),
+    });
+
+    setMonthCloseMonth(month);
+    setMonthCloseAccountInputs(
+      toCurrencyDraftMap(
+        monthCloseSeedPreview.accounts.map((account) => ({ id: account.accountId, value: account.appBalance })),
+      ),
+    );
+    setMonthCloseCardInputs(
+      toCurrencyDraftMap(monthCloseSeedPreview.cardInvoices.map((item) => ({ id: item.cardId, value: item.appTotal }))),
+    );
+    setMonthCloseModalOpen(true);
+  }
+
+  function handleAccountCloseChange(accountId: string, value: string) {
+    setMonthCloseAccountInputs((prev) => ({
+      ...prev,
+      [accountId]: formatCurrencyInputBRL(value, { allowNegative: true }),
+    }));
+  }
+
+  function handleCardCloseChange(cardId: string, value: string) {
+    setMonthCloseCardInputs((prev) => ({
+      ...prev,
+      [cardId]: formatCurrencyInputBRL(value, { allowNegative: true }),
+    }));
+  }
+
+  async function handleConfirmMonthClose() {
+    setMonthCloseSubmitting(true);
+    try {
+      monthCloseController.confirmCloseMonth({
+        householdId,
+        month: monthCloseMonth,
+        realAccountBalances: toDecimalRecord(monthCloseAccountInputs),
+        realCardInvoiceTotals: toDecimalRecord(monthCloseCardInputs),
+      });
+      setMonthCloseModalOpen(false);
+      setRefreshKey((prev) => prev + 1);
+      notify({ message: "Mes fechado com sucesso.", tone: "success" });
+    } catch {
+      notify({ message: "Nao foi possivel fechar o mes.", tone: "error" });
+    } finally {
+      setMonthCloseSubmitting(false);
+    }
   }
 
   return (
@@ -351,7 +453,11 @@ export default function CashflowPage() {
                 </div>
               </div>
 
-              <div className="sm:inline-flex">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button type="button" variant="outline" className="w-full rounded-xl sm:w-auto" onClick={handleOpenMonthCloseModal}>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Fechar mes
+                </Button>
                 <Button type="button" variant="outline" className="w-full rounded-xl sm:w-auto" onClick={() => setImportModalOpen(true)}>
                   Importar texto
                 </Button>
@@ -514,6 +620,16 @@ export default function CashflowPage() {
 
           window.setTimeout(runToggle, 16);
         }}
+      />
+
+      <MonthCloseSheet
+        open={monthCloseModalOpen}
+        preview={monthClosePreview}
+        isSubmitting={monthCloseSubmitting}
+        onOpenChange={setMonthCloseModalOpen}
+        onAccountChange={handleAccountCloseChange}
+        onCardChange={handleCardCloseChange}
+        onConfirm={handleConfirmMonthClose}
       />
 
       <Sheet open={transactionModalOpen} onOpenChange={setTransactionModalOpen}>

@@ -19,8 +19,13 @@ import { CategoriesService } from "../../src/modules/categories/categories.servi
 import { ScheduleRepository } from "../../src/modules/scheduling/schedule.repository";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository";
 import { InvoiceSettlementRepository } from "../../src/modules/invoices/invoice-settlement.repository";
+import { SnackbarProvider } from "../../src/components/ui/snackbar";
 
 const householdId = "household-main";
+
+function renderCashflowPage() {
+  return render(React.createElement(SnackbarProvider, null, React.createElement(CashflowPage)));
+}
 
 describe("free balance dashboard", () => {
   afterEach(() => {
@@ -55,7 +60,7 @@ describe("free balance dashboard", () => {
 
   it("shows clean dashboard with semaphore and statement only", async () => {
     const user = userEvent.setup();
-    render(React.createElement(CashflowPage));
+    renderCashflowPage();
     expect(screen.getByRole("tab", { name: "Abr/26", selected: true })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Ir para proximo mes" }));
     expect(screen.getByRole("tab", { name: "Mai/26", selected: true })).toBeInTheDocument();
@@ -86,7 +91,7 @@ describe("free balance dashboard", () => {
 
   it("renders red risk when next month projection becomes negative", async () => {
     const user = userEvent.setup();
-    render(React.createElement(CashflowPage));
+    renderCashflowPage();
 
     await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
     const tipo = screen.getAllByLabelText("Tipo da transacao")[0]!;
@@ -106,5 +111,45 @@ describe("free balance dashboard", () => {
 
     expect(await screen.findByText("Fatura Visa Casa")).toBeInTheDocument();
     expect(screen.getAllByTestId("free-balance-risk")[0]).toHaveTextContent("Risco");
+  });
+
+  it("lets the user close the month from the dashboard and refreshes the statement", async () => {
+    const user = userEvent.setup();
+    renderCashflowPage();
+
+    await user.click(screen.getByRole("button", { name: "Fechar mes" }));
+    const accountInput = await screen.findByLabelText("Valor real - Conta Casa");
+    const cardInput = await screen.findByLabelText("Valor real - Visa Casa");
+
+    await user.clear(accountInput);
+    await user.type(accountInput, "102500");
+    await user.clear(cardInput);
+    await user.type(cardInput, "1500");
+
+    await user.click(screen.getByRole("button", { name: "Confirmar fechamento" }));
+
+    expect(await screen.findByText("REAJUSTE")).toBeInTheDocument();
+    expect(await screen.findByText("Fatura Visa Casa")).toBeInTheDocument();
+    expect(await screen.findByText("Mes fechado com sucesso.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirmar fechamento" })).not.toBeInTheDocument();
+  });
+
+  it("seeds the month close sheet from the selected month, not the current balance snapshot", async () => {
+    const user = userEvent.setup();
+    renderCashflowPage();
+
+    await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
+    await user.type(screen.getByLabelText("Descricao da transacao"), "Lancamento futuro");
+    await user.clear(screen.getByLabelText("Valor da transacao"));
+    await user.type(screen.getByLabelText("Valor da transacao"), "30000");
+    await user.clear(screen.getByLabelText("Data da transacao"));
+    await user.type(screen.getByLabelText("Data da transacao"), "2026-04-20");
+    await user.click(screen.getAllByRole("button", { name: "Adicionar lancamento" })[0]!);
+    expect(await screen.findByText("Lancamento futuro")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Mar/26" }));
+    await user.click(screen.getByRole("button", { name: "Fechar mes" }));
+
+    expect(await screen.findByLabelText("Valor real - Conta Casa")).toHaveValue("1000.00");
   });
 });
