@@ -104,6 +104,7 @@ model Transaction {
   creditCardId String?
   categoryId   String
   transferGroupId String?
+  systemTag    String?
 
   account      Account?    @relation(fields: [accountId], references: [id])
   creditCard   CreditCard? @relation(fields: [creditCardId], references: [id])
