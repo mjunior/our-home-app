@@ -16,12 +16,12 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MonthBlock({ title, data }: { title: string; data: FreeBalanceMonthBreakdown }) {
+function MonthBlock({ title, data, isCurrentMonth = false }: { title: string; data: FreeBalanceMonthBreakdown; isCurrentMonth?: boolean }) {
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
       <h3 className="mb-2 text-base">{title}</h3>
       <ul className="space-y-1.5">
-        <Row label="Saldo contas" value={data.components.accountStartingBalance} />
+        <Row label={isCurrentMonth ? "Saldo do mes anterior" : "Saldo contas"} value={data.components.accountStartingBalance} />
         <Row label="Entradas" value={data.components.projectedIncome} />
         <Row label="Fatura cartao" value={data.components.cardInvoiceDue} />
         <Row label="Parcelas" value={data.components.installments} />
@@ -43,7 +43,7 @@ export function FreeBalanceBreakdown({ current, next }: FreeBalanceBreakdownProp
         <CardTitle>Composicao do Saldo Livre</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-2 sm:grid-cols-2">
-        <MonthBlock title={`Mes atual (${current.month})`} data={current} />
+        <MonthBlock title={`Mes atual (${current.month})`} data={current} isCurrentMonth />
         <MonthBlock title={`Proximo mes (${next.month})`} data={next} />
       </CardContent>
     </Card>

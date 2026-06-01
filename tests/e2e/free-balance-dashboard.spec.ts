@@ -87,6 +87,7 @@ describe("free balance dashboard", () => {
 
     await user.click(screen.getByRole("button", { name: "Abrir composicao do saldo atual" }));
     expect(screen.getByText("Detalhamento do saldo atual - Mes atual")).toBeInTheDocument();
+    expect(screen.getByText("Saldo do mes anterior")).toBeInTheDocument();
   });
 
   it("renders red risk when next month projection becomes negative", async () => {

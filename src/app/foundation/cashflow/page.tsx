@@ -722,6 +722,12 @@ export default function CashflowPage() {
               </div>
               {detailMonthKey === "current" ? (
                 <div className="mt-2 flex items-center justify-between rounded-xl border border-slate-200 px-2 py-1.5 text-xs dark:border-slate-700">
+                  <span className="text-slate-500 dark:text-slate-300">Saldo do mes anterior</span>
+                  <strong>{formatCurrencyBR(freeBalance.breakdown.current.startingBalance)}</strong>
+                </div>
+              ) : null}
+              {detailMonthKey === "current" ? (
+                <div className="mt-2 flex items-center justify-between rounded-xl border border-slate-200 px-2 py-1.5 text-xs dark:border-slate-700">
                   <span className="text-slate-500 dark:text-slate-300">Saldo previsto do mes atual</span>
                   <strong>{formatCurrencyBR(freeBalance.freeBalanceCurrent)}</strong>
                 </div>
