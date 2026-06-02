@@ -5,15 +5,15 @@
   "type": "module",
   "scripts": {
     "predev": "npm run db:push || echo \"[warn] db:push failed, continuing dev server\"",
-    "dev": "vite",
+    "dev": "DATABASE_URL=${LOCAL_DATABASE_URL:-file:./dev.db} vite",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "vitest run",
     "lint": "tsc --noEmit",
-    "prisma:validate": "prisma validate --schema prisma/schema.prisma",
+    "prisma:validate": "DATABASE_URL=${LOCAL_DATABASE_URL:-file:./dev.db} prisma validate --schema prisma/schema.prisma",
     "prisma:validate:prod": "prisma validate --schema prisma/schema.prod.prisma",
-    "db:push": "prisma db push --schema prisma/schema.prisma",
+    "db:push": "DATABASE_URL=${LOCAL_DATABASE_URL:-file:./dev.db} prisma db push --schema prisma/schema.prisma",
     "db:push:prod": "prisma db push --schema prisma/schema.prod.prisma",
     "dev:reset:phase13": "bash scripts/dev-reset-seed-phase13.sh"
   },

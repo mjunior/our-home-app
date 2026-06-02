@@ -11,10 +11,13 @@ export interface AccountRecord {
 
 const accountsStore: AccountRecord[] = [];
 
+type CreateAccountData = Omit<AccountRecord, "id" | "goalAmount"> & Partial<Pick<AccountRecord, "goalAmount">>;
+
 export class AccountsRepository {
-  create(data: Omit<AccountRecord, "id">): AccountRecord {
+  create(data: CreateAccountData): AccountRecord {
     const record: AccountRecord = {
       id: createId(),
+      goalAmount: null,
       ...data,
     };
 

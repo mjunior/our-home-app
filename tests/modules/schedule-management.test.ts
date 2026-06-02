@@ -230,7 +230,7 @@ describe("schedule management", () => {
     const june = instances.find((item) => item.monthKey === "2026-06");
 
     expect(sameRule.active).toBe(true);
-    expect(updated.monthKey).toBe("2026-05");
+    expect("monthKey" in updated ? updated.monthKey : "").toBe("2026-05");
     expect(april?.amount).toBe("120.00");
     expect(may?.amount).toBe("180.00");
     expect(may?.description).toBe("Internet promocional");

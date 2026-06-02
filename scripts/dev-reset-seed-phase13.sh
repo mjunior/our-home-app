@@ -9,7 +9,7 @@ PASS_1="${2:-secret123}"
 EMAIL_2="${3:-owner2@ourhome.local}"
 PASS_2="${4:-secret123}"
 
-export DATABASE_URL="${DATABASE_URL:-file:./prisma/dev.db}"
+export DATABASE_URL="${LOCAL_DATABASE_URL:-file:./dev.db}"
 
 rm -f dev.db prisma/dev.db
 npm run db:push
