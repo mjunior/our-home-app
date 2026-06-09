@@ -1,4 +1,4 @@
-import type { GetFreeBalanceInput } from "./free-balance.types";
+import type { GetFreeBalanceInput, GetFreeBalanceProjectionInput } from "./free-balance.types";
 import { FreeBalanceService } from "./free-balance.service";
 
 export class FreeBalanceController {
@@ -6,5 +6,9 @@ export class FreeBalanceController {
 
   getFreeBalance(payload: GetFreeBalanceInput) {
     return this.service.getFreeBalance(payload);
+  }
+
+  getFreeBalanceProjection(payload: GetFreeBalanceProjectionInput) {
+    return this.service.getFreeBalanceProjection(payload);
   }
 }

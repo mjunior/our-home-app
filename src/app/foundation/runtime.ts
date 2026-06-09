@@ -96,9 +96,9 @@ type InvoicesControllerContract = Pick<
   | "unsettleInvoice"
   | "createCreditCardAdjustment"
 >;
-type FreeBalanceControllerContract = Pick<FreeBalanceController, "getFreeBalance">;
+type FreeBalanceControllerContract = Pick<FreeBalanceController, "getFreeBalance" | "getFreeBalanceProjection">;
 type MonthCloseControllerContract = Pick<MonthCloseController, "previewCloseMonth" | "confirmCloseMonth">;
-type ScheduleManagementControllerContract = Pick<
+type ScheduleManagementControllerSyncContract = Pick<
   ScheduleManagementController,
   | "createRecurringSchedule"
   | "createInstallmentSchedule"
@@ -113,6 +113,11 @@ type ScheduleManagementControllerContract = Pick<
   | "deleteInstallmentSchedule"
   | "stopRecurringSchedule"
 >;
+type ScheduleManagementControllerContract = Omit<ScheduleManagementControllerSyncContract, "createLaunch"> & {
+  createLaunch: (
+    ...args: MethodArgs<ScheduleManagementController["createLaunch"]>
+  ) => MethodReturn<ScheduleManagementController["createLaunch"]> | Promise<MethodReturn<ScheduleManagementController["createLaunch"]>>;
+};
 type Runtime = {
   accountsController: AccountsControllerContract;
   cardsController: CardsControllerContract;
@@ -181,6 +186,24 @@ function requestSync<T>(method: "GET" | "POST", url: string, payload?: unknown):
   }
 
   return JSON.parse(request.responseText) as T;
+}
+
+async function requestAsync<T>(method: "GET" | "POST", url: string, payload?: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method,
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized();
+    }
+    throw new Error(await readErrorMessage(response, `HTTP_${response.status}`));
+  }
+
+  return (await response.json()) as T;
 }
 
 function createLocalRuntime(): Runtime {
@@ -370,7 +393,9 @@ function createApiRuntime(): Runtime {
   type CreditCardAdjustmentOutput = MethodReturn<Runtime["invoicesController"]["createCreditCardAdjustment"]>;
 
   type FreeBalanceInput = MethodArgs<Runtime["freeBalanceController"]["getFreeBalance"]>[0];
-  type FreeBalanceOutput = MethodReturn<Runtime["freeBalanceController"]["getFreeBalance"]>;
+  type FreeBalanceOutput = MethodReturn<FreeBalanceController["getFreeBalance"]>;
+  type FreeBalanceProjectionInput = MethodArgs<Runtime["freeBalanceController"]["getFreeBalanceProjection"]>[0];
+  type FreeBalanceProjectionOutput = MethodReturn<FreeBalanceController["getFreeBalanceProjection"]>;
   type MonthClosePreviewInput = MethodArgs<Runtime["monthCloseController"]["previewCloseMonth"]>[0];
   type MonthClosePreviewOutput = MethodReturn<Runtime["monthCloseController"]["previewCloseMonth"]>;
   type MonthCloseConfirmInput = MethodArgs<Runtime["monthCloseController"]["confirmCloseMonth"]>[0];
@@ -381,7 +406,7 @@ function createApiRuntime(): Runtime {
   type InstallmentCreateInput = MethodArgs<Runtime["scheduleManagementController"]["createInstallmentSchedule"]>[0];
   type InstallmentCreateOutput = MethodReturn<Runtime["scheduleManagementController"]["createInstallmentSchedule"]>;
   type UnifiedLaunchInput = MethodArgs<Runtime["scheduleManagementController"]["createLaunch"]>[0];
-  type UnifiedLaunchOutput = MethodReturn<Runtime["scheduleManagementController"]["createLaunch"]>;
+  type UnifiedLaunchOutput = Awaited<MethodReturn<Runtime["scheduleManagementController"]["createLaunch"]>>;
   type UnifiedLaunchBatchInput = MethodArgs<Runtime["scheduleManagementController"]["createLaunchBatch"]>[0];
   type UnifiedLaunchBatchOutput = MethodReturn<Runtime["scheduleManagementController"]["createLaunchBatch"]>;
   type SchedulesListOutput = MethodReturn<Runtime["scheduleManagementController"]["listSchedules"]>;
@@ -568,6 +593,13 @@ function createApiRuntime(): Runtime {
     freeBalanceController: {
       getFreeBalance: (input: FreeBalanceInput): FreeBalanceOutput =>
         requestSync<FreeBalanceOutput>("GET", `/api/free-balance?month=${encodeURIComponent(input.month)}`),
+      getFreeBalanceProjection: (input: FreeBalanceProjectionInput): FreeBalanceProjectionOutput => {
+        const query = new URLSearchParams({
+          startMonth: input.startMonth,
+          endMonth: input.endMonth,
+        });
+        return requestSync<FreeBalanceProjectionOutput>("GET", `/api/free-balance/projection?${query.toString()}`);
+      },
     },
     monthCloseController: {
       previewCloseMonth: (input: MonthClosePreviewInput): MonthClosePreviewOutput =>
@@ -602,9 +634,8 @@ function createApiRuntime(): Runtime {
           accountId: input.accountId,
           creditCardId: input.creditCardId,
         }),
-      createLaunch: (input: UnifiedLaunchInput): UnifiedLaunchOutput => {
-        return requestSync<UnifiedLaunchOutput>("POST", "/api/launches", input);
-      },
+      createLaunch: (input: UnifiedLaunchInput): Promise<UnifiedLaunchOutput> =>
+        requestAsync<UnifiedLaunchOutput>("POST", "/api/launches", input),
       createLaunchBatch: (input: UnifiedLaunchBatchInput): UnifiedLaunchBatchOutput =>
         requestSync<UnifiedLaunchBatchOutput>("POST", "/api/launches/batch", input),
       listSchedules: (_householdId: string): SchedulesListOutput =>

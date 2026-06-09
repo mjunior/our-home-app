@@ -8,17 +8,27 @@ import { ScheduleRepository } from "../scheduling/schedule.repository";
 import { TransactionsRepository } from "../transactions/transactions.repository";
 import { FreeBalancePolicy } from "./free-balance.policy";
 import type {
+  FreeBalanceCalculationDetail,
   FreeBalanceMonthBreakdown,
   FreeBalancePendingOutflow,
+  FreeBalanceProjectionMonth,
+  FreeBalanceProjectionResult,
   FreeBalanceResult,
   FreeBalanceTopDriver,
   GetFreeBalanceInput,
+  GetFreeBalanceProjectionInput,
 } from "./free-balance.types";
 import type { InvoiceSettlementRecord } from "../invoices/invoice-settlement.repository";
 
 const inputSchema = z.object({
   householdId: z.string().min(1),
   month: z.string().regex(/^\d{4}-\d{2}$/),
+});
+
+const projectionInputSchema = z.object({
+  householdId: z.string().min(1),
+  startMonth: z.string().regex(/^\d{4}-\d{2}$/),
+  endMonth: z.string().regex(/^\d{4}-\d{2}$/),
 });
 
 type DriverSeed = Omit<FreeBalanceTopDriver, "amount"> & { amount: Decimal };
@@ -123,6 +133,19 @@ export class FreeBalanceService {
       checkingAccountIds,
       invoiceSettlements,
     );
+    const currentCalculationDetail = this.buildCurrentCalculationDetail(
+      parsed.householdId,
+      currentMonth,
+      currentComputation.breakdown.pendingOutflows,
+      transactions,
+      scheduleInstances,
+      invoiceSettlements,
+      checkingAccountIds,
+      accountOpeningBalance,
+    );
+    currentComputation.breakdown.startingBalance = currentCalculationDetail.realCheckingBalance;
+    currentComputation.breakdown.freeBalance = currentCalculationDetail.formula.projectedBalance;
+    currentComputation.breakdown.components.accountStartingBalance = currentCalculationDetail.realCheckingBalance;
 
     const carryToNext = new Decimal(currentComputation.breakdown.freeBalance).lessThan(0)
       ? new Decimal(currentComputation.breakdown.freeBalance).abs()
@@ -168,11 +191,192 @@ export class FreeBalanceService {
       missingData,
       topDrivers,
       alerts: policy.alerts,
+      currentCalculationDetail,
       breakdown: {
         current: currentComputation.breakdown,
         next: nextComputation.breakdown,
       },
     };
+  }
+
+  getFreeBalanceProjection(input: GetFreeBalanceProjectionInput): FreeBalanceProjectionResult {
+    const parsed = projectionInputSchema.parse(input);
+    if (parsed.endMonth < parsed.startMonth) {
+      throw new Error("FREE_BALANCE_INVALID_PROJECTION_RANGE");
+    }
+
+    const transactions = this.transactionsRepository.listByHousehold(parsed.householdId);
+    const scheduleInstances = this.scheduleRepository.listInstancesByHousehold(parsed.householdId);
+    const accounts = this.accountsRepository.listByHousehold(parsed.householdId);
+    const checkingAccountIds = new Set(accounts.filter((item) => item.type === "CHECKING").map((item) => item.id));
+    const accountOpeningBalance = sumDecimals(
+      accounts
+        .filter((item) => item.type === "CHECKING")
+        .map((item) => new Decimal(item.openingBalance)),
+    );
+    const cardCharges = this.collectCardCharges(parsed.householdId, transactions, scheduleInstances);
+    const invoiceSettlements = this.invoiceSettlementRepository?.listByHousehold(parsed.householdId) ?? [];
+
+    const firstPendingOutflows = this.collectPendingOutflows(
+      parsed.householdId,
+      parsed.startMonth,
+      transactions,
+      scheduleInstances,
+      cardCharges,
+      checkingAccountIds,
+      invoiceSettlements,
+    );
+    const currentCalculationDetail = this.buildCurrentCalculationDetail(
+      parsed.householdId,
+      parsed.startMonth,
+      firstPendingOutflows,
+      transactions,
+      scheduleInstances,
+      invoiceSettlements,
+      checkingAccountIds,
+      accountOpeningBalance,
+    );
+
+    const months: FreeBalanceProjectionMonth[] = [];
+    let cursor = parsed.startMonth;
+    let startingBalance = this.computeStartingBalance(
+      parsed.householdId,
+      parsed.startMonth,
+      accountOpeningBalance,
+      transactions,
+      scheduleInstances,
+      cardCharges,
+      invoiceSettlements,
+      checkingAccountIds,
+    );
+
+    while (cursor <= parsed.endMonth) {
+      const computation = this.computeMonth(
+        parsed.householdId,
+        cursor,
+        startingBalance,
+        new Decimal(0),
+        transactions,
+        scheduleInstances,
+        cardCharges,
+        invoiceSettlements,
+        checkingAccountIds,
+      );
+      const breakdown = computation.breakdown;
+      const endingBalance = new Decimal(breakdown.freeBalance);
+      months.push({
+        month: cursor,
+        startingBalance: startingBalance.toFixed(2),
+        entradas: breakdown.income,
+        saidas: breakdown.gastosOperacionais,
+        investimentos: breakdown.investimentos,
+        sobra: endingBalance.toFixed(2),
+        endingBalance: endingBalance.toFixed(2),
+      });
+      startingBalance = endingBalance;
+      cursor = addMonths(cursor, 1);
+    }
+
+    return {
+      startMonth: parsed.startMonth,
+      endMonth: parsed.endMonth,
+      months,
+      currentCalculationDetail,
+    };
+  }
+
+  private buildCurrentCalculationDetail(
+    householdId: string,
+    month: string,
+    pendingOutflows: FreeBalancePendingOutflow[],
+    transactions: ReturnType<TransactionsRepository["listByHousehold"]>,
+    scheduleInstances: ReturnType<ScheduleRepository["listInstancesByHousehold"]>,
+    invoiceSettlements: InvoiceSettlementRecord[],
+    checkingAccountIds: Set<string>,
+    openingBalance: Decimal,
+  ): FreeBalanceCalculationDetail {
+    const realCheckingBalance = this.computeRealCheckingBalance(
+      householdId,
+      month,
+      transactions,
+      scheduleInstances,
+      invoiceSettlements,
+      checkingAccountIds,
+      openingBalance,
+    );
+    const pendingExpenses = sumDecimals(
+      pendingOutflows.filter((item) => item.sourceType === "ONE_OFF").map((item) => new Decimal(item.amount)),
+    );
+    const pendingInvoices = sumDecimals(
+      pendingOutflows.filter((item) => item.sourceType === "CARD_INVOICE").map((item) => new Decimal(item.amount)),
+    );
+    const pendingSchedules = sumDecimals(
+      pendingOutflows
+        .filter((item) => item.sourceType === "INSTALLMENT" || item.sourceType === "RECURRING")
+        .map((item) => new Decimal(item.amount)),
+    );
+    const pendingOutflowsTotal = pendingExpenses.plus(pendingInvoices).plus(pendingSchedules);
+    const projectedBalance = realCheckingBalance.minus(pendingOutflowsTotal);
+
+    return {
+      realCheckingBalance: realCheckingBalance.toFixed(2),
+      pendingOutflowsTotal: pendingOutflowsTotal.toFixed(2),
+      pendingOutflows,
+      formula: {
+        realCheckingBalance: realCheckingBalance.toFixed(2),
+        pendingExpenses: pendingExpenses.toFixed(2),
+        pendingInvoices: pendingInvoices.toFixed(2),
+        pendingSchedules: pendingSchedules.toFixed(2),
+        projectedBalance: projectedBalance.toFixed(2),
+      },
+    };
+  }
+
+  private computeRealCheckingBalance(
+    householdId: string,
+    month: string,
+    transactions: ReturnType<TransactionsRepository["listByHousehold"]>,
+    scheduleInstances: ReturnType<ScheduleRepository["listInstancesByHousehold"]>,
+    invoiceSettlements: InvoiceSettlementRecord[],
+    checkingAccountIds: Set<string>,
+    openingBalance: Decimal,
+  ): Decimal {
+    const paidTransactionNet = sumDecimals(
+      transactions
+        .filter(
+          (item) =>
+            item.householdId === householdId &&
+            item.accountId !== null &&
+            checkingAccountIds.has(item.accountId) &&
+            (item.settlementStatus ?? "PAID") === "PAID" &&
+            monthFromIso(item.occurredAt) <= month,
+        )
+        .map((item) => (item.kind === "INCOME" ? new Decimal(item.amount) : new Decimal(item.amount).negated())),
+    );
+    const paidScheduleNet = sumDecimals(
+      scheduleInstances
+        .filter(
+          (item) =>
+            item.householdId === householdId &&
+            item.accountId !== null &&
+            checkingAccountIds.has(item.accountId) &&
+            (item.settlementStatus ?? "PAID") === "PAID" &&
+            item.monthKey <= month,
+        )
+        .map((item) => (item.kind === "INCOME" ? new Decimal(item.amount) : new Decimal(item.amount).negated())),
+    );
+    const paidInvoiceNet = sumDecimals(
+      invoiceSettlements
+        .filter(
+          (item) =>
+            item.householdId === householdId &&
+            checkingAccountIds.has(item.paymentAccountId) &&
+            monthFromIso(item.paidAt) <= month,
+        )
+        .map((item) => new Decimal(item.paidAmount).negated()),
+    );
+
+    return openingBalance.plus(paidTransactionNet).plus(paidScheduleNet).plus(paidInvoiceNet);
   }
 
   private computeStartingBalance(

@@ -28,14 +28,21 @@ function renderCashflowPage() {
 }
 
 describe("free balance dashboard", () => {
+  const scrollIntoView = vi.fn();
+
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
+    scrollIntoView.mockClear();
   });
 
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-04-15T12:00:00.000Z"));
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
 
     const accountsRepo = new AccountsRepository();
     const cardsRepo = new CardsRepository();
@@ -58,10 +65,14 @@ describe("free balance dashboard", () => {
     categories.createCategory({ householdId, name: "Mercado" });
   });
 
-  it("shows clean dashboard with semaphore and statement only", async () => {
+  it("shows clean dashboard with annual projection cards and statement only", async () => {
     const user = userEvent.setup();
     renderCashflowPage();
+    expect(screen.getByRole("tab", { name: "Jan/26" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Abr/26", selected: true })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Dez/26" })).toBeInTheDocument();
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "center", behavior: "smooth" });
+    expect(screen.getAllByText("Mes anterior").length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: "Ir para proximo mes" }));
     expect(screen.getByRole("tab", { name: "Mai/26", selected: true })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Ir para mes anterior" }));
@@ -72,25 +83,18 @@ describe("free balance dashboard", () => {
     await user.clear(screen.getByLabelText("Valor da transacao"));
     await user.type(screen.getByLabelText("Valor da transacao"), "3000.00");
     await user.click(screen.getAllByRole("button", { name: "Adicionar lancamento" })[0]!);
-    expect(screen.getByRole("button", { name: "Salvando..." })).toBeDisabled();
     expect(await screen.findByText("Salario")).toBeInTheDocument();
 
-    expect(screen.getByLabelText("Semaforo saldo livre")).toBeInTheDocument();
-    expect(screen.getByTestId("free-balance-current")).toHaveTextContent("R$");
+    expect(screen.queryByLabelText("Semaforo saldo livre")).not.toBeInTheDocument();
     expect(screen.queryByText("Top 3 causas de pressao")).not.toBeInTheDocument();
     expect(screen.queryByText("Filtros do extrato")).not.toBeInTheDocument();
-    expect(screen.getByText("Gastos mes")).toBeInTheDocument();
-    expect(screen.getByText("Gastos operacionais")).toBeInTheDocument();
-    expect(screen.getByText("Investimentos")).toBeInTheDocument();
-    expect(screen.getByText("Total de saidas")).toBeInTheDocument();
+    expect(screen.queryByText("Mes atual")).not.toBeInTheDocument();
+    expect(screen.queryByText("Proximo mes")).not.toBeInTheDocument();
+    expect(screen.queryByText("Gastos mes")).not.toBeInTheDocument();
     expect(screen.queryByText("Pode aumentar no cartao")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Abrir composicao do saldo atual" }));
-    expect(screen.getByText("Detalhamento do saldo atual - Mes atual")).toBeInTheDocument();
-    expect(screen.getByText("Saldo do mes anterior")).toBeInTheDocument();
   });
 
-  it("renders red risk when next month projection becomes negative", async () => {
+  it("keeps high card spending in the monthly statement without rendering risk cards", async () => {
     const user = userEvent.setup();
     renderCashflowPage();
 
@@ -111,7 +115,7 @@ describe("free balance dashboard", () => {
     await user.click(screen.getAllByRole("button", { name: "Adicionar lancamento" })[0]!);
 
     expect(await screen.findByText("Fatura Visa Casa")).toBeInTheDocument();
-    expect(screen.getAllByTestId("free-balance-risk")[0]).toHaveTextContent("Risco");
+    expect(screen.queryByTestId("free-balance-risk")).not.toBeInTheDocument();
   });
 
   it("lets the user close the month from the dashboard and refreshes the statement", async () => {
@@ -145,7 +149,7 @@ describe("free balance dashboard", () => {
     await user.click(screen.getAllByRole("button", { name: "Adicionar lancamento" })[0]!);
     expect(await screen.findByText("Lancamento futuro")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "Mar/26" }));
+    await user.click(screen.getByRole("button", { name: "Ir para mes anterior" }));
     await user.click(screen.getByRole("button", { name: "Fechar mes" }));
 
     expect(await screen.findByLabelText("Valor real - Conta Casa")).toHaveValue("1000.00");

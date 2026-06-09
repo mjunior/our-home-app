@@ -1648,12 +1648,15 @@ export function installViteApi(server: MiddlewareServer) {
         const preview = monthCloseService.previewCloseMonth(input);
         const accountRows = preview.accounts.filter((row) => row.willCreateAdjustment);
 
-        const accountAdjustments = [];
+        const accountAdjustments: Array<{
+          accountId: string;
+          result: Awaited<ReturnType<typeof createPersistedMonthCloseAccountAdjustment>>;
+        }> = [];
         await prisma.$transaction(async (db) => {
           for (const row of accountRows) {
             accountAdjustments.push({
               accountId: row.accountId,
-              result: await createPersistedMonthCloseAccountAdjustment(db as MonthCloseAdjustmentDb, {
+              result: await createPersistedMonthCloseAccountAdjustment(db as unknown as MonthCloseAdjustmentDb, {
                 householdId: authHouseholdId,
                 accountId: row.accountId,
                 appBalance: row.appBalance,
@@ -1822,6 +1825,15 @@ export function installViteApi(server: MiddlewareServer) {
         const month = url.searchParams.get("month") ?? "";
         const { freeBalanceService } = await loadServices();
         sendJson(res, 200, freeBalanceService.getFreeBalance({ householdId, month }));
+        return;
+      }
+
+      if (req.method === "GET" && path === "/api/free-balance/projection") {
+        const householdId = authHouseholdId;
+        const startMonth = url.searchParams.get("startMonth") ?? "";
+        const endMonth = url.searchParams.get("endMonth") ?? "";
+        const { freeBalanceService } = await loadServices();
+        sendJson(res, 200, freeBalanceService.getFreeBalanceProjection({ householdId, startMonth, endMonth }));
         return;
       }
 

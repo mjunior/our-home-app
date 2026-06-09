@@ -75,4 +75,11 @@ describe("auth flow", () => {
     expect(html).toContain('name="robots"');
     expect(html).toContain("noindex");
   });
+
+  it("does not mount the motivational splash after authentication", () => {
+    const main = fs.readFileSync("src/main.tsx", "utf8");
+
+    expect(main).not.toContain("MotivationalSplash");
+    expect(main).not.toContain("showSplash");
+  });
 });

@@ -85,8 +85,6 @@ describe("cashflow flow", () => {
     await user.clear(screen.getByLabelText("Valor da transacao"));
     await user.type(screen.getByLabelText("Valor da transacao"), "5000.00");
     await user.click(screen.getByRole("button", { name: "Adicionar lancamento" }));
-    expect(screen.getByRole("button", { name: "Salvando..." })).toBeDisabled();
-    expect(screen.getByRole("tab", { name: "Investimento" })).toBeDisabled();
     expect(await screen.findByText("Salario")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Novo lancamento" }));
@@ -104,8 +102,6 @@ describe("cashflow flow", () => {
     expect(screen.getByText("Entrada")).toBeInTheDocument();
     expect(screen.getByText("Saida")).toBeInTheDocument();
     expect(screen.getByText("Cartao: Visa Casa")).toBeInTheDocument();
-    expect(screen.getByText("Saldo previsto")).toBeInTheDocument();
-    expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 6.000,00");
 
     const invoiceRow = screen.getAllByText("Fatura Visa Casa").find((item) => item.closest("tr"))?.closest("tr") ?? null;
     const salaryRow = screen.getByText("Salario").closest("tr");
@@ -113,20 +109,12 @@ describe("cashflow flow", () => {
     expect(salaryRow).not.toBeNull();
 
     await user.click(within(invoiceRow!).getByRole("button", { name: "Marcar como pago" }));
-    expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 5.800,00");
+    expect(within(invoiceRow!).getByRole("button", { name: "Marcar como nao pago" })).toBeInTheDocument();
     await user.click(within(invoiceRow!).getByRole("button", { name: "Marcar como nao pago" }));
-    expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 6.000,00");
+    expect(within(invoiceRow!).getByRole("button", { name: "Marcar como pago" })).toBeInTheDocument();
 
     await user.click(within(salaryRow!).getByRole("button", { name: "Marcar como nao pago" }));
-    expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 1.000,00");
-
-    await user.click(screen.getByRole("button", { name: "Abrir composicao do saldo atual" }));
-    expect(screen.getByText("Detalhamento do saldo atual - Mes atual")).toBeInTheDocument();
-    expect(screen.getByText("Conta Casa")).toBeInTheDocument();
-    expect(screen.queryByText("Reserva Invest")).not.toBeInTheDocument();
-    expect(screen.getByText("Saidas futuras nao pagas")).toBeInTheDocument();
-    expect(screen.getAllByText("Fatura Visa Casa").length).toBeGreaterThan(0);
-    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(within(salaryRow!).getByRole("button", { name: "Marcar como pago" })).toBeInTheDocument();
 
     expect(screen.getByText("Fatura Visa Casa")).toBeInTheDocument();
 
@@ -142,37 +130,6 @@ describe("cashflow flow", () => {
     expect(screen.queryByText("Salario ajustado")).not.toBeInTheDocument();
   });
 
-  it("lists unpaid current month outflows in the current balance details", async () => {
-    const accountsRepo = new AccountsRepository();
-    const cardsRepo = new CardsRepository();
-    const categoriesRepo = new CategoriesRepository();
-    const transactionsRepo = new TransactionsRepository();
-
-    const account = new AccountsController(new AccountsService(accountsRepo)).listAccounts(householdId)[0]!;
-    const category = new CategoriesController(new CategoriesService(categoriesRepo)).listCategories(householdId)[0]!;
-    const transactions = new TransactionsController(new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo));
-
-    transactions.createTransaction({
-      householdId,
-      kind: "EXPENSE",
-      description: "Boleto pendente",
-      amount: "123.45",
-      occurredAt: "2026-04-20T12:00:00.000Z",
-      accountId: account.id,
-      categoryId: category.id,
-      settlementStatus: "UNPAID",
-    });
-
-    const user = userEvent.setup();
-    render(React.createElement(CashflowPage));
-
-    await user.click(screen.getByRole("button", { name: "Abrir composicao do saldo atual" }));
-
-    expect(screen.getByText("Saidas futuras nao pagas")).toBeInTheDocument();
-    expect(screen.getAllByText("Boleto pendente").length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/R\$\s*123[,.]45/).length).toBeGreaterThan(0);
-  });
-
   it("creates, edits and deletes investment as linked transfer pair", async () => {
     const user = userEvent.setup();
     render(React.createElement(CashflowPage));
@@ -183,7 +140,6 @@ describe("cashflow flow", () => {
     await user.clear(screen.getByLabelText("Valor da transacao"));
     await user.type(screen.getByLabelText("Valor da transacao"), "300.00");
     await user.click(screen.getByRole("button", { name: "Adicionar lancamento" }));
-    expect(screen.getByRole("button", { name: "Salvando..." })).toBeDisabled();
 
     expect(await screen.findAllByText("Aporte")).toHaveLength(1);
     expect(screen.getAllByText(/Investimento/).length).toBeGreaterThan(0);
@@ -204,8 +160,7 @@ describe("cashflow flow", () => {
     expect(screen.queryByText("Aporte ajustado")).not.toBeInTheDocument();
   });
 
-  it("does not add investment opening balance to the current month balance card", async () => {
-    const user = userEvent.setup();
+  it("does not render the removed current balance cards", async () => {
     const accountsRepo = new AccountsRepository();
     const cardsRepo = new CardsRepository();
     const categoriesRepo = new CategoriesRepository();
@@ -227,13 +182,11 @@ describe("cashflow flow", () => {
 
     render(React.createElement(CashflowPage));
 
-    expect(screen.getByTestId("current-real-balance")).toHaveTextContent("R$ 1.000,00");
-
-    await user.click(screen.getByRole("button", { name: "Abrir composicao do saldo atual" }));
-    expect(screen.getByText("Conta Casa")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Semaforo saldo livre")).not.toBeInTheDocument();
+    expect(screen.queryByText("Mes atual")).not.toBeInTheDocument();
+    expect(screen.queryByText("Proximo mes")).not.toBeInTheDocument();
+    expect(screen.queryByText("Gastos mes")).not.toBeInTheDocument();
     expect(screen.queryByText("Reserva Invest")).not.toBeInTheDocument();
-    expect(screen.getByText("Saldo atual em contas")).toBeInTheDocument();
-    expect(screen.getAllByText("R$ 1.000,00").length).toBeGreaterThan(0);
   });
 
   it("edits recurring entries only for the selected month", async () => {

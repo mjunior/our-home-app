@@ -40,6 +40,21 @@ export interface FreeBalancePendingOutflow {
   cardName: string | null;
 }
 
+export interface FreeBalanceCalculationFormula {
+  realCheckingBalance: string;
+  pendingExpenses: string;
+  pendingInvoices: string;
+  pendingSchedules: string;
+  projectedBalance: string;
+}
+
+export interface FreeBalanceCalculationDetail {
+  realCheckingBalance: string;
+  pendingOutflowsTotal: string;
+  pendingOutflows: FreeBalancePendingOutflow[];
+  formula: FreeBalanceCalculationFormula;
+}
+
 export interface FreeBalanceMonthBreakdown {
   month: string;
   startingBalance: string;
@@ -53,6 +68,23 @@ export interface FreeBalanceMonthBreakdown {
   pendingOutflows: FreeBalancePendingOutflow[];
 }
 
+export interface FreeBalanceProjectionMonth {
+  month: string;
+  startingBalance: string;
+  entradas: string;
+  saidas: string;
+  investimentos: string;
+  sobra: string;
+  endingBalance: string;
+}
+
+export interface FreeBalanceProjectionResult {
+  startMonth: string;
+  endMonth: string;
+  months: FreeBalanceProjectionMonth[];
+  currentCalculationDetail: FreeBalanceCalculationDetail;
+}
+
 export interface FreeBalanceResult {
   currentMonth: string;
   nextMonth: string;
@@ -64,6 +96,7 @@ export interface FreeBalanceResult {
   missingData: string[];
   topDrivers: FreeBalanceTopDriver[];
   alerts: FreeBalanceAlert[];
+  currentCalculationDetail: FreeBalanceCalculationDetail;
   breakdown: {
     current: FreeBalanceMonthBreakdown;
     next: FreeBalanceMonthBreakdown;
@@ -73,4 +106,10 @@ export interface FreeBalanceResult {
 export interface GetFreeBalanceInput {
   householdId: string;
   month: string;
+}
+
+export interface GetFreeBalanceProjectionInput {
+  householdId: string;
+  startMonth: string;
+  endMonth: string;
 }

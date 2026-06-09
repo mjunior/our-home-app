@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 
-import { FreeBalanceSemaphore } from "../../../components/foundation/free-balance-semaphore";
 import { MonthCloseSheet } from "../../../components/foundation/month-close-sheet";
 import { StatementTable } from "../../../components/foundation/statement-table";
 import { TransactionImportForm } from "../../../components/foundation/transaction-import-form";
 import { UnifiedLaunchForm } from "../../../components/foundation/unified-launch-form";
-import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import { Card, CardContent } from "../../../components/ui/card";
 import { useSnackbar } from "../../../components/ui/snackbar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
 import { launchConfettiCanvas, playCashRegisterSound, playCheerSound } from "../../../lib/celebration";
@@ -26,24 +24,6 @@ import {
   getRuntimeHouseholdId,
 } from "../runtime";
 import type { MonthClosePreview } from "../../../modules/month-close/month-close.service";
-
-const breakdownLabels: Record<string, string> = {
-  accountStartingBalance: "Saldo de contas",
-  projectedIncome: "Entradas previstas",
-  cardInvoiceDue: "Fatura de cartao",
-  installments: "Parcelas",
-  recurrences: "Recorrencias",
-  oneOffExpenses: "Gastos extras",
-  investments: "Investimentos",
-  lateCarry: "Atrasos carregados",
-};
-
-const pendingOutflowLabels: Record<string, string> = {
-  ONE_OFF: "Despesa avulsa",
-  INSTALLMENT: "Parcela",
-  RECURRING: "Recorrencia",
-  CARD_INVOICE: "Fatura",
-};
 
 function addMonths(monthKey: string, count: number): string {
   const [year, month] = monthKey.split("-").map(Number);
@@ -64,20 +44,13 @@ function toDecimalRecord(values: Record<string, string>) {
 }
 
 export default function CashflowPage() {
-  const [monthRailEl, setMonthRailEl] = useState<HTMLDivElement | null>(null);
-  const [isDesktop, setIsDesktop] = useState(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return true;
-    }
-    return window.matchMedia("(min-width: 640px)").matches;
-  });
+  const [currentMonthKey] = useState(() => getCurrentMonthKeyLocal());
+  const statementSectionRef = useRef<HTMLDivElement | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [transactionFormResetKey, setTransactionFormResetKey] = useState(0);
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [detailMonthKey, setDetailMonthKey] = useState<"current" | "next">("current");
-  const [month, setMonth] = useState(() => getCurrentMonthKeyLocal());
+  const [month, setMonth] = useState(currentMonthKey);
   const [editMode, setEditMode] = useState<"ONE_OFF" | "RECURRING" | "INSTALLMENT" | "INVESTMENT" | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
@@ -105,6 +78,7 @@ export default function CashflowPage() {
   const [monthCloseSubmitting, setMonthCloseSubmitting] = useState(false);
   const { notify } = useSnackbar();
   const householdId = getRuntimeHouseholdId();
+  const projectionRailRef = useRef<HTMLDivElement | null>(null);
 
   const accounts = useMemo(() => accountsController.listAccounts(householdId), [refreshKey, householdId]);
   const consolidatedBalance = useMemo(
@@ -152,11 +126,6 @@ export default function CashflowPage() {
     () => invoicesController.getDueObligationsByMonth({ householdId, dueMonth: month }),
     [refreshKey, month, householdId],
   );
-  const monthRail = useMemo(() => {
-    const offsets = isDesktop ? [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6] : [-3, -2, -1, 0, 1, 2, 3];
-    return offsets.map((offset) => addMonths(month, offset));
-  }, [isDesktop, month]);
-
   const statementEntries = useMemo(() => {
     const oneOff = transactions
       .filter((item) => !item.transferGroupId && !(item.kind === "EXPENSE" && item.creditCardId))
@@ -252,38 +221,24 @@ export default function CashflowPage() {
     });
   }, [cardDueDayMap, cardLabels, dueObligations.cards, month, optimisticSettlementByEntryId, scheduleInstances, transactions]);
 
-  const freeBalance = useMemo(
+  const projectionStartMonth = `${currentMonthKey.slice(0, 4)}-01`;
+  const projectionEndMonth = `${currentMonthKey.slice(0, 4)}-12`;
+  const freeBalanceProjection = useMemo(
     () =>
-      freeBalanceController.getFreeBalance({
-        householdId: householdId,
-        month,
+      freeBalanceController.getFreeBalanceProjection({
+        householdId,
+        startMonth: projectionStartMonth,
+        endMonth: projectionEndMonth,
       }),
-    [month, refreshKey, householdId],
+    [householdId, projectionEndMonth, projectionStartMonth, refreshKey],
   );
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return;
+    const currentMonthButton = projectionRailRef.current?.querySelector<HTMLButtonElement>("[data-current-month='true']");
+    if (typeof currentMonthButton?.scrollIntoView === "function") {
+      currentMonthButton.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
     }
-    const mediaQuery = window.matchMedia("(min-width: 640px)");
-    const handleChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
-    setIsDesktop(mediaQuery.matches);
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
-
-  useEffect(() => {
-    if (!monthRailEl) {
-      return;
-    }
-    const activeButton = monthRailEl.querySelector<HTMLButtonElement>('[aria-selected="true"]');
-    if (!activeButton) {
-      return;
-    }
-    if (typeof activeButton.scrollIntoView === "function") {
-      activeButton.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
-    }
-  }, [month, monthRailEl]);
+  }, [currentMonthKey, freeBalanceProjection.months]);
 
   useEffect(() => {
     const openLaunch = () => handleOpenTransactionModal();
@@ -313,6 +268,14 @@ export default function CashflowPage() {
 
   function handleMonthNavigation(offset: number) {
     setMonth(addMonths(month, offset));
+  }
+
+  function handleProjectionMonthSelect(monthKey: string) {
+    setMonth(monthKey);
+    window.requestAnimationFrame(() => {
+      statementSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      statementSectionRef.current?.focus({ preventScroll: true });
+    });
   }
 
   function handleOpenTransactionModal() {
@@ -414,19 +377,58 @@ export default function CashflowPage() {
                   </div>
                 </div>
 
-                <div className="cashflow-month-rail" role="tablist" aria-label="Selecionar mes" ref={setMonthRailEl}>
-                  {monthRail.map((monthItem) => {
+                <div
+                  className="mt-3 flex gap-3 overflow-x-auto pb-2"
+                  role="tablist"
+                  aria-label="Projecao mensal ate dezembro"
+                  ref={projectionRailRef}
+                >
+                  {freeBalanceProjection.months.map((projectionMonth) => {
+                    const monthItem = projectionMonth.month;
                     const active = monthItem === month;
+                    const isCurrentMonth = monthItem === currentMonthKey;
                     return (
                       <button
                         key={monthItem}
                         type="button"
                         role="tab"
                         aria-selected={active}
-                        className={`cashflow-month-rail__item ${active ? "is-active" : ""}`}
-                        onClick={() => setMonth(monthItem)}
+                        aria-label={formatMonthLabelBR(monthItem)}
+                        data-current-month={isCurrentMonth}
+                        className={`min-w-[176px] rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/45 ${
+                          active
+                            ? "border-brand-teal bg-brand-teal/10 shadow-sm dark:border-brand-lime dark:bg-brand-lime/10"
+                            : "border-slate-200 bg-white/70 hover:border-brand-teal/50 hover:bg-white dark:border-slate-700 dark:bg-slate-950/60 dark:hover:border-brand-lime/50"
+                        }`}
+                        onClick={() => handleProjectionMonthSelect(monthItem)}
                       >
-                        {formatMonthLabelBR(monthItem)}
+                        <span className="block text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
+                          {formatMonthLabelBR(monthItem)}
+                        </span>
+                        <span className="mt-2 grid gap-1 text-xs">
+                          <span className="flex justify-between gap-2">
+                            <span className="text-slate-500 dark:text-slate-300">Entradas</span>
+                            <strong>{formatCurrencyBR(projectionMonth.entradas)}</strong>
+                          </span>
+                          <span className="flex justify-between gap-2">
+                            <span className="text-slate-500 dark:text-slate-300">Mes anterior</span>
+                            <strong>{formatCurrencyBR(projectionMonth.startingBalance)}</strong>
+                          </span>
+                          <span className="flex justify-between gap-2">
+                            <span className="text-slate-500 dark:text-slate-300">Saidas</span>
+                            <strong>{formatCurrencyBR(projectionMonth.saidas)}</strong>
+                          </span>
+                          <span className="flex justify-between gap-2">
+                            <span className="text-slate-500 dark:text-slate-300">Invest.</span>
+                            <strong>{formatCurrencyBR(projectionMonth.investimentos)}</strong>
+                          </span>
+                          <span className="mt-1 flex justify-between gap-2 border-t border-slate-200 pt-1 dark:border-slate-700">
+                            <span className="font-semibold text-slate-700 dark:text-slate-200">Sobra</span>
+                            <strong className={Number(projectionMonth.sobra) < 0 ? "text-red-600 dark:text-red-400" : "text-brand-teal dark:text-brand-lime"}>
+                              {formatCurrencyBR(projectionMonth.sobra)}
+                            </strong>
+                          </span>
+                        </span>
                       </button>
                     );
                   })}
@@ -447,31 +449,14 @@ export default function CashflowPage() {
         </CardContent>
       </Card>
 
-      <FreeBalanceSemaphore
-        currentBalance={consolidatedBalance.byType.CHECKING}
-        currentProjectedBalance={freeBalance.freeBalanceCurrent}
-        freeBalanceNext={freeBalance.freeBalanceNext}
-        gastosOperacionais={freeBalance.breakdown.current.gastosOperacionais}
-        investimentos={freeBalance.breakdown.current.investimentos}
-        totalSaidas={freeBalance.breakdown.current.totalSaidas}
-        risk={freeBalance.risk}
-        onOpenCurrentDetails={() => {
-          setDetailMonthKey("current");
-          setDetailModalOpen(true);
-        }}
-        onOpenNextDetails={() => {
-          setDetailMonthKey("next");
-          setDetailModalOpen(true);
-        }}
-      />
-
-      <StatementTable
-        entries={statementEntries}
-        accountLabels={accountLabels}
-        cardLabels={cardLabels}
-        categoryLabels={categoryLabelsWithInvoice}
-        loadingSettlementEntryId={loadingSettlementEntryId}
-        onEditEntry={(entry) => {
+      <div ref={statementSectionRef} tabIndex={-1} className="scroll-mt-4 focus:outline-none">
+        <StatementTable
+          entries={statementEntries}
+          accountLabels={accountLabels}
+          cardLabels={cardLabels}
+          categoryLabels={categoryLabelsWithInvoice}
+          loadingSettlementEntryId={loadingSettlementEntryId}
+          onEditEntry={(entry) => {
           if (entry.sourceType === "INVOICE") {
             window.dispatchEvent(
               new CustomEvent("app:navigate-route", {
@@ -514,8 +499,8 @@ export default function CashflowPage() {
           setEditCategoryId(entry.categoryId);
           setEditSettlementStatus(entry.settlementStatus === "UNPAID" ? "UNPAID" : "PAID");
           setEditModalOpen(true);
-        }}
-        onToggleSettlement={(entry) => {
+          }}
+          onToggleSettlement={(entry) => {
           if (loadingSettlementEntryId) {
             return;
           }
@@ -599,8 +584,9 @@ export default function CashflowPage() {
           }
 
           window.setTimeout(runToggle, 16);
-        }}
-      />
+          }}
+        />
+      </div>
 
       <MonthCloseSheet
         open={monthCloseModalOpen}
@@ -626,22 +612,15 @@ export default function CashflowPage() {
               cards={cards.map((item) => ({ id: item.id, label: item.name }))}
               categories={categories.map((item) => ({ id: item.id, label: item.name }))}
               onSubmit={async (payload) => {
-                await new Promise<void>((resolve, reject) => {
-                  const runCreate = () => {
-                    try {
-                      scheduleManagementController.createLaunch(payload);
-                      setRefreshKey((prev) => prev + 1);
-                      setTransactionModalOpen(false);
-                      notify({ message: "Lancamento cadastrado com sucesso.", tone: "success" });
-                      resolve();
-                    } catch (error) {
-                      notify({ message: "Nao foi possivel cadastrar o lancamento.", tone: "error" });
-                      reject(error);
-                    }
-                  };
-
-                  window.setTimeout(runCreate, import.meta.env.MODE === "test" ? 32 : 140);
-                });
+                try {
+                  await scheduleManagementController.createLaunch(payload);
+                  setRefreshKey((prev) => prev + 1);
+                  setTransactionModalOpen(false);
+                  notify({ message: "Lancamento cadastrado com sucesso.", tone: "success" });
+                } catch (error) {
+                  notify({ message: "Nao foi possivel cadastrar o lancamento.", tone: "error" });
+                  throw error;
+                }
               }}
             />
           </div>
@@ -674,103 +653,6 @@ export default function CashflowPage() {
               }}
             />
           </div>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-        <SheetContent className="inset-y-auto left-1/2 top-1/2 h-auto max-h-[85vh] w-[94%] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border-r-0">
-          <SheetHeader>
-            <SheetTitle>
-              {detailMonthKey === "current" ? "Detalhamento do saldo atual - Mes atual" : "Detalhamento do saldo livre - Proximo mes"}
-            </SheetTitle>
-            <SheetDescription>
-              {detailMonthKey === "current"
-                ? "Composicao do saldo real disponivel em contas correntes no momento atual."
-                : "Transparencia completa dos componentes usados no calculo da projecao."}
-            </SheetDescription>
-          </SheetHeader>
-
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle className="text-base">
-                {detailMonthKey === "current"
-                  ? `Mes atual (${freeBalance.breakdown.current.month})`
-                  : `Proximo mes (${freeBalance.breakdown.next.month})`}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {detailMonthKey === "current"
-                ? consolidatedBalance.accounts.filter((account) => account.type === "CHECKING").map((account) => (
-                  <div key={account.id} className="row-animate flex items-center justify-between rounded-xl px-2 py-1.5 text-sm">
-                    <span className="text-slate-500 dark:text-slate-300">{account.name}</span>
-                    <strong>{formatCurrencyBR(account.balance)}</strong>
-                  </div>
-                ))
-                : Object.entries(freeBalance.breakdown.next.components).map(([label, value]) => (
-                  <div key={label} className="row-animate flex items-center justify-between rounded-xl px-2 py-1.5 text-sm">
-                    <span className="text-slate-500 dark:text-slate-300">{breakdownLabels[label] ?? label}</span>
-                    <strong>{formatCurrencyBR(value)}</strong>
-                  </div>
-                ))}
-              <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-sm dark:border-slate-700">
-                <span>{detailMonthKey === "current" ? "Saldo atual em contas" : "Saldo livre final"}</span>
-                <strong>
-                  {formatCurrencyBR(
-                    detailMonthKey === "current" ? consolidatedBalance.byType.CHECKING : freeBalance.breakdown.next.freeBalance,
-                  )}
-                </strong>
-              </div>
-              {detailMonthKey === "current" ? (
-                <div className="mt-2 flex items-center justify-between rounded-xl border border-slate-200 px-2 py-1.5 text-xs dark:border-slate-700">
-                  <span className="text-slate-500 dark:text-slate-300">Saldo do mes anterior</span>
-                  <strong>{formatCurrencyBR(freeBalance.breakdown.current.startingBalance)}</strong>
-                </div>
-              ) : null}
-              {detailMonthKey === "current" ? (
-                <div className="mt-2 flex items-center justify-between rounded-xl border border-slate-200 px-2 py-1.5 text-xs dark:border-slate-700">
-                  <span className="text-slate-500 dark:text-slate-300">Saldo previsto do mes atual</span>
-                  <strong>{formatCurrencyBR(freeBalance.freeBalanceCurrent)}</strong>
-                </div>
-              ) : null}
-              {detailMonthKey === "current" ? (
-                <div className="mt-4 space-y-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold">Saidas futuras nao pagas</h3>
-                    {freeBalance.breakdown.current.pendingOutflows.length > 0 ? (
-                      <strong className="text-sm">
-                        {formatCurrencyBR(
-                          freeBalance.breakdown.current.pendingOutflows
-                            .reduce((acc, item) => acc + Number(item.amount), 0)
-                            .toFixed(2),
-                        )}
-                      </strong>
-                    ) : null}
-                  </div>
-                  {freeBalance.breakdown.current.pendingOutflows.length > 0 ? (
-                    <div className="space-y-1">
-                      {freeBalance.breakdown.current.pendingOutflows.map((item) => (
-                        <div key={item.id} className="row-animate flex items-start justify-between gap-3 rounded-lg px-2 py-1.5 text-xs">
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-slate-800 dark:text-slate-100">{item.description}</p>
-                            <p className="text-slate-500 dark:text-slate-300">
-                              {pendingOutflowLabels[item.sourceType] ?? item.sourceType}
-                              {item.accountName ? ` - ${item.accountName}` : ""}
-                              {item.cardName ? ` - ${item.cardName}` : ""}
-                            </p>
-                          </div>
-                          <strong className="shrink-0">{formatCurrencyBR(item.amount)}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-500 dark:text-slate-300">
-                      Nenhuma saida futura nao paga esta abatendo o saldo previsto deste mes.
-                    </p>
-                  )}
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
         </SheetContent>
       </Sheet>
 

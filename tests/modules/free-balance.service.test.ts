@@ -384,4 +384,172 @@ describe("free balance service", () => {
     expect(result.breakdown.current.components.cardInvoiceDue).toBe("220.00");
     expect(result.breakdown.current.pendingOutflows).toEqual([]);
   });
+
+  it("anchors current month projection on real checking balance minus unpaid outflows", () => {
+    const account = accounts.createAccount({
+      householdId,
+      name: "Conta Real",
+      type: "CHECKING",
+      openingBalance: "-50.00",
+    });
+    const category = categories.createCategory({ householdId, name: "Essenciais" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "INCOME",
+      description: "Recebido",
+      amount: "100.00",
+      occurredAt: "2026-03-02T12:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+      settlementStatus: "PAID",
+    });
+    transactions.createTransaction({
+      householdId,
+      kind: "INCOME",
+      description: "Ainda nao recebido",
+      amount: "500.00",
+      occurredAt: "2026-03-05T12:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+      settlementStatus: "UNPAID",
+    });
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Boleto pendente",
+      amount: "120.00",
+      occurredAt: "2026-03-10T12:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+      settlementStatus: "UNPAID",
+    });
+
+    const result = freeBalance.getFreeBalance({ householdId, month: "2026-03" });
+
+    expect(result.freeBalanceCurrent).toBe("-70.00");
+    expect(result.currentCalculationDetail.realCheckingBalance).toBe("50.00");
+    expect(result.currentCalculationDetail.pendingOutflowsTotal).toBe("120.00");
+    expect(result.currentCalculationDetail.pendingOutflows).toMatchObject([
+      {
+        description: "Boleto pendente",
+        sourceType: "ONE_OFF",
+        amount: "120.00",
+      },
+    ]);
+    expect(result.currentCalculationDetail.formula).toEqual({
+      realCheckingBalance: "50.00",
+      pendingExpenses: "120.00",
+      pendingInvoices: "0.00",
+      pendingSchedules: "0.00",
+      projectedBalance: "-70.00",
+    });
+  });
+
+  it("projects months in one result and carries surplus or deficit forward", () => {
+    const account = accounts.createAccount({
+      householdId,
+      name: "Conta Projecao",
+      type: "CHECKING",
+      openingBalance: "100.00",
+    });
+    const category = categories.createCategory({ householdId, name: "Fluxo" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Março pendente",
+      amount: "150.00",
+      occurredAt: "2026-03-05T12:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+      settlementStatus: "UNPAID",
+    });
+    transactions.createTransaction({
+      householdId,
+      kind: "INCOME",
+      description: "Abril salario",
+      amount: "300.00",
+      occurredAt: "2026-04-01T12:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+    });
+    transactions.createTransaction({
+      householdId,
+      kind: "EXPENSE",
+      description: "Abril conta",
+      amount: "80.00",
+      occurredAt: "2026-04-02T12:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+    });
+
+    const projection = freeBalance.getFreeBalanceProjection({
+      householdId,
+      startMonth: "2026-03",
+      endMonth: "2026-05",
+    });
+
+    expect(projection.months.map((item) => item.month)).toEqual(["2026-03", "2026-04", "2026-05"]);
+    expect(projection.months[0]).toMatchObject({
+      month: "2026-03",
+      startingBalance: "100.00",
+      entradas: "0.00",
+      saidas: "150.00",
+      investimentos: "0.00",
+      sobra: "-50.00",
+      endingBalance: "-50.00",
+    });
+    expect(projection.months[1]).toMatchObject({
+      month: "2026-04",
+      startingBalance: "-50.00",
+      entradas: "300.00",
+      saidas: "80.00",
+      investimentos: "0.00",
+      sobra: "170.00",
+      endingBalance: "170.00",
+    });
+    expect(projection.months[2]).toMatchObject({
+      month: "2026-05",
+      startingBalance: "170.00",
+      endingBalance: "170.00",
+    });
+  });
+
+  it("keeps first-month income in entradas instead of mes anterior", () => {
+    const account = accounts.createAccount({
+      householdId,
+      name: "Conta Janeiro",
+      type: "CHECKING",
+      openingBalance: "0.00",
+    });
+    const category = categories.createCategory({ householdId, name: "Renda" });
+
+    transactions.createTransaction({
+      householdId,
+      kind: "INCOME",
+      description: "Salario",
+      amount: "100.00",
+      occurredAt: "2026-01-09T12:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+      settlementStatus: "PAID",
+    });
+
+    const projection = freeBalance.getFreeBalanceProjection({
+      householdId,
+      startMonth: "2026-01",
+      endMonth: "2026-01",
+    });
+
+    expect(projection.months[0]).toMatchObject({
+      month: "2026-01",
+      startingBalance: "0.00",
+      entradas: "100.00",
+      saidas: "0.00",
+      investimentos: "0.00",
+      sobra: "100.00",
+      endingBalance: "100.00",
+    });
+  });
 });
