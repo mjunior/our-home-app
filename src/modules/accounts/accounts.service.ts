@@ -205,16 +205,15 @@ export class AccountsService {
   }
 
   private buildNetByAccountId(householdId: string, untilMonth?: string): Map<string, number> {
+    // Crucially: we include SYSTEM_TAG transactions for balance calculation
+    // but we ignore the legacy 'balanceAdjustment' field in buildAccountBalanceRows below.
     const transactions = this.transactionsRepository?.listByHousehold(householdId) ?? [];
     const netByAccountId = new Map<string, number>();
 
     for (const item of transactions) {
       if (!item.accountId) continue;
       if ((item.settlementStatus ?? "PAID") !== "PAID") continue;
-      
-      // If untilMonth is provided, we respect temporal boundary
       if (untilMonth && item.occurredAt.slice(0, 7) > untilMonth) continue;
-      
       const signed = item.kind === "INCOME" ? Number(item.amount) : Number(item.amount) * -1;
       netByAccountId.set(item.accountId, (netByAccountId.get(item.accountId) ?? 0) + signed);
     }
@@ -246,9 +245,10 @@ export class AccountsService {
     return this.list(householdId).map((item) => {
       const opening = Number(item.openingBalance);
       
-      // Legacy balanceAdjustment is now considered "initial" adjustment.
-      // But we will primarily rely on the Transactions (including the new ones with systemTag)
-      const adjustment = Number(item.balanceAdjustment ?? "0");
+      // ABOLITION OF LEGACY FIELD: 
+      // We explicitly IGNORE account.balanceAdjustment to prevent global leakage.
+      // All adjustments are now temporal transactions included in netByAccountId.
+      const adjustment = 0;
       
       const movement = netByAccountId.get(item.id) ?? 0;
       const balance = (opening + adjustment + movement).toFixed(2);
@@ -262,7 +262,7 @@ export class AccountsService {
         name: item.name,
         type: item.type,
         balance,
-        balanceAdjustment: (adjustment).toFixed(2),
+        balanceAdjustment: "0.00",
         ...goalSnapshot,
       };
     });

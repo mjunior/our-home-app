@@ -97,10 +97,12 @@ export class FreeBalanceService {
 
     const accounts = this.accountsRepository.listByHousehold(parsed.householdId);
     const checkingAccountIds = new Set(accounts.filter((item) => item.type === "CHECKING").map((item) => item.id));
+    
+    // ABOLITION OF LEGACY FIELD: We ignore balanceAdjustment from the account model
     const accountOpeningBalance = sumDecimals(
       accounts
         .filter((item) => item.type === "CHECKING")
-        .map((item) => new Decimal(item.openingBalance).plus(new Decimal(item.balanceAdjustment ?? "0"))),
+        .map((item) => new Decimal(item.openingBalance)),
     );
 
     const cardCharges = this.collectCardCharges(parsed.householdId, transactions, scheduleInstances);
@@ -128,6 +130,7 @@ export class FreeBalanceService {
       accountOpeningBalance,
     );
 
+    // Current month view always anchors on the bank balance
     const currentComputation = this.computeMonth(
       parsed.householdId,
       currentMonth,
@@ -140,7 +143,6 @@ export class FreeBalanceService {
       checkingAccountIds,
     );
     
-    // Aggressive Force Sync for Current Month
     currentComputation.breakdown.startingBalance = currentCalculationDetail.realCheckingBalance;
     currentComputation.breakdown.cumulativeBalance = currentCalculationDetail.formula.projectedBalance;
     currentComputation.breakdown.freeBalance = currentComputation.breakdown.cumulativeBalance;
@@ -206,10 +208,11 @@ export class FreeBalanceService {
     const scheduleInstances = this.scheduleRepository.listInstancesByHousehold(parsed.householdId);
     const accounts = this.accountsRepository.listByHousehold(parsed.householdId);
     const checkingAccountIds = new Set(accounts.filter((item) => item.type === "CHECKING").map((item) => item.id));
+    
     const accountOpeningBalance = sumDecimals(
       accounts
         .filter((item) => item.type === "CHECKING")
-        .map((item) => new Decimal(item.openingBalance).plus(new Decimal(item.balanceAdjustment ?? "0"))),
+        .map((item) => new Decimal(item.openingBalance)),
     );
     const cardCharges = this.collectCardCharges(parsed.householdId, transactions, scheduleInstances);
     const invoiceSettlements = this.invoiceSettlementRepository?.listByHousehold(parsed.householdId) ?? [];
@@ -257,7 +260,8 @@ export class FreeBalanceService {
       const operationalResult = new Decimal(breakdown.operationalResult);
       let cumulativeBalance = new Decimal(breakdown.cumulativeBalance);
 
-      // Aggressive Reset: If we are in the current month, force the cumulative balance to BANK REALITY
+      // Sincroniza o mês atual com a realidade bancária. 
+      // Graças às transações de ajuste temporal, essa âncora é agora estável e isolada.
       if (isCurrentMonth) {
           cumulativeBalance = new Decimal(currentCalculationDetail.formula.projectedBalance);
       }
