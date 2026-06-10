@@ -592,13 +592,23 @@ function createApiRuntime(): Runtime {
         }),
     },
     freeBalanceController: {
-      getFreeBalance: (input: FreeBalanceInput): FreeBalanceOutput =>
-        requestSync<FreeBalanceOutput>("GET", `/api/free-balance?month=${encodeURIComponent(input.month)}`),
+      getFreeBalance: (input: FreeBalanceInput): FreeBalanceOutput => {
+        const query = new URLSearchParams({
+          month: input.month,
+        });
+        if (input.currentMonth) {
+          query.set("currentMonth", input.currentMonth);
+        }
+        return requestSync<FreeBalanceOutput>("GET", `/api/free-balance?${query.toString()}`);
+      },
       getFreeBalanceProjection: (input: FreeBalanceProjectionInput): FreeBalanceProjectionOutput => {
         const query = new URLSearchParams({
           startMonth: input.startMonth,
           endMonth: input.endMonth,
         });
+        if (input.currentMonth) {
+          query.set("currentMonth", input.currentMonth);
+        }
         return requestSync<FreeBalanceProjectionOutput>("GET", `/api/free-balance/projection?${query.toString()}`);
       },
     },
