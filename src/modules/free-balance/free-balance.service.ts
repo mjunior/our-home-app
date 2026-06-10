@@ -29,6 +29,8 @@ const projectionInputSchema = z.object({
   householdId: z.string().min(1),
   startMonth: z.string().regex(/^\d{4}-\d{2}$/),
   endMonth: z.string().regex(/^\d{4}-\d{2}$/),
+  /** @internal Used for testing to mock "today" */
+  currentMonthOverride: z.string().regex(/^\d{4}-\d{2}$/).optional(),
 });
 
 type DriverSeed = Omit<FreeBalanceTopDriver, "amount"> & { amount: Decimal };
@@ -208,6 +210,8 @@ export class FreeBalanceService {
       throw new Error("FREE_BALANCE_INVALID_PROJECTION_RANGE");
     }
 
+    const currentMonthKey = parsed.currentMonthOverride ?? monthFromIso(new Date().toISOString());
+
     const transactions = this.transactionsRepository.listByHousehold(parsed.householdId);
     const scheduleInstances = this.scheduleRepository.listInstancesByHousehold(parsed.householdId);
     const accounts = this.accountsRepository.listByHousehold(parsed.householdId);
@@ -231,8 +235,8 @@ export class FreeBalanceService {
     );
     const currentCalculationDetail = this.buildCurrentCalculationDetail(
       parsed.householdId,
-      parsed.startMonth,
-      firstPendingOutflows,
+      currentMonthKey, // Anchor calculation on the REAL current month
+      this.collectPendingOutflows(parsed.householdId, currentMonthKey, transactions, scheduleInstances, cardCharges, checkingAccountIds, invoiceSettlements),
       transactions,
       scheduleInstances,
       invoiceSettlements,
@@ -254,6 +258,8 @@ export class FreeBalanceService {
     );
 
     while (cursor <= parsed.endMonth) {
+      const isCurrentMonth = cursor === currentMonthKey;
+      
       const computation = this.computeMonth(
         parsed.householdId,
         cursor,
@@ -265,9 +271,17 @@ export class FreeBalanceService {
         invoiceSettlements,
         checkingAccountIds,
       );
+      
       const breakdown = computation.breakdown;
       const operationalResult = new Decimal(breakdown.operationalResult);
-      const cumulativeBalance = new Decimal(breakdown.cumulativeBalance);
+      let cumulativeBalance = new Decimal(breakdown.cumulativeBalance);
+
+      // REALITY ANCHOR: If we are looking at the current month, force the cumulative balance 
+      // to sync with the bank reality (Real Balance - Pending Outflows).
+      // This "cleans" any accumulated historical drift.
+      if (isCurrentMonth) {
+          cumulativeBalance = new Decimal(currentCalculationDetail.formula.projectedBalance);
+      }
 
       months.push({
         month: cursor,
