@@ -290,7 +290,7 @@ export function StatementTable({
                     </tr>
                   </thead>
                   <tbody>
-                    {entries.map((entry, index) => {
+                    {entries.map((entry) => {
                       const categoryLabel = categoryLabels[entry.categoryId] ?? "Sem categoria";
                       const destinationLabel = entry.sourceType === "INVESTMENT"
                         ? `${accountLabels[entry.accountId ?? ""] ?? "Nao encontrada"} -> ${accountLabels[entry.destinationAccountId ?? ""] ?? "Nao encontrada"}`
@@ -302,7 +302,7 @@ export function StatementTable({
                       return (
                         <tr
                           key={entry.id}
-                          className={`row-animate border-b border-slate-200/60 last:border-b-0 dark:border-slate-800/80 ${index % 2 === 0 ? "bg-transparent" : "bg-slate-50/70 dark:bg-slate-900/28"} ${entry.sourceType === "INVOICE" && onEditEntry ? "cursor-pointer" : ""}`}
+                          className={`row-animate border-b border-slate-200/60 last:border-b-0 dark:border-slate-800/80 ${entry.sourceType === "INVOICE" && onEditEntry ? "cursor-pointer" : ""}`}
                           onClick={() => {
                             if (entry.sourceType === "INVOICE" && onEditEntry) {
                               onEditEntry(entry);
