@@ -113,10 +113,10 @@ describe("foundation flow", () => {
     expect(screen.getByText("Faltam R$ 500.00 para atingir a meta.")).toBeInTheDocument();
   });
 
-  it("adjusts account balance from accounts screen and records paid adjustment transaction", async () => {
+  it("adjusts account balance from accounts screen without creating a transaction", async () => {
     const user = userEvent.setup();
 
-    accountsController.createAccount({
+    const account = accountsController.createAccount({
       householdId: "household-main",
       name: "Conta Ajuste",
       type: "CHECKING",
@@ -160,12 +160,9 @@ describe("foundation flow", () => {
       .listTransactionsByMonth({ householdId: "household-main", month: "2026-04" })
       .filter((transaction) => transaction.description === "REAJUSTE");
 
-    expect(adjustments).toHaveLength(1);
-    expect(adjustments[0]).toMatchObject({
-      kind: "INCOME",
-      amount: "150.00",
-      settlementStatus: "PAID",
-      occurredAt: "2026-04-15T12:00:00.000Z",
+    expect(adjustments).toHaveLength(0);
+    expect(accountsController.getConsolidatedBalance("household-main").accounts.find((item) => item.id === account.id)).toMatchObject({
+      balance: "650.00",
     });
   });
 

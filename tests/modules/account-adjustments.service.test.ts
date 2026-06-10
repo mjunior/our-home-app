@@ -110,20 +110,16 @@ describe("account adjustments", () => {
     expect(result.previousBalance).toBe("1000.00");
     expect(result.realBalance).toBe("1250.75");
     expect(result.difference).toBe("250.75");
-    expect(result.transaction).toMatchObject({
+    expect(result.transaction).toBeNull();
+    expect(accountsService.getAccountBalanceSnapshot({
       householdId,
-      kind: "INCOME",
-      description: "REAJUSTE",
-      amount: "250.75",
-      occurredAt: "2026-04-15T12:00:00.000Z",
       accountId: account.id,
-      creditCardId: null,
-      invoiceMonthKey: null,
-      invoiceDueDate: null,
-      settlementStatus: "PAID",
-      transferGroupId: null,
+    }).balance).toBe("1250.75");
+    expect(accountsService.consolidatedBalance(householdId).accounts.find((item) => item.id === account.id)).toMatchObject({
+      balance: "1250.75",
     });
-    expect(categoriesRepo.listByHousehold(householdId)).toMatchObject([{ name: "Reajuste", normalized: "reajuste" }]);
+    expect(categoriesRepo.listByHousehold(householdId)).toHaveLength(0);
+    expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(0);
   });
 
   it("creates a paid expense adjustment when real balance is lower than current balance and reuses the system category", () => {
@@ -150,16 +146,16 @@ describe("account adjustments", () => {
     expect(result.previousBalance).toBe("1000.00");
     expect(result.realBalance).toBe("900.25");
     expect(result.difference).toBe("-99.75");
-    expect(result.transaction).toMatchObject({
+    expect(result.transaction).toBeNull();
+    expect(accountsService.getAccountBalanceSnapshot({
       householdId,
-      kind: "EXPENSE",
-      description: "REAJUSTE",
-      amount: "99.75",
       accountId: account.id,
-      categoryId: existingCategory.id,
-      settlementStatus: "PAID",
+    }).balance).toBe("900.25");
+    expect(accountsService.consolidatedBalance(householdId).accounts.find((item) => item.id === account.id)).toMatchObject({
+      balance: "900.25",
     });
     expect(categoriesRepo.listByHousehold(householdId)).toHaveLength(1);
+    expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(0);
   });
 
   it("returns a null transaction without writing when real balance matches current balance", () => {
@@ -248,12 +244,7 @@ describe("account adjustments", () => {
     expect(result.previousBalance).toBe("1000.00");
     expect(result.realBalance).toBe("1100.00");
     expect(result.difference).toBe("100.00");
-    expect(result.transaction).toMatchObject({
-      kind: "INCOME",
-      description: "REAJUSTE",
-      amount: "100.00",
-      accountId: account.id,
-    });
+    expect(result.transaction).toBeNull();
   });
 
   it("fails clearly when account adjustment controller contract is called without the service", () => {
@@ -292,5 +283,6 @@ describe("account adjustments", () => {
       id: account.id,
       balance: "925.40",
     });
+    expect(result.transaction).toBeNull();
   });
 });

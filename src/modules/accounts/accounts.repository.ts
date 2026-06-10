@@ -6,17 +6,20 @@ export interface AccountRecord {
   name: string;
   type: "CHECKING" | "INVESTMENT";
   openingBalance: string;
+  balanceAdjustment: string;
   goalAmount: string | null;
 }
 
 const accountsStore: AccountRecord[] = [];
 
-type CreateAccountData = Omit<AccountRecord, "id" | "goalAmount"> & Partial<Pick<AccountRecord, "goalAmount">>;
+type CreateAccountData = Omit<AccountRecord, "id" | "goalAmount" | "balanceAdjustment"> &
+  Partial<Pick<AccountRecord, "goalAmount" | "balanceAdjustment">>;
 
 export class AccountsRepository {
   create(data: CreateAccountData): AccountRecord {
     const record: AccountRecord = {
       id: createId(),
+      balanceAdjustment: "0.00",
       goalAmount: null,
       ...data,
     };

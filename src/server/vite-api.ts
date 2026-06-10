@@ -64,6 +64,7 @@ class AccountsReadRepository {
       name: string;
       type: "CHECKING" | "INVESTMENT";
       openingBalance: string;
+      balanceAdjustment: string;
       goalAmount: string | null;
     }>,
   ) {}
@@ -403,8 +404,13 @@ function toTransactionDto(row: any) {
   };
 }
 
-async function calculatePersistedAccountBalance(input: { householdId: string; accountId: string; openingBalance: string }) {
-  let balance = new Decimal(input.openingBalance);
+async function calculatePersistedAccountBalance(input: {
+  householdId: string;
+  accountId: string;
+  openingBalance: string;
+  balanceAdjustment: string;
+}) {
+  let balance = new Decimal(input.openingBalance).plus(new Decimal(input.balanceAdjustment));
   const transactions = await prisma.transaction.findMany({
     where: {
       householdId: input.householdId,
@@ -526,6 +532,7 @@ async function loadServices() {
     name: item.name,
     type: item.type,
     openingBalance: item.openingBalance.toString(),
+    balanceAdjustment: ((item as any).balanceAdjustment ?? 0).toString(),
     goalAmount: item.goalAmount?.toString() ?? null,
   })));
 
@@ -644,17 +651,8 @@ function normalizeMonthCloseBody(body: any, householdId: string) {
 
 type MonthCloseAdjustmentDb = {
   account: {
-    findUnique(args: { where: { id: string } }): Promise<{ householdId: string } | null>;
-  };
-  category: {
-    upsert(args: {
-      where: { householdId_normalized: { householdId: string; normalized: string } };
-      create: { householdId: string; name: string; normalized: string };
-      update: Record<string, never>;
-    }): Promise<{ id: string }>;
-  };
-  transaction: {
-    create(args: { data: Record<string, unknown> }): Promise<any>;
+    findUnique(args: { where: { id: string } }): Promise<{ householdId: string; balanceAdjustment: string } | null>;
+    update(args: { where: { id: string }; data: { balanceAdjustment: string } }): Promise<{ balanceAdjustment: string }>;
   };
 };
 
@@ -685,37 +683,11 @@ async function createPersistedMonthCloseAccountAdjustment(
     };
   }
 
-  const normalized = normalizeName("Reajuste");
-  const category = await db.category.upsert({
-    where: {
-      householdId_normalized: {
-        householdId: input.householdId,
-        normalized,
-      },
-    },
-    create: {
-      householdId: input.householdId,
-      name: "Reajuste",
-      normalized,
-    },
-    update: {},
-  });
-
-  const transaction = await db.transaction.create({
+  const currentAdjustment = new Decimal(((account as any).balanceAdjustment ?? 0).toString());
+  await db.account.update({
+    where: { id: input.accountId },
     data: {
-      householdId: input.householdId,
-      kind: difference.isNegative() ? "EXPENSE" : "INCOME",
-      description: "REAJUSTE",
-      amount: difference.abs().toFixed(2),
-      occurredAt: new Date(input.occurredAt),
-      accountId: input.accountId,
-      creditCardId: null,
-      categoryId: category.id,
-      invoiceMonthKey: null,
-      invoiceDueDate: null,
-      settlementStatus: "PAID",
-      transferGroupId: null,
-      systemTag: "MONTH_CLOSE",
+      balanceAdjustment: currentAdjustment.plus(difference).toFixed(2),
     },
   });
 
@@ -723,7 +695,7 @@ async function createPersistedMonthCloseAccountAdjustment(
     previousBalance: new Decimal(input.appBalance).toFixed(2),
     realBalance: new Decimal(input.realBalance).toFixed(2),
     difference: difference.toFixed(2),
-    transaction: toTransactionDto(transaction),
+    transaction: null,
   };
 }
 
@@ -836,6 +808,7 @@ export function installViteApi(server: MiddlewareServer) {
           rows.map((item) => ({
             ...item,
             openingBalance: item.openingBalance.toString(),
+          balanceAdjustment: ((item as any).balanceAdjustment ?? 0).toString(),
             goalAmount: item.goalAmount?.toString() ?? null,
           })),
         );
@@ -936,8 +909,9 @@ export function installViteApi(server: MiddlewareServer) {
 
         const accounts = rows.map((item) => {
           const opening = Number(item.openingBalance.toString());
+          const adjustment = Number(((item as any).balanceAdjustment ?? 0).toString());
           const movement = netByAccountId.get(item.id) ?? 0;
-          const balance = (opening + movement).toFixed(2);
+          const balance = (opening + adjustment + movement).toFixed(2);
           const goalAmount = item.goalAmount?.toString() ?? null;
           const goalRaw = goalAmount ? Number(goalAmount) : null;
           const progressRaw = goalRaw && goalRaw > 0 ? (Number(balance) / goalRaw) * 100 : null;
@@ -946,6 +920,7 @@ export function installViteApi(server: MiddlewareServer) {
             name: item.name,
             type: item.type,
             balance,
+            balanceAdjustment: ((item as any).balanceAdjustment ?? 0).toString(),
             goalAmount,
             goalProgressPercent: progressRaw == null ? null : Math.max(0, Math.min(100, Math.round(progressRaw * 100) / 100)),
             remainingToGoal: goalRaw == null ? null : Math.max(goalRaw - Number(balance), 0).toFixed(2),
@@ -990,6 +965,7 @@ export function installViteApi(server: MiddlewareServer) {
             householdId: authHouseholdId,
             accountId: account.id,
             openingBalance: account.openingBalance.toString(),
+            balanceAdjustment: ((account as any).balanceAdjustment ?? 0).toString(),
           }),
         );
         const realBalance = new Decimal(String(body.realBalance));
@@ -1004,45 +980,18 @@ export function installViteApi(server: MiddlewareServer) {
           return;
         }
 
-        const kind = difference.isNegative() ? "EXPENSE" : "INCOME";
-        const normalized = normalizeName("Reajuste");
-        const category = await prisma.category.upsert({
-          where: {
-            householdId_normalized: {
-              householdId: authHouseholdId,
-              normalized,
-            },
-          },
-          create: {
-            householdId: authHouseholdId,
-            name: "Reajuste",
-            normalized,
-          },
-          update: {},
-        });
-
-        const transaction = await prisma.transaction.create({
+        await prisma.account.update({
+          where: { id: account.id },
           data: {
-            householdId: authHouseholdId,
-            kind,
-            description: "REAJUSTE",
-            amount: difference.abs().toFixed(2),
-            occurredAt: new Date(body.occurredAt),
-            accountId: account.id,
-            creditCardId: null,
-            categoryId: category.id,
-            invoiceMonthKey: null,
-            invoiceDueDate: null,
-            settlementStatus: "PAID",
-            transferGroupId: null,
-          },
+            balanceAdjustment: new Decimal(((account as any).balanceAdjustment ?? 0).toString()).plus(difference).toFixed(2),
+          } as any,
         });
 
         sendJson(res, 200, {
           previousBalance: previousBalance.toFixed(2),
           realBalance: realBalance.toFixed(2),
           difference: difference.toFixed(2),
-          transaction: toTransactionDto(transaction),
+          transaction: null,
         });
         return;
       }

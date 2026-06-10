@@ -94,7 +94,7 @@ export class FreeBalanceService {
     const accountOpeningBalance = sumDecimals(
       accounts
         .filter((item) => item.type === "CHECKING")
-        .map((item) => new Decimal(item.openingBalance)),
+        .map((item) => new Decimal(item.openingBalance).plus(new Decimal(item.balanceAdjustment ?? "0"))),
     );
 
     const cardCharges = this.collectCardCharges(parsed.householdId, transactions, scheduleInstances);
@@ -212,7 +212,7 @@ export class FreeBalanceService {
     const accountOpeningBalance = sumDecimals(
       accounts
         .filter((item) => item.type === "CHECKING")
-        .map((item) => new Decimal(item.openingBalance)),
+        .map((item) => new Decimal(item.openingBalance).plus(new Decimal(item.balanceAdjustment ?? "0"))),
     );
     const cardCharges = this.collectCardCharges(parsed.householdId, transactions, scheduleInstances);
     const invoiceSettlements = this.invoiceSettlementRepository?.listByHousehold(parsed.householdId) ?? [];

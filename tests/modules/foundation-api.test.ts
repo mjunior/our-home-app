@@ -39,6 +39,7 @@ const apiState = {
     name: string;
     type: "CHECKING" | "INVESTMENT";
     openingBalance: ReturnType<typeof decimal>;
+    balanceAdjustment: ReturnType<typeof decimal>;
     goalAmount: ReturnType<typeof decimal> | null;
   }>,
   cards: [] as Array<{ id: string; householdId: string; name: string; closeDay: number; dueDay: number }>,
@@ -50,6 +51,8 @@ const apiState = {
 
 let transactionCreateCallCount = 0;
 let transactionCreateFailOnCall = 0;
+let accountUpdateCallCount = 0;
+let accountUpdateFailOnCall = 0;
 
 function decimal(value: string) {
   return { toString: () => value };
@@ -77,6 +80,7 @@ vi.mock("../../src/modules/shared/persistence/prisma", () => {
           id: `acc-${apiState.accounts.length + 1}`,
           ...data,
           openingBalance: decimal(String(data.openingBalance)),
+          balanceAdjustment: decimal(String(data.balanceAdjustment ?? "0.00")),
           goalAmount: data.goalAmount == null ? null : decimal(String(data.goalAmount)),
         };
         apiState.accounts.push(created);
@@ -86,6 +90,22 @@ vi.mock("../../src/modules/shared/persistence/prisma", () => {
         apiState.accounts.filter((item) => !where?.householdId || item.householdId === where.householdId),
       ),
       findUnique: vi.fn(async ({ where }: any) => apiState.accounts.find((item) => item.id === where.id) ?? null),
+      update: vi.fn(async ({ where, data }: any) => {
+        accountUpdateCallCount += 1;
+        if (accountUpdateFailOnCall > 0 && accountUpdateCallCount === accountUpdateFailOnCall) {
+          throw new Error("ACCOUNT_UPDATE_FAILED");
+        }
+        const account = apiState.accounts.find((item) => item.id === where.id);
+        if (!account) return null;
+        Object.assign(account, data);
+        if (data.balanceAdjustment != null) {
+          account.balanceAdjustment = decimal(String(data.balanceAdjustment));
+        }
+        if (data.goalAmount != null || data.goalAmount === null) {
+          account.goalAmount = data.goalAmount == null ? null : decimal(String(data.goalAmount));
+        }
+        return account;
+      }),
     },
     creditCard: {
       count: vi.fn(async ({ where }: any = {}) =>
@@ -186,12 +206,12 @@ vi.mock("../../src/modules/shared/persistence/prisma", () => {
     },
     $transaction: vi.fn(async (callback: any) => {
       const snapshot = {
-        users: apiState.users.slice(),
-        accounts: apiState.accounts.slice(),
-        cards: apiState.cards.slice(),
-        categories: apiState.categories.slice(),
-        transactions: apiState.transactions.slice(),
-        invoiceSettlements: apiState.invoiceSettlements.slice(),
+        users: apiState.users.map((item) => ({ ...item })),
+        accounts: apiState.accounts.map((item) => ({ ...item })),
+        cards: apiState.cards.map((item) => ({ ...item })),
+        categories: apiState.categories.map((item) => ({ ...item })),
+        transactions: apiState.transactions.map((item) => ({ ...item })),
+        invoiceSettlements: apiState.invoiceSettlements.map((item) => ({ ...item })),
       };
       const tx = {
         household: prisma.household,
@@ -314,6 +334,8 @@ describe("foundation api", () => {
   beforeEach(() => {
     transactionCreateCallCount = 0;
     transactionCreateFailOnCall = 0;
+    accountUpdateCallCount = 0;
+    accountUpdateFailOnCall = 0;
     accountsRepo.clearAll();
     cardsRepo.clearAll();
     categoriesRepo.clearAll();
@@ -357,6 +379,7 @@ describe("foundation api", () => {
           name: "Conta Principal",
           type: "CHECKING",
           balance: "1000.50",
+          balanceAdjustment: "0.00",
           goalAmount: null,
           goalProgressPercent: null,
           remainingToGoal: null,
@@ -367,6 +390,7 @@ describe("foundation api", () => {
           name: "Conta Investimento",
           type: "INVESTMENT",
           balance: "200.10",
+          balanceAdjustment: "0.00",
           goalAmount: "500.00",
           goalProgressPercent: 40.02,
           remainingToGoal: "299.90",
@@ -413,6 +437,7 @@ describe("foundation api", () => {
       name: "Reserva Longo Prazo",
       type: "INVESTMENT",
       balance: "350.00",
+      balanceAdjustment: "0.00",
       goalAmount: "300.00",
       goalProgressPercent: 100,
       remainingToGoal: "0.00",
@@ -575,6 +600,7 @@ describe("foundation api", () => {
         name: "Conta Principal",
         type: "CHECKING",
         balance: "750.00",
+        balanceAdjustment: "0.00",
         goalAmount: null,
         goalProgressPercent: null,
         remainingToGoal: null,
@@ -585,6 +611,7 @@ describe("foundation api", () => {
         name: "Reserva",
         type: "INVESTMENT",
         balance: "250.00",
+        balanceAdjustment: "0.00",
         goalAmount: null,
         goalProgressPercent: null,
         remainingToGoal: null,
@@ -621,6 +648,7 @@ describe("foundation api", () => {
         name: "Conta Principal",
         type: "CHECKING",
         balance: "1000.00",
+        balanceAdjustment: "0.00",
         goalAmount: null,
         goalProgressPercent: null,
         remainingToGoal: null,
@@ -663,6 +691,7 @@ describe("foundation api", () => {
         name: "Conta Principal",
         type: "CHECKING",
         balance: "1500.00",
+        balanceAdjustment: "0.00",
         goalAmount: null,
         goalProgressPercent: null,
         remainingToGoal: null,
@@ -705,12 +734,9 @@ describe("foundation api", () => {
 
     expect(result.applied.accountAdjustments).toHaveLength(1);
     expect(result.applied.cardInvoiceAdjustments).toEqual([]);
-    expect(result.applied.accountAdjustments[0].result.transaction).toMatchObject({
-      householdId,
-      kind: "INCOME",
-      amount: "25.00",
-      accountId: account.id,
-      systemTag: "MONTH_CLOSE",
+    expect(result.applied.accountAdjustments[0].result.transaction).toBeNull();
+    expect(accountsController.getConsolidatedBalance(householdId).accounts.find((item) => item.id === account.id)).toMatchObject({
+      balance: "225.00",
     });
   });
 
@@ -754,8 +780,9 @@ describe("foundation api", () => {
     expect(confirm.status).toBe(200);
     expect(confirm.body.applied.accountAdjustments).toHaveLength(1);
     expect(confirm.body.applied.cardInvoiceAdjustments).toEqual([]);
-    expect(apiState.transactions.filter((item) => item.householdId === victim.householdId && item.description === "REAJUSTE")).toHaveLength(1);
+    expect(apiState.transactions.filter((item) => item.householdId === victim.householdId && item.description === "REAJUSTE")).toHaveLength(0);
     expect(apiState.transactions.filter((item) => item.householdId === attacker.householdId && item.description === "REAJUSTE")).toHaveLength(0);
+    expect(apiState.accounts.find((item) => item.id === victimAccount.id)?.balanceAdjustment.toString()).toBe("25.00");
   });
 
   it("month close API confirm creates only non-zero account adjustments", async () => {
@@ -796,22 +823,8 @@ describe("foundation api", () => {
     ]);
     expect(confirm.body.applied.accountAdjustments).toHaveLength(1);
     expect(confirm.body.applied.cardInvoiceAdjustments).toEqual([]);
-    expect(apiState.transactions).toHaveLength(transactionCountBefore + 1);
-    expect(apiState.transactions.slice(transactionCountBefore).map((item) => ({
-      householdId: item.householdId,
-      description: item.description,
-      amount: item.amount.toString(),
-      accountId: item.accountId,
-      creditCardId: item.creditCardId,
-    }))).toEqual([
-      {
-        householdId: apiHouseholdId,
-        description: "REAJUSTE",
-        amount: "25.00",
-        accountId: nonZeroAccount.id,
-        creditCardId: null,
-      },
-    ]);
+    expect(apiState.transactions).toHaveLength(transactionCountBefore);
+    expect(apiState.accounts.find((item) => item.id === nonZeroAccount.id)?.balanceAdjustment.toString()).toBe("25.00");
   });
 
   it("month close API confirm rolls back all writes if a later adjustment fails", async () => {
@@ -831,7 +844,7 @@ describe("foundation api", () => {
     const secondAccount = secondAccountResponse.body;
     const categoriesBefore = apiState.categories.length;
     const transactionsBefore = apiState.transactions.length;
-    transactionCreateFailOnCall = 2;
+    accountUpdateFailOnCall = 2;
 
     const confirm = await apiRequest({
       method: "POST",
@@ -847,9 +860,11 @@ describe("foundation api", () => {
     });
 
     expect(confirm.status).toBe(500);
-    expect(confirm.body.message).toBe("TRANSACTION_CREATE_FAILED");
+    expect(confirm.body.message).toBe("ACCOUNT_UPDATE_FAILED");
     expect(apiState.categories).toHaveLength(categoriesBefore);
     expect(apiState.transactions).toHaveLength(transactionsBefore);
+    expect(apiState.accounts.find((item) => item.id === account.id)?.balanceAdjustment.toString()).toBe("0.00");
+    expect(apiState.accounts.find((item) => item.id === secondAccount.id)?.balanceAdjustment.toString()).toBe("0.00");
   });
 
   it("account adjustment API returns a null transaction without writing when balance is unchanged", async () => {

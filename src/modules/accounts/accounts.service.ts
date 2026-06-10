@@ -74,6 +74,7 @@ interface AccountBalanceRow extends AccountGoalSnapshot {
   name: string;
   type: "CHECKING" | "INVESTMENT";
   balance: string;
+  balanceAdjustment: string;
 }
 
 export interface ConsolidatedBalance {
@@ -141,6 +142,7 @@ export class AccountsService {
       name: account.name,
       type: account.type,
       openingBalance: account.openingBalance.toFixed(),
+      balanceAdjustment: "0.00",
       goalAmount: account.goalAmount?.toFixed() ?? null,
     });
   }
@@ -170,6 +172,17 @@ export class AccountsService {
 
     return this.repository.update(parsed.id, {
       goalAmount: account.goalAmount?.toFixed() ?? null,
+    });
+  }
+
+  updateBalanceAdjustment(input: { householdId: string; accountId: string; balanceAdjustment: string }) {
+    const account = this.repository.findById(input.accountId);
+    if (!account || account.householdId !== input.householdId) {
+      throw new Error("ACCOUNT_NOT_FOUND");
+    }
+
+    return this.repository.update(input.accountId, {
+      balanceAdjustment: input.balanceAdjustment,
     });
   }
 
@@ -229,8 +242,9 @@ export class AccountsService {
 
     return this.list(householdId).map((item) => {
       const opening = Number(item.openingBalance);
+      const adjustment = Number(item.balanceAdjustment ?? "0");
       const movement = netByAccountId.get(item.id) ?? 0;
-      const balance = (opening + movement).toFixed(2);
+      const balance = (opening + adjustment + movement).toFixed(2);
       const goalSnapshot = buildAccountGoalSnapshot({
         type: item.type,
         balance,
@@ -241,6 +255,7 @@ export class AccountsService {
         name: item.name,
         type: item.type,
         balance,
+        balanceAdjustment: (adjustment).toFixed(2),
         ...goalSnapshot,
       };
     });

@@ -1,9 +1,8 @@
 import Decimal from "decimal.js";
 import { z } from "zod";
 
-import { normalizeCategoryName } from "../../domain/categories/category.entity";
 import { CategoriesRepository } from "../categories/categories.repository";
-import { TransactionsRepository, type TransactionKind, type TransactionRecord } from "../transactions/transactions.repository";
+import { TransactionsRepository, type TransactionRecord } from "../transactions/transactions.repository";
 import { AccountsService } from "./accounts.service";
 
 const accountAdjustmentInputSchema = z.object({
@@ -62,37 +61,18 @@ export class AccountAdjustmentsService {
       };
     }
 
-    const kind: TransactionKind = difference.isNegative() ? "EXPENSE" : "INCOME";
-    const normalized = normalizeCategoryName("Reajuste");
-    const category =
-      this.categoriesRepository.findByNormalized(parsed.householdId, normalized) ??
-      this.categoriesRepository.create({
-        householdId: parsed.householdId,
-        name: "Reajuste",
-        normalized,
-      });
-
-    const transaction = this.transactionsRepository.create({
+    const currentAdjustment = new Decimal(snapshot.account.balanceAdjustment ?? "0");
+    this.accountsService.updateBalanceAdjustment({
       householdId: parsed.householdId,
-      kind,
-      description: "REAJUSTE",
-      amount: difference.abs().toFixed(2),
-      occurredAt: parsed.occurredAt,
       accountId: parsed.accountId,
-      creditCardId: null,
-      categoryId: category.id,
-      invoiceMonthKey: null,
-      invoiceDueDate: null,
-      settlementStatus: "PAID",
-      transferGroupId: null,
-      systemTag: parsed.systemTag ?? null,
+      balanceAdjustment: currentAdjustment.plus(difference).toFixed(2),
     });
 
     return {
       previousBalance: previousBalance.toFixed(2),
       realBalance: realBalance.toFixed(2),
       difference: difference.toFixed(2),
-      transaction,
+      transaction: null,
     };
   }
 }

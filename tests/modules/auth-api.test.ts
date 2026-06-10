@@ -4,7 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = {
   users: [] as Array<{ id: string; email: string; passwordHash: string; householdId: string }>,
-  accounts: [] as Array<{ id: string; householdId: string; name: string; type: "CHECKING"; openingBalance: ReturnType<typeof decimal>; goalAmount?: null }>,
+  accounts: [] as Array<{
+    id: string;
+    householdId: string;
+    name: string;
+    type: "CHECKING";
+    openingBalance: ReturnType<typeof decimal>;
+    balanceAdjustment: ReturnType<typeof decimal>;
+    goalAmount?: null;
+  }>,
   cards: [] as Array<{ id: string; householdId: string; name: string; closeDay: number; dueDay: number }>,
   categories: [] as Array<{ id: string; householdId: string; name: string; normalized: string }>,
   transactions: [] as Array<any>,
@@ -41,6 +49,7 @@ vi.mock("../../src/modules/shared/persistence/prisma", () => {
           id: `acc-${state.accounts.length + 1}`,
           ...data,
           openingBalance: decimal(String(data.openingBalance)),
+          balanceAdjustment: decimal(String(data.balanceAdjustment ?? "0.00")),
           goalAmount: null,
         };
         state.accounts.push(created);

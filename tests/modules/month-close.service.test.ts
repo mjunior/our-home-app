@@ -196,12 +196,9 @@ describe("month close service", () => {
       realBalance: "1250.00",
       difference: "50.00",
     });
-    expect(result.applied.accountAdjustments[0].result.transaction).toMatchObject({
-      kind: "INCOME",
-      amount: "50.00",
-      accountId: checking.id,
-      occurredAt: "2026-04-30T12:00:00.000Z",
-      systemTag: "MONTH_CLOSE",
+    expect(result.applied.accountAdjustments[0].result.transaction).toBeNull();
+    expect(accountsService.consolidatedBalance(householdId).accounts.find((item) => item.id === checking.id)).toMatchObject({
+      balance: "950.00",
     });
   });
 });
