@@ -1772,8 +1772,9 @@ export function installViteApi(server: MiddlewareServer) {
       if (req.method === "GET" && path === "/api/free-balance") {
         const householdId = authHouseholdId;
         const month = url.searchParams.get("month") ?? "";
+        const currentMonth = url.searchParams.get("currentMonth") ?? undefined;
         const { freeBalanceService } = await loadServices();
-        sendJson(res, 200, freeBalanceService.getFreeBalance({ householdId, month }));
+        sendJson(res, 200, freeBalanceService.getFreeBalance({ householdId, month, currentMonth }));
         return;
       }
 
@@ -1781,8 +1782,9 @@ export function installViteApi(server: MiddlewareServer) {
         const householdId = authHouseholdId;
         const startMonth = url.searchParams.get("startMonth") ?? "";
         const endMonth = url.searchParams.get("endMonth") ?? "";
+        const currentMonth = url.searchParams.get("currentMonth") ?? undefined;
         const { freeBalanceService } = await loadServices();
-        sendJson(res, 200, freeBalanceService.getFreeBalanceProjection({ householdId, startMonth, endMonth }));
+        sendJson(res, 200, freeBalanceService.getFreeBalanceProjection({ householdId, startMonth, endMonth, currentMonth }));
         return;
       }
 
