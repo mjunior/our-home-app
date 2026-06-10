@@ -4,6 +4,7 @@ import { z } from "zod";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { TransactionsRepository, type TransactionRecord } from "../transactions/transactions.repository";
 import { AccountsService } from "./accounts.service";
+import { createId } from "../../domain/shared/id";
 
 const accountAdjustmentInputSchema = z.object({
   householdId: z.string().min(1),
@@ -52,6 +53,7 @@ export class AccountAdjustmentsService {
     const previousBalance = new Decimal(parsed.comparisonBalance ?? snapshot.balance);
     const realBalance = new Decimal(parsed.realBalance);
     const difference = realBalance.minus(previousBalance);
+    
     if (difference.isZero()) {
       return {
         previousBalance: previousBalance.toFixed(2),
@@ -61,18 +63,37 @@ export class AccountAdjustmentsService {
       };
     }
 
-    const currentAdjustment = new Decimal(snapshot.account.balanceAdjustment ?? "0");
-    this.accountsService.updateBalanceAdjustment({
-      householdId: parsed.householdId,
-      accountId: parsed.accountId,
-      balanceAdjustment: currentAdjustment.plus(difference).toFixed(2),
+    // Instead of updating the legacy 'balanceAdjustment' field, 
+    // we create a specialized transaction with a system tag.
+    // This transaction will be ignored in statements but used in balance calculations.
+    
+    let adjustmentCategory = this.categoriesRepository.listByHousehold(parsed.householdId).find(c => c.normalized === "ajuste-de-saldo");
+    if (!adjustmentCategory) {
+        adjustmentCategory = this.categoriesRepository.create({
+            householdId: parsed.householdId,
+            name: "Ajuste de Saldo",
+            normalized: "ajuste-de-saldo",
+        });
+    }
+
+    const transaction = this.transactionsRepository.create({
+        id: createId(),
+        householdId: parsed.householdId,
+        kind: difference.isPositive() ? "INCOME" : "EXPENSE",
+        description: "Reajuste de Saldo (Sistema)",
+        amount: difference.abs().toFixed(2),
+        occurredAt: parsed.occurredAt,
+        categoryId: adjustmentCategory.id,
+        accountId: parsed.accountId,
+        settlementStatus: "PAID",
+        systemTag: "BALANCE_ADJUSTMENT",
     });
 
     return {
       previousBalance: previousBalance.toFixed(2),
       realBalance: realBalance.toFixed(2),
       difference: difference.toFixed(2),
-      transaction: null,
+      transaction,
     };
   }
 }

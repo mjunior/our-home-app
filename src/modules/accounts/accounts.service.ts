@@ -211,7 +211,10 @@ export class AccountsService {
     for (const item of transactions) {
       if (!item.accountId) continue;
       if ((item.settlementStatus ?? "PAID") !== "PAID") continue;
+      
+      // If untilMonth is provided, we respect temporal boundary
       if (untilMonth && item.occurredAt.slice(0, 7) > untilMonth) continue;
+      
       const signed = item.kind === "INCOME" ? Number(item.amount) : Number(item.amount) * -1;
       netByAccountId.set(item.accountId, (netByAccountId.get(item.accountId) ?? 0) + signed);
     }
@@ -242,7 +245,11 @@ export class AccountsService {
 
     return this.list(householdId).map((item) => {
       const opening = Number(item.openingBalance);
+      
+      // Legacy balanceAdjustment is now considered "initial" adjustment.
+      // But we will primarily rely on the Transactions (including the new ones with systemTag)
       const adjustment = Number(item.balanceAdjustment ?? "0");
+      
       const movement = netByAccountId.get(item.id) ?? 0;
       const balance = (opening + adjustment + movement).toFixed(2);
       const goalSnapshot = buildAccountGoalSnapshot({

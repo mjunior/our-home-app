@@ -17,7 +17,7 @@ export interface TransactionRecord {
   invoiceDueDate: string | null;
   settlementStatus: SettlementStatus | null;
   transferGroupId: string | null;
-  systemTag?: "MONTH_CLOSE" | null;
+  systemTag?: "MONTH_CLOSE" | "BALANCE_ADJUSTMENT" | null;
   createdAt: string;
 }
 
@@ -26,6 +26,7 @@ export interface TransactionMonthFilter {
   accountId?: string;
   creditCardId?: string;
   categoryId?: string;
+  includeSystemTags?: boolean;
 }
 
 const transactionsStore: TransactionRecord[] = [];
@@ -66,6 +67,11 @@ export class TransactionsRepository {
 
       if (filter.categoryId && transaction.categoryId !== filter.categoryId) {
         return false;
+      }
+
+      // Default: hide BALANCE_ADJUSTMENT from user-facing statements
+      if (!filter.includeSystemTags && transaction.systemTag === "BALANCE_ADJUSTMENT") {
+          return false;
       }
 
       return true;
