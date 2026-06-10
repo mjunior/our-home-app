@@ -143,19 +143,19 @@ export class FreeBalanceService {
       checkingAccountIds,
       accountOpeningBalance,
     );
+    
+    // In dual-view, we want to align current view with the projection rail logic
+    // but the 'current' result has special 'realCheckingBalance' logic
     currentComputation.breakdown.startingBalance = currentCalculationDetail.realCheckingBalance;
-    currentComputation.breakdown.freeBalance = currentCalculationDetail.formula.projectedBalance;
+    currentComputation.breakdown.cumulativeBalance = currentCalculationDetail.formula.projectedBalance;
+    currentComputation.breakdown.freeBalance = currentComputation.breakdown.cumulativeBalance;
     currentComputation.breakdown.components.accountStartingBalance = currentCalculationDetail.realCheckingBalance;
-
-    const carryToNext = new Decimal(currentComputation.breakdown.freeBalance).lessThan(0)
-      ? new Decimal(currentComputation.breakdown.freeBalance).abs()
-      : new Decimal(0);
 
     const nextComputation = this.computeMonth(
       parsed.householdId,
       nextMonth,
-      new Decimal(currentComputation.breakdown.freeBalance),
-      carryToNext,
+      new Decimal(currentComputation.breakdown.cumulativeBalance),
+      new Decimal(0), // lateCarry is now implicit in cumulative
       transactions,
       scheduleInstances,
       cardCharges,
@@ -172,9 +172,8 @@ export class FreeBalanceService {
         month: item.month,
       }));
 
-    const freeBalanceNext = nextComputation.breakdown.freeBalance;
     const policy = this.policy.classify({
-      freeBalanceNext,
+      freeBalanceNext: nextComputation.breakdown.cumulativeBalance,
       confidence,
       missingData,
       topDrivers,
@@ -183,9 +182,13 @@ export class FreeBalanceService {
     return {
       currentMonth,
       nextMonth,
-      freeBalanceCurrent: currentComputation.breakdown.freeBalance,
-      freeBalanceNext,
-      additionalCardSpendCapacity: freeBalanceNext,
+      freeBalanceCurrent: currentComputation.breakdown.cumulativeBalance,
+      freeBalanceNext: nextComputation.breakdown.cumulativeBalance,
+      operationalResultCurrent: currentComputation.breakdown.operationalResult,
+      operationalResultNext: nextComputation.breakdown.operationalResult,
+      cumulativeBalanceCurrent: currentComputation.breakdown.cumulativeBalance,
+      cumulativeBalanceNext: nextComputation.breakdown.cumulativeBalance,
+      additionalCardSpendCapacity: nextComputation.breakdown.cumulativeBalance,
       risk: policy.risk,
       confidence,
       missingData,
@@ -263,17 +266,21 @@ export class FreeBalanceService {
         checkingAccountIds,
       );
       const breakdown = computation.breakdown;
-      const endingBalance = new Decimal(breakdown.freeBalance);
+      const operationalResult = new Decimal(breakdown.operationalResult);
+      const cumulativeBalance = new Decimal(breakdown.cumulativeBalance);
+
       months.push({
         month: cursor,
         startingBalance: startingBalance.toFixed(2),
         entradas: breakdown.income,
         saidas: breakdown.gastosOperacionais,
         investimentos: breakdown.investimentos,
-        sobra: endingBalance.toFixed(2),
-        endingBalance: endingBalance.toFixed(2),
+        sobra: operationalResult.toFixed(2), // backwards compat
+        operationalResult: operationalResult.toFixed(2),
+        cumulativeBalance: cumulativeBalance.toFixed(2),
+        endingBalance: cumulativeBalance.toFixed(2),
       });
-      startingBalance = endingBalance;
+      startingBalance = cumulativeBalance;
       cursor = addMonths(cursor, 1);
     }
 
@@ -787,7 +794,8 @@ export class FreeBalanceService {
     const totalSaidas = gastosOperacionais.plus(investments);
     const obligations = totalSaidas;
 
-    const freeBalance = startingBalance.plus(income).minus(obligations);
+    const operationalResult = income.minus(obligations);
+    const cumulativeBalance = startingBalance.plus(operationalResult);
 
     const driverSeeds: DriverSeed[] = [
       { label: "Fatura de cartao", amount: cardInvoiceDue, month },
@@ -807,7 +815,9 @@ export class FreeBalanceService {
         gastosOperacionais: gastosOperacionais.toFixed(2),
         investimentos: investments.toFixed(2),
         totalSaidas: totalSaidas.toFixed(2),
-        freeBalance: freeBalance.toFixed(2),
+        freeBalance: cumulativeBalance.toFixed(2), // backwards compat
+        operationalResult: operationalResult.toFixed(2),
+        cumulativeBalance: cumulativeBalance.toFixed(2),
         components: {
           accountStartingBalance: startingBalance.toFixed(2),
           projectedIncome: income.toFixed(2),

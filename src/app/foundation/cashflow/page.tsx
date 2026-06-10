@@ -233,6 +233,11 @@ export default function CashflowPage() {
     [householdId, projectionEndMonth, projectionStartMonth, refreshKey],
   );
 
+  const selectedMonthData = useMemo(
+    () => freeBalanceProjection.months.find((m) => m.month === month),
+    [freeBalanceProjection.months, month],
+  );
+
   useEffect(() => {
     const currentMonthButton = projectionRailRef.current?.querySelector<HTMLButtonElement>("[data-current-month='true']");
     if (typeof currentMonthButton?.scrollIntoView === "function") {
@@ -352,11 +357,29 @@ export default function CashflowPage() {
           <div className="flex min-w-0 flex-col gap-3">
             <div className="min-w-0 space-y-2.5 lg:space-y-0">
               <div className="cashflow-month-shell">
-                <div className="cashflow-month-shell__header">
+              <div className="cashflow-month-shell__header">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-6">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Competencia</p>
                     <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{formatMonthLabelBR(month)}</p>
                   </div>
+                  {selectedMonthData && (
+                    <div className="flex gap-4 border-t border-slate-100 pt-1 sm:border-0 sm:pt-0">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/70 dark:text-slate-300/70">Resultado</p>
+                        <p className={`text-sm font-bold ${Number(selectedMonthData.operationalResult) < 0 ? "text-red-600 dark:text-red-400" : "text-brand-teal dark:text-brand-lime"}`}>
+                          {formatCurrencyBR(selectedMonthData.operationalResult)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/70 dark:text-slate-300/70">Saldo Final</p>
+                        <p className={`text-sm font-bold ${Number(selectedMonthData.cumulativeBalance) < 0 ? "text-red-600 dark:text-red-400" : "text-brand-teal dark:text-brand-lime"}`}>
+                          {formatCurrencyBR(selectedMonthData.cumulativeBalance)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
                   <div className="cashflow-month-nav" aria-label="Navegacao mensal">
                     <button
                       type="button"
@@ -411,10 +434,6 @@ export default function CashflowPage() {
                             <strong>{formatCurrencyBR(projectionMonth.entradas)}</strong>
                           </span>
                           <span className="flex justify-between gap-2">
-                            <span className="text-slate-500 dark:text-slate-300">Mes anterior</span>
-                            <strong>{formatCurrencyBR(projectionMonth.startingBalance)}</strong>
-                          </span>
-                          <span className="flex justify-between gap-2">
                             <span className="text-slate-500 dark:text-slate-300">Saidas</span>
                             <strong>{formatCurrencyBR(projectionMonth.saidas)}</strong>
                           </span>
@@ -422,12 +441,20 @@ export default function CashflowPage() {
                             <span className="text-slate-500 dark:text-slate-300">Invest.</span>
                             <strong>{formatCurrencyBR(projectionMonth.investimentos)}</strong>
                           </span>
-                          <span className="mt-1 flex justify-between gap-2 border-t border-slate-200 pt-1 dark:border-slate-700">
-                            <span className="font-semibold text-slate-700 dark:text-slate-200">Sobra</span>
-                            <strong className={Number(projectionMonth.sobra) < 0 ? "text-red-600 dark:text-red-400" : "text-brand-teal dark:text-brand-lime"}>
-                              {formatCurrencyBR(projectionMonth.sobra)}
-                            </strong>
-                          </span>
+                          <div className="mt-1 grid gap-1 border-t border-slate-200 pt-1 dark:border-slate-700">
+                            <span className="flex justify-between gap-2">
+                              <span className="text-slate-700/70 dark:text-slate-200/70">Resultado</span>
+                              <strong className={Number(projectionMonth.operationalResult) < 0 ? "text-red-600 dark:text-red-400" : "text-brand-teal dark:text-brand-lime"}>
+                                {formatCurrencyBR(projectionMonth.operationalResult)}
+                              </strong>
+                            </span>
+                            <span className="flex justify-between gap-2">
+                              <span className="font-semibold text-slate-700 dark:text-slate-200">Saldo Final</span>
+                              <strong className={Number(projectionMonth.cumulativeBalance) < 0 ? "text-red-600 dark:text-red-400" : "text-brand-teal dark:text-brand-lime"}>
+                                {formatCurrencyBR(projectionMonth.cumulativeBalance)}
+                              </strong>
+                            </span>
+                          </div>
                         </span>
                       </button>
                     );

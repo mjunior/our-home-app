@@ -63,7 +63,10 @@ export interface FreeBalanceMonthBreakdown {
   gastosOperacionais: string;
   investimentos: string;
   totalSaidas: string;
+  /** @deprecated Use operationalResult */
   freeBalance: string;
+  operationalResult: string;
+  cumulativeBalance: string;
   components: FreeBalanceMonthComponents;
   pendingOutflows: FreeBalancePendingOutflow[];
 }
@@ -74,7 +77,10 @@ export interface FreeBalanceProjectionMonth {
   entradas: string;
   saidas: string;
   investimentos: string;
+  /** @deprecated Use operationalResult */
   sobra: string;
+  operationalResult: string;
+  cumulativeBalance: string;
   endingBalance: string;
 }
 
@@ -88,8 +94,14 @@ export interface FreeBalanceProjectionResult {
 export interface FreeBalanceResult {
   currentMonth: string;
   nextMonth: string;
+  /** @deprecated Use operationalResult (from current breakdown) */
   freeBalanceCurrent: string;
+  /** @deprecated Use operationalResult (from next breakdown) */
   freeBalanceNext: string;
+  operationalResultCurrent: string;
+  operationalResultNext: string;
+  cumulativeBalanceCurrent: string;
+  cumulativeBalanceNext: string;
   additionalCardSpendCapacity: string;
   risk: FreeBalanceRiskLevel;
   confidence: FreeBalanceConfidence;
