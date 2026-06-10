@@ -332,7 +332,7 @@ export default function CashflowPage() {
 
   return (
     <main className="min-w-0 space-y-4 pb-36 lg:pb-4">
-      <section className="section-reveal flex min-w-0 flex-col items-start gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <section className="section-reveal hidden min-w-0 flex-col items-start gap-3 lg:flex lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
           <button
             type="button"

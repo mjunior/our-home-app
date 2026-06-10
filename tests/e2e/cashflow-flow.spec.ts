@@ -36,6 +36,23 @@ function getTodayDateInputValue() {
   return `${year}-${month}-${day}`;
 }
 
+function setDesktopMedia(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes("min-width: 1024px") ? matches : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe("cashflow flow", () => {
   afterEach(() => {
     cleanup();
@@ -45,6 +62,7 @@ describe("cashflow flow", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-04-15T12:00:00.000Z"));
+    setDesktopMedia(true);
 
     const accountsRepo = new AccountsRepository();
     const cardsRepo = new CardsRepository();
@@ -187,6 +205,37 @@ describe("cashflow flow", () => {
     expect(screen.queryByText("Proximo mes")).not.toBeInTheDocument();
     expect(screen.queryByText("Gastos mes")).not.toBeInTheDocument();
     expect(screen.queryByText("Reserva Invest")).not.toBeInTheDocument();
+  });
+
+  it("renders mobile statement as a compact spreadsheet table", () => {
+    setDesktopMedia(false);
+    const accountsRepo = new AccountsRepository();
+    const cardsRepo = new CardsRepository();
+    const categoriesRepo = new CategoriesRepository();
+    const transactionsRepo = new TransactionsRepository();
+
+    const account = new AccountsController(new AccountsService(accountsRepo)).listAccounts(householdId)[0]!;
+    const category = new CategoriesController(new CategoriesService(categoriesRepo)).listCategories(householdId)[0]!;
+    const transactions = new TransactionsController(new TransactionsService(transactionsRepo, accountsRepo, cardsRepo, categoriesRepo));
+
+    transactions.createTransaction({
+      householdId,
+      kind: "INCOME",
+      description: "Salario",
+      amount: "5000.00",
+      occurredAt: "2026-04-15T12:00:00.000Z",
+      accountId: account.id,
+      categoryId: category.id,
+      settlementStatus: "PAID",
+    });
+
+    render(React.createElement(CashflowPage));
+
+    expect(screen.getByRole("columnheader", { name: "Pg" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Desc." })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Valor" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Salario" })).toBeInTheDocument();
+    expect(screen.queryByText("Cartao: Visa Casa")).not.toBeInTheDocument();
   });
 
   it("edits recurring entries only for the selected month", async () => {
