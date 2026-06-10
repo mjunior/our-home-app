@@ -24,12 +24,14 @@ import { AccountsService } from "../accounts/accounts.service";
 const inputSchema = z.object({
   householdId: z.string().min(1),
   month: z.string().regex(/^\d{4}-\d{2}$/),
+  currentMonth: z.string().regex(/^\d{4}-\d{2}$/).optional(),
 });
 
 const projectionInputSchema = z.object({
   householdId: z.string().min(1),
   startMonth: z.string().regex(/^\d{4}-\d{2}$/),
   endMonth: z.string().regex(/^\d{4}-\d{2}$/),
+  currentMonth: z.string().regex(/^\d{4}-\d{2}$/).optional(),
   /** @internal Used for testing to mock "today" */
   currentMonthOverride: z.string().regex(/^\d{4}-\d{2}$/).optional(),
 });
@@ -87,7 +89,7 @@ export class FreeBalanceService {
   getFreeBalance(input: GetFreeBalanceInput): FreeBalanceResult {
     const parsed = inputSchema.parse(input);
 
-    const currentMonth = parsed.month;
+    const currentMonth = parsed.currentMonth ?? parsed.month;
     const nextMonth = addMonths(currentMonth, 1);
 
     const transactions = this.transactionsRepository.listByHousehold(parsed.householdId);
@@ -212,7 +214,7 @@ export class FreeBalanceService {
       throw new Error("FREE_BALANCE_INVALID_PROJECTION_RANGE");
     }
 
-    const currentMonthKey = parsed.currentMonthOverride ?? monthFromIso(new Date().toISOString());
+    const currentMonthKey = parsed.currentMonthOverride ?? parsed.currentMonth ?? monthFromIso(new Date().toISOString());
 
     const transactions = this.transactionsRepository.listByHousehold(parsed.householdId);
     const scheduleInstances = this.scheduleRepository.listInstancesByHousehold(parsed.householdId);

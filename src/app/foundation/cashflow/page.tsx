@@ -229,8 +229,9 @@ export default function CashflowPage() {
         householdId,
         startMonth: projectionStartMonth,
         endMonth: projectionEndMonth,
+        currentMonth: currentMonthKey,
       }),
-    [householdId, projectionEndMonth, projectionStartMonth, refreshKey],
+    [householdId, projectionEndMonth, projectionStartMonth, refreshKey, currentMonthKey],
   );
 
   const selectedMonthData = useMemo(

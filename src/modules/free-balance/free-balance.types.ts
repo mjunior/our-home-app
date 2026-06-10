@@ -118,10 +118,12 @@ export interface FreeBalanceResult {
 export interface GetFreeBalanceInput {
   householdId: string;
   month: string;
+  currentMonth?: string;
 }
 
 export interface GetFreeBalanceProjectionInput {
   householdId: string;
   startMonth: string;
   endMonth: string;
+  currentMonth?: string;
 }
