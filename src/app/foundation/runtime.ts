@@ -244,6 +244,7 @@ function createLocalRuntime(): Runtime {
       new InvoiceCycleService(),
       new FreeBalancePolicy(),
       invoiceSettlementRepository,
+      accountsService,
     ),
   );
   const scheduleManagementController = new ScheduleManagementController(

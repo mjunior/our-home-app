@@ -19,6 +19,7 @@ import type {
   GetFreeBalanceProjectionInput,
 } from "./free-balance.types";
 import type { InvoiceSettlementRecord } from "../invoices/invoice-settlement.repository";
+import { AccountsService } from "../accounts/accounts.service";
 
 const inputSchema = z.object({
   householdId: z.string().min(1),
@@ -80,6 +81,7 @@ export class FreeBalanceService {
     private readonly cycleService: InvoiceCycleService,
     private readonly policy: FreeBalancePolicy,
     private readonly invoiceSettlementRepository?: { listByHousehold(householdId: string): InvoiceSettlementRecord[] },
+    private readonly accountsService?: AccountsService,
   ) {}
 
   getFreeBalance(input: GetFreeBalanceInput): FreeBalanceResult {
@@ -362,6 +364,11 @@ export class FreeBalanceService {
     checkingAccountIds: Set<string>,
     openingBalance: Decimal,
   ): Decimal {
+    if (this.accountsService) {
+        const consolidated = this.accountsService.consolidatedBalance(householdId);
+        return new Decimal(consolidated.byType.CHECKING);
+    }
+
     const paidTransactionNet = sumDecimals(
       transactions
         .filter(
