@@ -108,29 +108,7 @@ export class FreeBalanceService {
     const missingData = this.collectMissingData(parsed.householdId, currentMonth, nextMonth, transactions, scheduleInstances, checkingAccountIds);
     const confidence = missingData.length > 0 ? "LOW" : "HIGH";
 
-    const startingCurrent = this.computeStartingBalance(
-      parsed.householdId,
-      currentMonth,
-      accountOpeningBalance,
-      transactions,
-      scheduleInstances,
-      cardCharges,
-      invoiceSettlements,
-      checkingAccountIds,
-    );
-
-    const currentComputation = this.computeMonth(
-      parsed.householdId,
-      currentMonth,
-      startingCurrent,
-      new Decimal(0),
-      transactions,
-      scheduleInstances,
-      cardCharges,
-      invoiceSettlements,
-      checkingAccountIds,
-    );
-    currentComputation.breakdown.pendingOutflows = this.collectPendingOutflows(
+    const currentPendingOutflows = this.collectPendingOutflows(
       parsed.householdId,
       currentMonth,
       transactions,
@@ -142,26 +120,38 @@ export class FreeBalanceService {
     const currentCalculationDetail = this.buildCurrentCalculationDetail(
       parsed.householdId,
       currentMonth,
-      currentComputation.breakdown.pendingOutflows,
+      currentPendingOutflows,
       transactions,
       scheduleInstances,
       invoiceSettlements,
       checkingAccountIds,
       accountOpeningBalance,
     );
+
+    const currentComputation = this.computeMonth(
+      parsed.householdId,
+      currentMonth,
+      new Decimal(currentCalculationDetail.realCheckingBalance).minus(currentCalculationDetail.pendingOutflowsTotal).minus(this.computeMonthOperationalResult(parsed.householdId, currentMonth, transactions, scheduleInstances, cardCharges, invoiceSettlements, checkingAccountIds)),
+      new Decimal(0),
+      transactions,
+      scheduleInstances,
+      cardCharges,
+      invoiceSettlements,
+      checkingAccountIds,
+    );
     
-    // In dual-view, we want to align current view with the projection rail logic
-    // but the 'current' result has special 'realCheckingBalance' logic
+    // Aggressive Force Sync for Current Month
     currentComputation.breakdown.startingBalance = currentCalculationDetail.realCheckingBalance;
     currentComputation.breakdown.cumulativeBalance = currentCalculationDetail.formula.projectedBalance;
     currentComputation.breakdown.freeBalance = currentComputation.breakdown.cumulativeBalance;
     currentComputation.breakdown.components.accountStartingBalance = currentCalculationDetail.realCheckingBalance;
+    currentComputation.breakdown.pendingOutflows = currentPendingOutflows;
 
     const nextComputation = this.computeMonth(
       parsed.householdId,
       nextMonth,
       new Decimal(currentComputation.breakdown.cumulativeBalance),
-      new Decimal(0), // lateCarry is now implicit in cumulative
+      new Decimal(0),
       transactions,
       scheduleInstances,
       cardCharges,
@@ -210,10 +200,6 @@ export class FreeBalanceService {
 
   getFreeBalanceProjection(input: GetFreeBalanceProjectionInput): FreeBalanceProjectionResult {
     const parsed = projectionInputSchema.parse(input);
-    if (parsed.endMonth < parsed.startMonth) {
-      throw new Error("FREE_BALANCE_INVALID_PROJECTION_RANGE");
-    }
-
     const currentMonthKey = parsed.currentMonthOverride ?? parsed.currentMonth ?? monthFromIso(new Date().toISOString());
 
     const transactions = this.transactionsRepository.listByHousehold(parsed.householdId);
@@ -228,18 +214,9 @@ export class FreeBalanceService {
     const cardCharges = this.collectCardCharges(parsed.householdId, transactions, scheduleInstances);
     const invoiceSettlements = this.invoiceSettlementRepository?.listByHousehold(parsed.householdId) ?? [];
 
-    const firstPendingOutflows = this.collectPendingOutflows(
-      parsed.householdId,
-      parsed.startMonth,
-      transactions,
-      scheduleInstances,
-      cardCharges,
-      checkingAccountIds,
-      invoiceSettlements,
-    );
     const currentCalculationDetail = this.buildCurrentCalculationDetail(
       parsed.householdId,
-      currentMonthKey, // Anchor calculation on the REAL current month
+      currentMonthKey,
       this.collectPendingOutflows(parsed.householdId, currentMonthKey, transactions, scheduleInstances, cardCharges, checkingAccountIds, invoiceSettlements),
       transactions,
       scheduleInstances,
@@ -280,9 +257,7 @@ export class FreeBalanceService {
       const operationalResult = new Decimal(breakdown.operationalResult);
       let cumulativeBalance = new Decimal(breakdown.cumulativeBalance);
 
-      // REALITY ANCHOR: If we are looking at the current month, force the cumulative balance 
-      // to sync with the bank reality (Real Balance - Pending Outflows).
-      // This "cleans" any accumulated historical drift.
+      // Aggressive Reset: If we are in the current month, force the cumulative balance to BANK REALITY
       if (isCurrentMonth) {
           cumulativeBalance = new Decimal(currentCalculationDetail.formula.projectedBalance);
       }
@@ -293,11 +268,12 @@ export class FreeBalanceService {
         entradas: breakdown.income,
         saidas: breakdown.gastosOperacionais,
         investimentos: breakdown.investimentos,
-        sobra: operationalResult.toFixed(2), // backwards compat
+        sobra: operationalResult.toFixed(2),
         operationalResult: operationalResult.toFixed(2),
         cumulativeBalance: cumulativeBalance.toFixed(2),
         endingBalance: cumulativeBalance.toFixed(2),
       });
+      
       startingBalance = cumulativeBalance;
       cursor = addMonths(cursor, 1);
     }
@@ -308,6 +284,19 @@ export class FreeBalanceService {
       months,
       currentCalculationDetail,
     };
+  }
+
+  private computeMonthOperationalResult(
+    householdId: string,
+    month: string,
+    transactions: ReturnType<TransactionsRepository["listByHousehold"]>,
+    scheduleInstances: ReturnType<ScheduleRepository["listInstancesByHousehold"]>,
+    cardCharges: CardCharge[],
+    invoiceSettlements: InvoiceSettlementRecord[],
+    checkingAccountIds: Set<string>,
+  ): Decimal {
+    const computation = this.computeMonth(householdId, month, new Decimal(0), new Decimal(0), transactions, scheduleInstances, cardCharges, invoiceSettlements, checkingAccountIds);
+    return new Decimal(computation.breakdown.operationalResult);
   }
 
   private buildCurrentCalculationDetail(
