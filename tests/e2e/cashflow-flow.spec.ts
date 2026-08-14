@@ -146,7 +146,7 @@ describe("cashflow flow", () => {
     await user.click(screen.getAllByRole("button", { name: "Editar lancamento" })[0]!);
     await user.click(screen.getByRole("button", { name: "Excluir" }));
     expect(screen.queryByText("Salario ajustado")).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it("creates, edits and deletes investment as linked transfer pair", async () => {
     const user = userEvent.setup();

@@ -91,7 +91,7 @@ describe("account adjustments", () => {
     ).toThrow("ACCOUNT_NOT_FOUND");
   });
 
-  it("creates a paid income adjustment when real balance is greater than current balance", () => {
+  it("creates a hidden system income adjustment when real balance is greater than current balance", () => {
     const account = accountsService.create({
       householdId,
       name: "Conta Principal",
@@ -110,7 +110,14 @@ describe("account adjustments", () => {
     expect(result.previousBalance).toBe("1000.00");
     expect(result.realBalance).toBe("1250.75");
     expect(result.difference).toBe("250.75");
-    expect(result.transaction).toBeNull();
+    expect(result.transaction).toMatchObject({
+      kind: "INCOME",
+      description: "Reajuste de Saldo (Sistema)",
+      amount: "250.75",
+      accountId: account.id,
+      settlementStatus: "PAID",
+      systemTag: "BALANCE_ADJUSTMENT",
+    });
     expect(accountsService.getAccountBalanceSnapshot({
       householdId,
       accountId: account.id,
@@ -118,18 +125,22 @@ describe("account adjustments", () => {
     expect(accountsService.consolidatedBalance(householdId).accounts.find((item) => item.id === account.id)).toMatchObject({
       balance: "1250.75",
     });
-    expect(categoriesRepo.listByHousehold(householdId)).toHaveLength(0);
-    expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(0);
+    expect(categoriesRepo.listByHousehold(householdId)).toMatchObject([{ normalized: "ajuste-de-saldo" }]);
+    expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(1);
+    expect(transactionsRepo.listByHouseholdMonth(householdId, { month: "2026-04" })).toEqual([]);
+    expect(transactionsRepo.listByHouseholdMonth(householdId, { month: "2026-04", includeSystemTags: true })).toMatchObject([
+      { id: result.transaction?.id, systemTag: "BALANCE_ADJUSTMENT" },
+    ]);
   });
 
-  it("creates a paid expense adjustment when real balance is lower than current balance and reuses the system category", () => {
+  it("creates a hidden system expense adjustment when real balance is lower than current balance", () => {
     const account = accountsService.create({
       householdId,
       name: "Conta Principal",
       type: "CHECKING",
       openingBalance: "1000.00",
     });
-    const existingCategory = categoriesRepo.create({
+    categoriesRepo.create({
       householdId,
       name: "Reajuste",
       normalized: "reajuste",
@@ -146,7 +157,14 @@ describe("account adjustments", () => {
     expect(result.previousBalance).toBe("1000.00");
     expect(result.realBalance).toBe("900.25");
     expect(result.difference).toBe("-99.75");
-    expect(result.transaction).toBeNull();
+    expect(result.transaction).toMatchObject({
+      kind: "EXPENSE",
+      description: "Reajuste de Saldo (Sistema)",
+      amount: "99.75",
+      accountId: account.id,
+      settlementStatus: "PAID",
+      systemTag: "BALANCE_ADJUSTMENT",
+    });
     expect(accountsService.getAccountBalanceSnapshot({
       householdId,
       accountId: account.id,
@@ -154,8 +172,8 @@ describe("account adjustments", () => {
     expect(accountsService.consolidatedBalance(householdId).accounts.find((item) => item.id === account.id)).toMatchObject({
       balance: "900.25",
     });
-    expect(categoriesRepo.listByHousehold(householdId)).toHaveLength(1);
-    expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(0);
+    expect(categoriesRepo.listByHousehold(householdId)).toHaveLength(2);
+    expect(transactionsRepo.listByHousehold(householdId)).toHaveLength(1);
   });
 
   it("returns a null transaction without writing when real balance matches current balance", () => {
@@ -244,7 +262,7 @@ describe("account adjustments", () => {
     expect(result.previousBalance).toBe("1000.00");
     expect(result.realBalance).toBe("1100.00");
     expect(result.difference).toBe("100.00");
-    expect(result.transaction).toBeNull();
+    expect(result.transaction).toMatchObject({ systemTag: "BALANCE_ADJUSTMENT", amount: "100.00" });
   });
 
   it("fails clearly when account adjustment controller contract is called without the service", () => {
@@ -283,6 +301,6 @@ describe("account adjustments", () => {
       id: account.id,
       balance: "925.40",
     });
-    expect(result.transaction).toBeNull();
+    expect(result.transaction).toMatchObject({ systemTag: "BALANCE_ADJUSTMENT", amount: "125.40" });
   });
 });

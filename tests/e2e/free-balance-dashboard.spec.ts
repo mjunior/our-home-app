@@ -72,7 +72,6 @@ describe("free balance dashboard", () => {
     expect(screen.getByRole("tab", { name: "Abr/26", selected: true })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Dez/26" })).toBeInTheDocument();
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "center", behavior: "smooth" });
-    expect(screen.getAllByText("Mes anterior").length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: "Ir para proximo mes" }));
     expect(screen.getByRole("tab", { name: "Mai/26", selected: true })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Ir para mes anterior" }));

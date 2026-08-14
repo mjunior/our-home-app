@@ -196,7 +196,10 @@ describe("month close service", () => {
       realBalance: "1250.00",
       difference: "50.00",
     });
-    expect(result.applied.accountAdjustments[0].result.transaction).toBeNull();
+    expect(result.applied.accountAdjustments[0].result.transaction).toMatchObject({
+      systemTag: "BALANCE_ADJUSTMENT",
+      amount: "50.00",
+    });
     expect(accountsService.consolidatedBalance(householdId).accounts.find((item) => item.id === checking.id)).toMatchObject({
       balance: "950.00",
     });
