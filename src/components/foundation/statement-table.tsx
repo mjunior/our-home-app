@@ -25,7 +25,7 @@ export interface StatementEntry {
   monthKey?: string;
   sequence?: number;
   settlementStatus?: "PAID" | "UNPAID" | null;
-  systemTag?: "MONTH_CLOSE" | null;
+  systemTag?: "MONTH_CLOSE" | "BALANCE_ADJUSTMENT" | null;
 }
 
 interface StatementTableProps {

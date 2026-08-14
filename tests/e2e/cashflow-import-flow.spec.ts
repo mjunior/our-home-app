@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import CashflowPage from "../../src/app/foundation/cashflow/page";
 import { AccountsController } from "../../src/modules/accounts/accounts.controller";
@@ -24,9 +24,12 @@ const householdId = "household-main";
 describe("cashflow import flow", () => {
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-03-15T12:00:00.000Z"));
     const accountsRepo = new AccountsRepository();
     const cardsRepo = new CardsRepository();
     const categoriesRepo = new CategoriesRepository();
@@ -101,7 +104,7 @@ describe("cashflow import flow", () => {
     expect(screen.getByText("Invalidas: 0")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Importar lancamentos validos" }));
-    expect(screen.getByText("Fatura Cartao C6")).toBeInTheDocument();
+    expect(await screen.findByText("Fatura Cartao C6")).toBeInTheDocument();
     expect(screen.getAllByText("R$ 120,00").length).toBeGreaterThan(0);
   });
 });

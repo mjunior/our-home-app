@@ -4,7 +4,7 @@ import { z } from "zod";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { TransactionsRepository, type TransactionRecord } from "../transactions/transactions.repository";
 import { AccountsService } from "./accounts.service";
-import { createId } from "../../domain/shared/id";
+
 
 const accountAdjustmentInputSchema = z.object({
   householdId: z.string().min(1),
@@ -77,7 +77,6 @@ export class AccountAdjustmentsService {
     }
 
     const transaction = this.transactionsRepository.create({
-        id: createId(),
         householdId: parsed.householdId,
         kind: difference.isPositive() ? "INCOME" : "EXPENSE",
         description: "Reajuste de Saldo (Sistema)",
@@ -85,7 +84,11 @@ export class AccountAdjustmentsService {
         occurredAt: parsed.occurredAt,
         categoryId: adjustmentCategory.id,
         accountId: parsed.accountId,
+        creditCardId: null,
+        invoiceMonthKey: null,
+        invoiceDueDate: null,
         settlementStatus: "PAID",
+        transferGroupId: null,
         systemTag: "BALANCE_ADJUSTMENT",
     });
 

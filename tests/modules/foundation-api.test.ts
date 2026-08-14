@@ -734,7 +734,10 @@ describe("foundation api", () => {
 
     expect(result.applied.accountAdjustments).toHaveLength(1);
     expect(result.applied.cardInvoiceAdjustments).toEqual([]);
-    expect(result.applied.accountAdjustments[0].result.transaction).toBeNull();
+    expect(result.applied.accountAdjustments[0].result.transaction).toMatchObject({
+      systemTag: "BALANCE_ADJUSTMENT",
+      amount: "25.00",
+    });
     expect(accountsController.getConsolidatedBalance(householdId).accounts.find((item) => item.id === account.id)).toMatchObject({
       balance: "225.00",
     });
